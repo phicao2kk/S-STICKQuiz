@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Trắc nghiệm v40.0 - Professional</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #4f46e5; --success: #10b981; --error: #ef4444; --bg: #f8fafc; --sidebar: #0f172a; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; color: #1e293b; }
+        
+        /* Sidebar & Overlay */
+        #sidebar { position: fixed; left: -280px; top: 0; width: 280px; height: 100%; background: var(--sidebar); color: white; transition: 0.4s; z-index: 1000; }
+        #sidebar.active { left: 0; }
+        .avatar-circle { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background: var(--primary); border: 2px solid rgba(255,255,255,0.1); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; overflow: hidden; color: white; }
+        .menu-item { padding: 18px 25px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #94a3b8; transition: 0.3s; }
+        .menu-item:hover { background: rgba(255,255,255,0.05); color: white; }
+        #overlay { position: fixed; display: none; width: 100%; height: 100%; top: 0; left: 0; background: rgba(15, 23, 42, 0.6); z-index: 999; backdrop-filter: blur(4px); }
+        
+        /* Header & Layout */
+        .header { background: white; padding: 15px 30px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 998; }
+        .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
+        .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid #f1f5f9; box-sizing: border-box; }
+        .input-control { width: 100%; padding: 12px 16px; margin: 8px 0; border: 2px solid #f1f5f9; border-radius: 12px; font-size: 14px; outline: none; box-sizing: border-box; }
+        
+        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        button:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: #fee2e2; color: var(--error); border: 1px solid #fecaca; }
+        .hidden { display: none !important; }
+        
+        /* Quiz Interface v40 */
+        .quiz-grid-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+        @media (max-width: 850px) { .quiz-grid-layout { grid-template-columns: 1fr; } }
+
+        #timer-box { font-size: 24px; font-weight: 800; color: var(--error); text-align: center; margin-bottom: 15px; background: #fff1f2; padding: 10px; border-radius: 15px; border: 2px solid #fecaca; }
+        
+        /* SỬA LỖI TRÀN CỘT SỐ CÂU */
+        .nav-panel { 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); 
+            gap: 8px; 
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .nav-btn { 
+            width: 100%; 
+            aspect-ratio: 1/1; 
+            border: 2px solid #e2e8f0; 
+            border-radius: 10px; 
+            background: white; 
+            cursor: pointer; 
+            font-weight: 700; 
+            transition: 0.2s; 
+            font-size: 13px; 
+            color: #64748b; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            padding: 0;
+        }
+        .nav-btn.active { border-color: var(--primary); color: var(--primary); background: #eef2ff; }
+        .nav-btn.answered { background: var(--success); border-color: var(--success); color: white; }
+
+        .quiz-opt { display: block; padding: 15px; border: 2px solid #f1f5f9; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; position: relative; }
+        .quiz-opt:hover { background: #f8fafc; border-color: #e2e8f0; }
+        .quiz-opt input { margin-right: 10px; transform: scale(1.2); }
+        .quiz-opt.selected { border-color: var(--primary); background: #eef2ff; }
+
+        /* History Detail Style */
+        .rev-item { margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; }
+        .rev-opt { padding: 10px 15px; border: 1px solid #f1f5f9; border-radius: 8px; margin: 5px 0; font-size: 14px; }
+        .rev-correct { background: #dcfce7 !important; border-color: #22c55e !important; color: #166534; font-weight: 600; }
+        .rev-wrong { background: #fee2e2 !important; border-color: #ef4444 !important; color: #991b1b; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        .btn-small { padding: 6px 10px; font-size: 11px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div id="overlay" onclick="toggleMenu(true)"></div>
+
+<div id="sidebar">
+    <div style="padding: 30px; text-align: center; border-bottom: 1px solid #334155;">
+        <div id="side-avatar-box" class="avatar-circle">?</div>
+        <b id="side-username" style="color: #38bdf8;">Khách</b>
+    </div>
+    <div class="menu-item" onclick="showPage('page-home')">🏠 Trang chủ</div>
+    <div id="admin-menu-storage" class="menu-item hidden" onclick="showPage('page-storage')">📊 Lịch sử làm bài</div>
+    <div id="admin-menu-users" class="menu-item hidden" onclick="showPage('page-users-manager')">👥 Quản lý thí sinh</div>
+    <div id="admin-menu-otp" class="menu-item hidden" onclick="showPage('page-otp-manager')">🔑 Cấp mã đổi MK</div>
+    <div class="menu-item" onclick="showPage('page-info')">👤 Hồ sơ & Đổi MK</div>
+    <div class="menu-item" onclick="logout()" style="color: #fb7185; margin-top: 30px;">🔴 Đăng xuất</div>
+</div>
+
+<div id="header" class="header hidden">
+    <div style="display: flex; align-items: center;">
+        <div onclick="toggleMenu()" style="font-size: 24px; cursor: pointer;">☰</div>
+        <div style="font-weight: 800; margin-left: 15px;">HỆ THỐNG <span id="role-badge" style="font-size: 10px; padding: 3px 8px; border-radius: 8px; margin-left: 10px;"></span></div>
+    </div>
+    <div id="head-avatar-box" class="avatar-circle" style="width: 35px; height: 35px; margin:0; font-size: 14px;">?</div>
+</div>
+
+<div id="login-screen" class="container" style="max-width: 400px; margin-top: 60px;">
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="auth-header" style="text-align: center; padding: 25px 20px 10px;">
+            <img src="https://i.ibb.co/nNCs81Dp/LOGO-S-STICK.png" alt="Logo" style="width: 80px;">
+            <h1 style="margin: 5px 0 0; font-size: 24px;">S-STICK Quiz</h1>
+            <h1 style="margin: 5px 0 0; font-size: 12px;">Thi trắc nghiệm trực tuyến</h1>
+        </div>
+        <div style="display: flex; background: #f8fafc;">
+            <button id="tab-login" class="auth-tab-btn active" style="flex:1; border-radius:0; background:none; color:#64748b; border-bottom: 2px solid transparent;" onclick="switchAuth('login')">Đăng nhập</button>
+            <button id="tab-reg" class="auth-tab-btn" style="flex:1; border-radius:0; background:none; color:#64748b; border-bottom: 2px solid transparent;" onclick="switchAuth('reg')">Đăng ký</button>
+        </div>
+        <div style="padding: 25px;">
+            <div id="form-login">
+                <input type="text" id="login-user" class="input-control" placeholder="Tài khoản / SĐT">
+                <input type="password" id="login-pass" class="input-control" placeholder="Mật khẩu">
+                <button onclick="handleLogin()" style="width: 100%; margin-top: 15px;">Vào hệ thống</button>
+                <div style="text-align: center; margin-top: 15px;">
+                    <span style="color: var(--primary); cursor: pointer; text-decoration: underline; font-size: 13px;" onclick="switchAuth('forgot')">Quên mật khẩu?</span>
+                </div>
+            </div>
+            <div id="form-reg" class="hidden">
+                <input type="text" id="reg-user" class="input-control" placeholder="Tài khoản mới">
+                <input type="password" id="reg-pass" class="input-control" placeholder="Mật khẩu">
+                <input type="password" id="reg-confirm" class="input-control" placeholder="Xác nhận mật khẩu">
+                <button onclick="handleRegister()" class="btn-success" style="width: 100%; margin-top: 15px;">Đăng ký ngay</button>
+            </div>
+            <div id="form-forgot" class="hidden">
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="forgot-user" class="input-control" placeholder="Tài khoản">
+                    <button onclick="requestOTP()" style="padding: 0 15px; font-size: 12px; white-space: nowrap;">Gửi mã</button>
+                </div>
+                <input type="text" id="forgot-otp" class="input-control" placeholder="Nhập OTP">
+                <input type="password" id="forgot-new-pass" class="input-control" placeholder="Mật khẩu mới">
+                <button onclick="handleForgot()" style="width: 100%; margin-top: 15px;">Đổi mật khẩu</button>
+                <div style="text-align: center; margin-top: 10px;"><span onclick="switchAuth('login')" style="cursor:pointer; color:var(--primary)">Quay lại</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="app-content" class="container hidden">
+    <div id="page-home" class="page">
+        <div id="admin-zone" class="hidden">
+            <div class="card">
+                <h3>🛠️ QUẢN LÝ ĐỀ THI</h3>
+                <label><b>1. Nhập từ file Word (.docx):</b></label>
+                <div style="display: flex; gap: 10px; margin-top: 8px;">
+                    <input type="file" id="wordFile" accept=".docx" class="input-control" style="margin:0">
+                    <button onclick="previewWordFile()" style="background: #6366f1;">Kiểm tra file</button>
+                </div>
+                <div id="confirm-upload-zone" class="hidden" style="margin-top: 15px; padding: 15px; background: #fff7ed; border: 1px dashed #fb923c; border-radius: 12px;">
+                    <p style="margin:0; color: #c2410c;"><b>⚠️ Phát hiện <span id="temp-count">0</span> câu hỏi:</b></p>
+                    <div id="temp-preview" style="max-height: 100px; overflow-y: auto; font-size: 11px; margin: 10px 0; color: #666;"></div>
+                    <button class="btn-success" onclick="confirmImport()">✅ Xác nhận lưu</button>
+                    <button onclick="cancelImport()" style="background:none; color: #64748b;">Hủy</button>
+                </div>
+                <hr style="margin: 20px 0; border: 0; border-top: 1px solid #f1f5f9;">
+                <label><b>2. Nhập thủ công:</b></label>
+                <textarea id="manual-q" class="input-control" placeholder="Nội dung câu hỏi..."></textarea>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <input type="text" id="manual-a" class="input-control" placeholder="Đáp án A">
+                    <input type="text" id="manual-b" class="input-control" placeholder="Đáp án B">
+                    <input type="text" id="manual-c" class="input-control" placeholder="Đáp án C">
+                    <input type="text" id="manual-d" class="input-control" placeholder="Đáp án D">
+                </div>
+                <select id="manual-correct" class="input-control">
+                    <option value="0">A đúng</option><option value="1">B đúng</option><option value="2">C đúng</option><option value="3">D đúng</option>
+                </select>
+                <input type="hidden" id="edit-index" value="-1">
+                <button id="btn-save-q" class="btn-success" onclick="saveQuestion()" style="margin-top:10px">➕ Thêm câu hỏi</button>
+                <button id="btn-cancel-edit" class="hidden" onclick="cancelEdit()" style="background:#64748b; margin-top:10px">Hủy sửa</button>
+
+                <div style="margin-top: 25px; display: flex; justify-content: space-between; align-items: center;">
+                    <span>Tổng số: <b id="count" style="color:var(--primary)">0</b></span>
+                    <button class="btn-danger" onclick="clearAllDB()" style="font-size:12px; padding:8px 12px;">🗑️ Xóa sạch đề</button>
+                </div>
+            </div>
+            <div id="preview-section"></div>
+        </div>
+        <div id="student-zone" class="hidden">
+            <div class="card" style="text-align:center; padding: 40px;">
+                <h2 style="margin-top:0">BÀI THI TRẮC NGHIỆM</h2>
+                <p>Thời gian: 45 phút | Hình thức: Từng câu một</p>
+                <button onclick="startQuiz()" style="font-size: 1.2rem; padding: 15px 40px;">BẮT ĐẦU THI NGAY</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-quiz-view" class="page hidden">
+        <div class="quiz-grid-layout">
+            <div class="quiz-left">
+                <div class="card" style="min-height: 400px; display: flex; flex-direction: column;">
+                    <div id="current-q-box" style="flex: 1;"></div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
+                        <button id="btn-prev" onclick="moveQ(-1)">⬅️ Câu trước</button>
+                        <button id="btn-next" onclick="moveQ(1)">Câu sau ➡️</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quiz-right">
+                <div id="timer-box">45:00</div>
+                <div class="card" style="padding: 15px;">
+                    <h4 style="margin: 0 0 15px 0; text-align: center;">DANH SÁCH CÂU</h4>
+                    <div id="nav-panel" class="nav-panel"></div>
+                    <button class="btn-success" onclick="confirmSubmit()" style="width: 100%; margin-top: 20px; padding: 15px;">NỘP BÀI</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-storage" class="page hidden">
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3>📊 LỊCH SỬ LÀM BÀI</h3>
+                <button class="btn-danger" onclick="clearAllHistory()" style="font-size:12px; padding:8px 12px;">Xóa sạch lịch sử</button>
+            </div>
+            <div style="overflow-x:auto;"><table><thead><tr><th>Tài khoản</th><th>Đúng</th><th>Điểm</th><th>Thời gian</th><th>Hành động</th></tr></thead><tbody id="history-table-body"></tbody></table></div>
+        </div>
+    </div>
+
+    <div id="page-history-detail" class="page hidden">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin:0">📝 CHI TIẾT BÀI LÀM</h3>
+                <button onclick="showPage('page-storage')" style="background: #64748b; padding: 8px 15px;">Quay lại</button>
+            </div>
+            <div id="rev-info-bar" style="background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; border: 1px solid #f1f5f9;"></div>
+            <div id="rev-content"></div>
+        </div>
+    </div>
+
+    <div id="page-users-manager" class="page hidden">
+        <div class="card"><h3>👥 QUẢN LÝ THÍ SINH</h3><div style="overflow-x:auto;"><table><thead><tr><th>Tài khoản</th><th>Mật khẩu</th><th>Hành động</th></tr></thead><tbody id="users-table-body"></tbody></table></div></div>
+    </div>
+    <div id="page-otp-manager" class="page hidden">
+        <div class="card"><h3>🔑 CẤP MÃ OTP</h3><input type="text" id="otp-target-user" class="input-control" placeholder="Tài khoản"><button onclick="generateOTP()" style="width:100%">Tạo mã</button><div id="otp-display" style="font-size:3rem; text-align:center; color:var(--primary); margin-top:20px;"></div></div>
+    </div>
+    <div id="page-info" class="page hidden">
+        <div class="card">
+            <h2>👤 Hồ sơ cá nhân</h2>
+            <div style="display:flex; gap:30px; flex-wrap:wrap;">
+                <div style="text-align: center;">
+                    <div id="profile-avatar-box" class="avatar-circle" style="width:120px; height:120px; font-size: 40px;">?</div>
+                    <button class="btn-small" onclick="document.getElementById('avatar-input').click()">Thay ảnh</button>
+                    <input type="file" id="avatar-input" class="hidden" onchange="processAvatar(this)">
+                </div>
+                <div style="flex:1; min-width: 280px;">
+                    <p>Tài khoản hiện tại: <b id="inf-email" style="color: var(--primary);">---</b></p>
+                    <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 20px 0;">
+                    <h4>🔐 Đổi mật khẩu</h4>
+                    <input type="password" id="info-old-pass" class="input-control" placeholder="Mật khẩu cũ">
+                    <input type="password" id="info-new-pass" class="input-control" placeholder="Mật khẩu mới">
+                    <input type="password" id="info-confirm-pass" class="input-control" placeholder="Xác nhận mật khẩu">
+                    <button onclick="handleUpdatePassword()" class="btn-success" style="width: 100%;">Cập nhật mật khẩu</button>
+                    <div id="self-delete-section" class="hidden" style="margin-top: 30px; padding: 15px; background: #fff1f2; border: 1px solid #fecaca; border-radius: 12px;">
+                        <h4 style="margin: 0 0 5px 0; color: #e11d48;">⚠️ Vùng nguy hiểm</h4>
+                        <button onclick="studentSelfDelete()" class="btn-danger" style="width: 100%; background: #be123c; color: white; border: none;">XÓA TÀI KHOẢN VĨNH VIỄN</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const AD_EMAIL = "cnhphi25@pdu.edu.vn", AD_PHONE = "0978877125", AD_PASS_INIT = "04082007";
+    let db = JSON.parse(localStorage.getItem('quiz_db') || '[]');
+    let usersDB = JSON.parse(localStorage.getItem('users_db') || '{}');
+    let otpStore = JSON.parse(localStorage.getItem('otp_store') || '{}');
+    let currentUser = JSON.parse(localStorage.getItem('sys_logged_user') || 'null');
+    let quizHistory = JSON.parse(localStorage.getItem('quiz_history') || '[]');
+    
+    let currentIdx = 0;
+    let userAnswers = []; 
+    let quizInterval = null;
+    let timeLeft = 45 * 60; 
+    let tempQuestions = [];
+
+    // --- TÍNH NĂNG TỰ ĐỘNG ĐĂNG XUẤT (15 PHÚT) ---
+    let idleTimeout;
+    const IDLE_TIME = 15 * 60 * 1000; // 15 phút tính bằng milisecond
+
+    function resetIdleTimer() {
+        if (!currentUser) return; // Nếu chưa đăng nhập thì không chạy hẹn giờ
+        clearTimeout(idleTimeout);
+        idleTimeout = setTimeout(() => {
+            alert("Bạn đã không hoạt động trong 15 phút. Hệ thống sẽ tự động đăng xuất để bảo mật.");
+            logout();
+        }, IDLE_TIME);
+    }
+
+    // Theo dõi các hành động của người dùng để reset bộ đếm
+    ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
+        document.addEventListener(evt, resetIdleTimer, true);
+    });
+
+    window.onload = () => { 
+        if(!usersDB[AD_EMAIL]) usersDB[AD_EMAIL] = { pass: AD_PASS_INIT };
+        if(!usersDB[AD_PHONE]) usersDB[AD_PHONE] = { pass: AD_PASS_INIT };
+        localStorage.setItem('users_db', JSON.stringify(usersDB));
+        if(currentUser) {
+            loginSuccess();
+            resetIdleTimer(); // Bắt đầu tính giờ khi đã đăng nhập
+        }
+        renderAdminPreview(); renderHistory();
+
+        document.getElementById('login-screen').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                handleLogin();
+            }
+        });
+    };
+
+    function handleLogin() {
+        const u = document.getElementById('login-user').value.trim(), p = document.getElementById('login-pass').value;
+        if (usersDB[u] && usersDB[u].pass === p) {
+            currentUser = { name: (u === AD_EMAIL || u === AD_PHONE ? "Quản trị viên" : "Thí sinh"), user: u, isAdmin: (u === AD_EMAIL || u === AD_PHONE), avatar: usersDB[u].avatar || null };
+            localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
+            loginSuccess();
+            resetIdleTimer(); // Kích hoạt bộ đếm ngay khi login
+        } else alert("Sai thông tin đăng nhập!");
+    }
+
+    function loginSuccess() {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app-content').classList.remove('hidden');
+        document.getElementById('header').classList.remove('hidden');
+        const badge = document.getElementById('role-badge');
+        if(currentUser.isAdmin) {
+            ['admin-zone', 'admin-menu-storage', 'admin-menu-users', 'admin-menu-otp'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+            badge.innerText = "ADMIN"; badge.style.background = "var(--error)";
+            renderUsersManager();
+        } else {
+            document.getElementById('student-zone').classList.remove('hidden');
+            document.getElementById('self-delete-section').classList.remove('hidden');
+            badge.innerText = "THÍ SINH"; badge.style.background = "var(--success)";
+        }
+        document.getElementById('inf-email').innerText = currentUser.user;
+        document.getElementById('side-username').innerText = currentUser.user;
+        updateAvatarUI(); renderHistory();
+    }
+
+    function previewWordFile() {
+        const file = document.getElementById('wordFile').files[0];
+        if(!file) return alert("Chọn file!");
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            mammoth.convertToHtml({arrayBuffer: e.target.result}).then(res => {
+                const lines = res.value.split(/<p>|<\/p>|<br\s*\/?>/i).map(l => l.replace(/<[^>]*>/g, "").trim()).filter(l => l.length > 0);
+                tempQuestions = [];
+                for(let i = 0; i < lines.length; i++) {
+                    if(lines[i].toLowerCase().startsWith("câu")) {
+                        let qText = lines[i].replace(/^câu\s*\d+[\.\:\-\s]*/i, "").trim();
+                        let qObj = { text: qText, options: [], correct: 0 };
+                        let j = i + 1;
+                        while(j < lines.length && qObj.options.length < 4) {
+                            let optMatch = lines[j].match(/^([A-D])[\.\:\)\-\s]+(.*)/i);
+                            if(optMatch) qObj.options.push(optMatch[2].trim());
+                            if(lines[j].toLowerCase().startsWith("câu")) break;
+                            j++;
+                        }
+                        let k = j;
+                        while(k < lines.length && k < j + 5) {
+                            if(lines[k].toLowerCase().includes("đáp án:")) {
+                                let ansChar = lines[k].split(":")[1]?.trim().toUpperCase().charAt(0);
+                                qObj.correct = ({"A":0, "B":1, "C":2, "D":3})[ansChar] || 0;
+                                break;
+                            }
+                            if(lines[k].toLowerCase().startsWith("câu")) break;
+                            k++;
+                        }
+                        if (qObj.options.length === 4) { tempQuestions.push(qObj); i = Math.max(j, k) - 1; }
+                    }
+                }
+                if(tempQuestions.length > 0) {
+                    document.getElementById('confirm-upload-zone').classList.remove('hidden');
+                    document.getElementById('temp-count').innerText = tempQuestions.length;
+                    document.getElementById('temp-preview').innerText = tempQuestions.slice(0, 2).map(q => q.text).join(" | ") + "...";
+                } else alert("Không tìm thấy câu hỏi phù hợp!");
+            });
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function confirmImport() { db = [...db, ...tempQuestions]; localStorage.setItem('quiz_db', JSON.stringify(db)); renderAdminPreview(); cancelImport(); }
+    function cancelImport() { tempQuestions = []; document.getElementById('confirm-upload-zone').classList.add('hidden'); document.getElementById('wordFile').value = ""; }
+
+    function startQuiz() {
+        if(db.length === 0) return alert("Hệ thống chưa có câu hỏi nào!");
+        currentIdx = 0;
+        userAnswers = new Array(db.length).fill(-1);
+        timeLeft = 45 * 60;
+        showPage('page-quiz-view');
+        renderQuestion();
+        renderNav();
+        startTimer();
+    }
+
+    function startTimer() {
+        if(quizInterval) clearInterval(quizInterval);
+        quizInterval = setInterval(() => {
+            timeLeft--;
+            if(timeLeft <= 0) {
+                clearInterval(quizInterval);
+                alert("Hết giờ làm bài! Hệ thống tự động nộp.");
+                submitQuiz();
+            }
+            updateTimerUI();
+        }, 1000);
+    }
+
+    function updateTimerUI() {
+        const m = Math.floor(timeLeft / 60);
+        const s = timeLeft % 60;
+        document.getElementById('timer-box').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    }
+
+    function renderQuestion() {
+        const q = db[currentIdx];
+        const container = document.getElementById('current-q-box');
+        let optionsHtml = q.options.map((opt, i) => `
+            <label class="quiz-opt ${userAnswers[currentIdx] === i ? 'selected' : ''}">
+                <input type="radio" name="answer" value="${i}" ${userAnswers[currentIdx] === i ? 'checked' : ''} onchange="selectOption(${i})">
+                <span>${String.fromCharCode(65+i)}. ${opt}</span>
+            </label>
+        `).join('');
+        container.innerHTML = `
+            <h2 style="margin-bottom:10px; color:var(--primary)">Câu hỏi ${currentIdx + 1}/${db.length}</h2>
+            <p style="font-size: 18px; font-weight: 600; margin-bottom: 25px; line-height:1.5;">${q.text}</p>
+            <div class="options-container">${optionsHtml}</div>
+        `;
+        document.getElementById('btn-prev').disabled = (currentIdx === 0);
+        document.getElementById('btn-next').disabled = (currentIdx === db.length - 1);
+        renderNav();
+    }
+
+    function renderNav() {
+        const panel = document.getElementById('nav-panel');
+        panel.innerHTML = db.map((_, i) => `
+            <button class="nav-btn ${currentIdx === i ? 'active' : ''} ${userAnswers[i] !== -1 ? 'answered' : ''}" 
+                    onclick="jumpTo(${i})">
+                ${i + 1}
+            </button>
+        `).join('');
+    }
+
+    function selectOption(val) { userAnswers[currentIdx] = val; renderQuestion(); }
+    function moveQ(step) { currentIdx += step; if(currentIdx < 0) currentIdx = 0; if(currentIdx >= db.length) currentIdx = db.length - 1; renderQuestion(); }
+    function jumpTo(idx) { currentIdx = idx; renderQuestion(); }
+
+    function confirmSubmit() {
+        const done = userAnswers.filter(a => a !== -1).length;
+        if(confirm(`Bạn đã làm ${done}/${db.length} câu. Bạn có chắc chắn muốn nộp bài?`)) {
+            submitQuiz();
+        }
+    }
+
+    function submitQuiz() {
+        clearInterval(quizInterval);
+        let score = 0;
+        let details = [];
+        db.forEach((q, i) => {
+            if(userAnswers[i] === q.correct) score++;
+            details.push({ text: q.text, options: [...q.options], correct: q.correct, selected: userAnswers[i] });
+        });
+        const historyItem = { user: currentUser.user, score, total: db.length, percent: ((score/db.length)*100).toFixed(1), time: new Date().toLocaleString('vi-VN'), details: details };
+        quizHistory.push(historyItem);
+        localStorage.setItem('quiz_history', JSON.stringify(quizHistory));
+        alert(`Hoàn thành! Kết quả: ${score}/${db.length} (${historyItem.percent}%)`); 
+        showPage('page-home');
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const body = document.getElementById('history-table-body'); if(!body) return;
+        body.innerHTML = quizHistory.map((h, i) => `
+            <tr>
+                <td><b>${h.user}</b></td>
+                <td>${h.score}/${h.total}</td>
+                <td>${h.percent}%</td>
+                <td><small>${h.time}</small></td>
+                <td class="action-btns">
+                    <button class="btn-small btn-success" onclick="viewAttempt(${i})">Xem</button>
+                    <button class="btn-small btn-danger" onclick="deleteHistoryItem(${i})">Xóa</button>
+                </td>
+            </tr>`).reverse().join('');
+    }
+
+    function viewAttempt(idx) {
+        const h = quizHistory[idx];
+        showPage('page-history-detail');
+        document.getElementById('rev-info-bar').innerText = `Bài làm của: ${h.user} | Kết quả: ${h.score}/${h.total} câu đúng`;
+        
+        let html = "";
+        h.details.forEach((q, i) => {
+            html += `<div class="rev-item">
+                <span class="rev-q-text">Câu ${i+1}: ${q.text}</span>`;
+            
+            q.options.forEach((opt, oIdx) => {
+                let statusClass = "";
+                let tag = "";
+                
+                if(oIdx === q.correct) statusClass = "rev-correct";
+                if(oIdx === q.selected && oIdx !== q.correct) statusClass = "rev-wrong";
+                if(oIdx === q.selected) tag = `<span class="rev-choice-tag">(Chọn)</span>`;
+                
+                html += `<div class="rev-opt ${statusClass}">
+                    <span><b>${String.fromCharCode(65+oIdx)}.</b> ${opt}</span>
+                    ${tag}
+                </div>`;
+            });
+
+            if(q.selected === -1) {
+                html += `<span class="no-choice-warning">⚠️ Thí sinh không chọn đáp án cho câu hỏi này</span>`;
+            }
+
+            html += `</div>`;
+        });
+        document.getElementById('rev-content').innerHTML = html;
+    }
+
+
+    function deleteHistoryItem(idx) { if(confirm("Xóa dòng lịch sử này?")) { quizHistory.splice(idx, 1); localStorage.setItem('quiz_history', JSON.stringify(quizHistory)); renderHistory(); } }
+    function clearAllHistory() { if(confirm("Xóa toàn bộ lịch sử?")) { quizHistory = []; localStorage.setItem('quiz_history', JSON.stringify(quizHistory)); renderHistory(); } }
+    
+    function saveDB() { localStorage.setItem('quiz_db', JSON.stringify(db)); renderAdminPreview(); }
+    
+    function renderAdminPreview() {
+        document.getElementById('count').innerText = db.length;
+        const p = document.getElementById('preview-section');
+        if(p) p.innerHTML = db.map((q, i) => `
+            <div class="card" style="border-left: 5px solid var(--primary);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                    <b style="flex:1">Câu ${i+1}: ${q.text}</b>
+                    <div style="display:flex; gap:5px;">
+                        <button class="btn-small" style="background:#6366f1" onclick="editQ(${i})">Sửa</button>
+                        <button class="btn-small btn-danger" onclick="deleteQ(${i})">Xóa</button>
+                    </div>
+                </div>
+            </div>`).reverse().join('');
+    }
+
+    function editQ(i) {
+        const q = db[i];
+        document.getElementById('manual-q').value = q.text;
+        document.getElementById('manual-a').value = q.options[0];
+        document.getElementById('manual-b').value = q.options[1];
+        document.getElementById('manual-c').value = q.options[2];
+        document.getElementById('manual-d').value = q.options[3];
+        document.getElementById('manual-correct').value = q.correct;
+        document.getElementById('edit-index').value = i;
+        
+        document.getElementById('btn-save-q').innerText = "💾 Cập nhật câu hỏi";
+        document.getElementById('btn-cancel-edit').classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelEdit() {
+        document.getElementById('manual-q').value = "";
+        document.getElementById('manual-a').value = "";
+        document.getElementById('manual-b').value = "";
+        document.getElementById('manual-c').value = "";
+        document.getElementById('manual-d').value = "";
+        document.getElementById('manual-correct').value = "0";
+        document.getElementById('edit-index').value = "-1";
+        
+        document.getElementById('btn-save-q').innerText = "➕ Thêm câu hỏi";
+        document.getElementById('btn-cancel-edit').classList.add('hidden');
+    }
+
+    function saveQuestion() {
+        const qText = document.getElementById('manual-q').value.trim();
+        const opts = [
+            document.getElementById('manual-a').value.trim(), 
+            document.getElementById('manual-b').value.trim(), 
+            document.getElementById('manual-c').value.trim(), 
+            document.getElementById('manual-d').value.trim()
+        ];
+        const cor = parseInt(document.getElementById('manual-correct').value);
+        const editIdx = parseInt(document.getElementById('edit-index').value);
+
+        if(!qText || opts.some(o => !o)) return alert("Vui lòng nhập đầy đủ thông tin!");
+
+        const newQ = { text: qText, options: opts, correct: cor };
+
+        if(editIdx === -1) {
+            db.push(newQ);
+        } else {
+            db[editIdx] = newQ;
+            cancelEdit();
+        }
+        
+        saveDB();
+        if(editIdx === -1) {
+            document.getElementById('manual-q').value = "";
+            opts.forEach((_, idx) => document.getElementById('manual-'+String.fromCharCode(97+idx)).value = "");
+        }
+    }
+
+    function deleteQ(i) { if(confirm("Bạn có chắc chắn muốn xóa câu hỏi này?")) { db.splice(i, 1); saveDB(); } }
+    function clearAllDB() { if(confirm("Xóa hết đề?")) { db = []; saveDB(); } }
+    function showPage(id) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); toggleMenu(true); }
+    function toggleMenu(f) { const s = document.getElementById('sidebar'); if(f) s.classList.remove('active'); else s.classList.toggle('active'); document.getElementById('overlay').style.display = s.classList.contains('active') ? 'block' : 'none'; }
+    function logout() { 
+        localStorage.removeItem('sys_logged_user'); 
+        clearTimeout(idleTimeout); // Xóa hẹn giờ khi logout
+        location.reload(); 
+    }
+    function switchAuth(t) { ['form-login', 'form-reg', 'form-forgot'].forEach(id => document.getElementById(id).classList.add('hidden')); document.getElementById('form-' + t).classList.remove('hidden'); }
+    function generateOTP() {
+        const t = document.getElementById('otp-target-user').value.trim();
+        const code = Math.floor(100000 + Math.random() * 900000);
+        otpStore[t] = code; localStorage.setItem('otp_store', JSON.stringify(otpStore));
+        document.getElementById('otp-display').innerText = code;
+    }
+    function handleForgot() {
+        const u = document.getElementById('forgot-user').value.trim(), o = document.getElementById('forgot-otp').value.trim(), n = document.getElementById('forgot-new-pass').value;
+        if(otpStore[u] && otpStore[u].toString() === o) {
+            usersDB[u].pass = n; delete otpStore[u];
+            localStorage.setItem('users_db', JSON.stringify(usersDB));
+            alert("Thành công!"); switchAuth('login');
+        } else alert("Mã sai!");
+    }
+    function updateAvatarUI() {
+        const url = currentUser.avatar;
+        ['side-avatar-box', 'head-avatar-box', 'profile-avatar-box'].forEach(id => {
+            const el = document.getElementById(id); if(el) {
+                if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`;
+                else el.innerText = currentUser.user.charAt(0).toUpperCase();
+            }
+        });
+    }
+    function processAvatar(input) {
+        if (input.files[0]) {
+            const r = new FileReader(); r.onload = (e) => {
+                const data = e.target.result; currentUser.avatar = data; usersDB[currentUser.user].avatar = data;
+                localStorage.setItem('sys_logged_user', JSON.stringify(currentUser)); localStorage.setItem('users_db', JSON.stringify(usersDB)); updateAvatarUI();
+            }; r.readAsDataURL(input.files[0]);
+        }
+    }
+    function renderUsersManager() {
+        const body = document.getElementById('users-table-body'); if(!body) return;
+        body.innerHTML = Object.keys(usersDB).map(u => `<tr><td>${u}</td><td>${usersDB[u].pass}</td><td><button class="btn-small btn-danger" onclick="deleteAcc('${u}')">Xóa</button></td></tr>`).join('');
+    }
+    function deleteAcc(u) { if(confirm("Xóa user?")) { delete usersDB[u]; localStorage.setItem('users_db', JSON.stringify(usersDB)); renderUsersManager(); } }
+    function studentSelfDelete() { if(confirm("XÓA VĨNH VIỄN TÀI KHOẢN?")) { delete usersDB[currentUser.user]; localStorage.setItem('users_db', JSON.stringify(usersDB)); logout(); } }
+    function handleRegister() {
+        const u = document.getElementById('reg-user').value.trim(), p = document.getElementById('reg-pass').value, c = document.getElementById('reg-confirm').value;
+        if(!u || !p || p!==c || usersDB[u]) return alert("Lỗi dữ liệu!");
+        usersDB[u] = { pass: p }; localStorage.setItem('users_db', JSON.stringify(usersDB)); alert("Xong!"); switchAuth('login');
+    }
+    function requestOTP() {
+        const u = document.getElementById('forgot-user').value.trim(); if(!usersDB[u]) return alert("Không tồn tại!");
+        alert("Đã yêu cầu. Liên hệ admin để lấy mã.");
+    }
+    function handleUpdatePassword() {
+        const oldP = document.getElementById('info-old-pass').value;
+        const newP = document.getElementById('info-new-pass').value;
+        const confP = document.getElementById('info-confirm-pass').value;
+        if(usersDB[currentUser.user].pass !== oldP) return alert("Mật khẩu cũ không đúng!");
+        if(!newP || newP !== confP) return alert("Mật khẩu mới không khớp!");
+        usersDB[currentUser.user].pass = newP;
+        localStorage.setItem('users_db', JSON.stringify(usersDB));
+        alert("Đổi mật khẩu thành công!");
+    }
+</script>
+</body>
+</html>

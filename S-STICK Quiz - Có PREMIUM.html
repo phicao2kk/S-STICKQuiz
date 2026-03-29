@@ -1,0 +1,3418 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, ial-scale=1.0">
+    <title>Hệ thống Trắc nghiệm v40.0 - Professional Admin Multi-User</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+
+/* Chấm thông báo nhỏ trên nút Menu */
+.menu-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    background-color: #ef4444; /* Màu đỏ */
+    border-radius: 50%;
+    border: 1.5px solid #1e293b;
+    z-index: 10;
+}
+
+.badge-normal {
+    background: #64748b !important; /* Màu slate-500 */
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important; /* Ép màu chữ trắng, không cho trong suốt */
+    text-fill-color: #ffffff !important;
+    background-clip: border-box !important;
+    -webkit-background-clip: border-box !important;
+    font-weight: 800 !important;
+    font-size: 10px !important;
+    padding: 2px 10px !important;
+    border-radius: 50px !important;
+    display: inline-flex !important;
+    align-items: center;
+    text-transform: uppercase;
+    margin-left: 8px;
+    box-shadow: none !important;
+}
+
+        /* --- TOAST THÔNG BÁO HIỆN ĐẠI --- */
+#toast-container {
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    z-index: 10005; /* Luôn nằm trên cùng */
+    pointer-events: none;
+}
+
+.modern-toast {
+    pointer-events: auto;
+    background: rgba(15, 23, 42, 0.85); /* Màu tối sang trọng */
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    border-left: 6px solid #6366f1; /* Thanh màu Indigo bên trái */
+    color: white;
+    padding: 18px 25px;
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 12px;
+    transform: translateX(120%);
+    transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    max-width: 380px;
+    cursor: pointer;
+}
+
+.modern-toast.show {
+    transform: translateX(0);
+}
+
+.toast-icon {
+    width: 45px;
+    height: 45px;
+    background: rgba(99, 102, 241, 0.2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    animation: toast-pulse 2s infe;
+}
+
+@keyframes toast-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5); }
+    70% { box-shadow: 0 0 0 15px rgba(99, 102, 241, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+
+.toast-content { flex: 1; }
+.toast-title { font-weight: 800; font-size: 15px; margin-bottom: 3px; color: #818cf8; text-transform: uppercase; letter-spacing: 0.5px; }
+.toast-desc { font-size: 13px; color: #cbd5e1; line-height: 1.4; }
+
+        .msg-item { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 13px; line-height: 1.4; position: relative; }
+.msg-left { align-self: flex-start; background: rgba(255,255,255,0.1); color: white; border-bottom-left-radius: 2px; }
+.msg-right { align-self: flex-end; background: #6366f1; color: white; border-bottom-right-radius: 2px; }
+.chat-user-btn { width: 100%; text-align: left; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
+.chat-user-btn:hover { background: rgba(99, 102, 241, 0.1); border-color: #6366f1; }
+.chat-user-btn.active { background: #6366f1; color: white; }
+
+        :root { 
+            --primary: #6366f1; 
+            --success: #10b981; 
+            --error: #ef4444; 
+            --bg: #0f172a; 
+            --sidebar: rgba(15, 23, 42, 0.9); 
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        .video-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            object-fit: cover;
+            opacity: 0.4;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.7) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .text-shine {
+            background: linear-gradient(to right, #fff 20%, #818cf8 40%, #818cf8 60%, #fff 80%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            text-fill-color: transparent;
+            -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infe;
+        }
+
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+
+        #sidebar { position: fixed; left: -280px; top: 0; width: 280px; height: 100%; background: var(--sidebar); color: white; transition: 0.4s; z-index: 1000; backdrop-filter: blur(10px); border-right: 1px solid rgba(255,255,255,0.1); }
+        #sidebar.active { left: 0; }
+        .avatar-circle { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background: linear-gradient(135deg, #6366f1, #a855f7); border: 2px solid rgba(255,255,255,0.2); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; overflow: hidden; color: white; }
+        .menu-item { padding: 18px 25px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #94a3b8; transition: 0.3s; }
+        .menu-item:hover { background: rgba(255,255,255,0.05); color: white; }
+        #overlay { position: fixed; display: none; width: 100%; height: 100%; top: 0; left: 0; background: rgba(0, 0, 0, 0.6); z-index: 999; backdrop-filter: blur(4px); }
+        
+        .header { background: rgba(15, 23, 42, 0.8); padding: 15px 30px; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(8px); border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top: 0; z-index: 998; }
+        
+        .card { background: rgba(30, 41, 59, 0.5); padding: 25px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 25px; transition: 0.3s; }
+        .input-control { width: 100%; padding: 12px 16px; margin: 8px 0; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; font-size: 14px; outline: none; background: rgba(0,0,0,0.2); color: white; transition: 0.3s; }
+        .input-control:focus { border-color: var(--primary); background: rgba(0,0,0,0.4); }
+        
+        .pw-container { position: relative; }
+        .pw-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; }
+        .pw-toggle:hover { color: white; }
+
+        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
+        button:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        button:active { transform: translateY(0); }
+        button:disabled { background: #475569; cursor: not-allowed; box-shadow: none; }
+        
+        .btn-success { background: var(--success); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
+        .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--error); border: 1px solid rgba(239, 68, 68, 0.2); box-shadow: none; }
+        .btn-danger:hover { background: var(--error); color: white; }
+
+        .nav-panel { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: 100%; }
+        .nav-btn { width: 100%; aspect-ratio: 1/1; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; background: rgba(255,255,255,0.05); cursor: pointer; font-weight: 700; transition: 0.2s; font-size: 13px; color: #94a3b8; display: flex; align-items: center; justify-content: center; }
+        .nav-btn.active { border-color: var(--primary); color: white; background: var(--primary); box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); }
+        .nav-btn.answered { background: var(--success); border-color: var(--success); color: white; }
+
+        .quiz-opt { display: flex; align-items: center; padding: 18px; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s ease; background: rgba(255,255,255,0.03); }
+        #timer-box { font-size: 28px; font-weight: 800; color: #ff4d4d; text-align: center; margin-bottom: 15px; background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 20px; border: 1px solid rgba(239, 68, 68, 0.2); text-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
+        
+        .hidden { display: none !important; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px; color: #94a3b8; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+        .suggestion-box { position: absolute; width: 100%; max-height: 200px; overflow-y: auto; background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(15px); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; z-index: 100; margin-top: 2px; display: none; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
+        .suggestion-item { padding: 8px 16px; cursor: pointer; font-size: 13px; color: #cbd5e1; transition: all 0.2s; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .suggestion-item:hover { background: rgba(99, 102, 241, 0.25); color: #fff; padding-left: 20px; }
+
+        #notify-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); opacity: 0; visibility: hidden; transition: 0.3s; }
+        #notify-container.active { opacity: 1; visibility: visible; }
+        #notify-box { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); padding: 30px; border-radius: 24px; width: 90%; max-width: 400px; text-align: center; transform: scale(0.9); transition: 0.3s; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        #notify-container.active #notify-box { transform: scale(1); }
+        .notify-icon { font-size: 48px; margin-bottom: 15px; display: block; }
+        .notify-title { font-size: 20px; font-weight: 800; color: white; margin-bottom: 10px; }
+        .notify-msg { font-size: 14px; color: #94a3b8; margin-bottom: 20px; line-height: 1.5; }
+        .notify-btns { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+        
+        #ocr-loading { display: none; margin-top: 10px; font-size: 12px; color: #818cf8; font-weight: bold; animation: pulse 1.5s infe; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* BỔ SUNG: Hiệu ứng Kết quả */
+        .result-circle {
+            position: relative;
+            width: 200px; height: 200px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 25px;
+            background: conic-gradient(var(--primary) var(--deg), rgba(255,255,255,0.1) 0deg);
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+            transition: 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .result-circle::after {
+            content: ""; position: absolute;
+            width: 170px; height: 170px;
+            background: #0f172a; border-radius: 50%;
+        }
+        .result-val { position: relative; z-index: 10; font-size: 48px; font-weight: 900; color: white; }
+
+        .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 30px; }
+        .stat-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; text-align: center; }
+        .stat-label { font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .stat-value { font-size: 20px; font-weight: 800; color: white; }
+
+        /* CSS BỔ SUNG CHO PREMIUM */
+        .premium-border {
+            border: 1px solid rgba(251, 191, 36, 0.4) !important;
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)) !important;
+        }
+        .text-premium {
+            background: linear-gradient(to right, #fcd34d, #fbbf24, #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .payment-box {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .check-icon {
+            color: #10b981;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .badge-vip-active {
+    background: #FFC107 !important; /* Màu vàng đậm rực rỡ */
+    color: #000000 !important;      /* Ép chữ thành MÀU ĐEN hoàn toàn */
+    font-weight: 800 !important;    /* Chữ siêu đậm */
+    padding: 3px 12px !important;
+    border-radius: 50px !important;
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    box-shadow: 0 0 15px rgba(255, 193, 7, 0.5) !important;
+    border: 1.5px solid #ffffff !important;
+    /* KHỬ HIỆU ỨNG TRONG SUỐT (nếu có) */
+    -webkit-text-fill-color: #000000 !important; 
+    text-fill-color: #000000 !important;
+    background-clip: unset !important;
+    -webkit-background-clip: border-box !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    line-height: 1 !important;
+}
+
+/* CSS CHO CHAT */
+.msg-bubble { max-width: 85%; padding: 8px 12px; border-radius: 15px; font-size: 13px; line-height: 1.4; margin-bottom: 5px; position: relative; }
+.msg-left { align-self: flex-start; background: rgba(255,255,255,0.1); color: white; border-bottom-left-radius: 2px; }
+.msg-right { align-self: flex-end; background: #6366f1; color: white; border-bottom-right-radius: 2px; }
+.chat-user-item { width: 100%; text-align: left; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; margin-bottom: 8px; }
+.chat-user-item:hover { background: rgba(99, 102, 241, 0.1); border-color: #6366f1; }
+.chat-user-item.active { background: #6366f1; border-color: #6366f1; color: white; }
+#chat-messages::-webkit-scrollbar, #admin-chat-messages::-webkit-scrollbar { width: 4px; }
+#chat-messages::-webkit-scrollbar-thumb, #admin-chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+/* Hiệu ứng Toast Thông báo Hiện đại */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10002;
+    pointer-events: none;
+}
+
+.modern-toast {
+    pointer-events: auto;
+    background: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-left: 4px solid #6366f1;
+    color: white;
+    padding: 16px 20px;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 10px;
+    transform: translateX(120%);
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    max-width: 350px;
+}
+
+.modern-toast.show {
+    transform: translateX(0);
+}
+
+.toast-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(99, 102, 241, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    animation: pulse-indigo 2s infe;
+}
+
+@keyframes pulse-indigo {
+    0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+
+.toast-content { flex: 1; }
+.toast-title { font-weight: 800; font-size: 14px; margin-bottom: 2px; color: #818cf8; }
+.toast-desc { font-size: 12px; color: #cbd5e1; line-height: 1.4; }
+
+    </style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<div id="notify-container">
+    <div id="notify-box">
+        <span id="nt-icon" class="notify-icon">🔔</span>
+        <div id="nt-title" class="notify-title">Thông báo</div>
+        <div id="nt-msg" class="notify-msg">Nội dung thông báo ở đây.</div>
+        <input type="text" id="nt-input" class="input-control hidden mb-6" placeholder="Nhập tại đây...">
+        <div class="notify-btns" id="nt-actions">
+            <button id="nt-btn-ok" onclick="closeNotify(true)">Đồng ý</button>
+            <button id="nt-btn-cancel" class="btn-danger hidden" onclick="closeNotify(false)">Hủy</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Đăng ký Premium -->
+<div id="premium-modal" class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden" onclick="closePremiumModal()">
+    <div class="premium-border rounded-[32px] w-[95%] max-w-[440px] p-8 relative shadow-2xl animate-in fade-in zoom-in duration-300" onclick="event.stopPropagation()">
+        <div class="text-center mb-6">
+            <span class="text-5xl block mb-2">🔔</span>
+            <h2 class="text-2xl font-extrabold text-white">Đăng ký Premium</h2>
+        </div>
+
+        <div class="space-y-4 mb-6">
+            <h3 class="text-center font-extrabold text-premium tracking-widest text-lg uppercase">Quyền lợi Premium</h3>
+            <ul class="space-y-2 text-[13px] text-slate-300">
+                <li>✅ Không giới hạn bộ đề</li>
+                <li>✅ Tăng tốc độ Quét ảnh (OCR)</li>
+                <li>✅ Tự động tạo mã đề con</li>
+                <li>✅ Lưu trữ đám mây an toàn</li>
+            </ul>
+        </div>
+
+        <!-- BẢNG THÔNG TIN THANH TOÁN -->
+        <div class="payment-box p-5 rounded-2xl space-y-2 text-[13px] mb-6">
+            <p class="text-amber-400 font-bold uppercase text-[12px] mb-2">Đăng ký premium chỉ với 20k/tháng:</p>
+            
+            <div class="flex justify-between items-center py-1">
+                <span>🏦 Ngân hàng:</span> 
+                <b class="text-indigo-200 font-bold">MB BANK</b>
+            </div>
+            
+            <div class="flex justify-between items-center py-1">
+                <span>🔢 Số TK:</span> 
+                <b class="text-amber-200 font-mono text-lg tracking-wider">0978877125</b>
+            </div>
+            
+            <div class="flex justify-between items-center py-1">
+                <span>👤 Chủ TK:</span> 
+                <b class="text-emerald-200 uppercase font-extrabold">CAO NGUYỄN HỒNG PHI</b>
+            </div>
+
+            <div class="pt-2 border-t border-white/5 flex justify-between items-center">
+                <span>💰 Nội dung:</span> 
+                <b class="text-indigo-400">PREMIUM <span id="premium-acc-tag">...</span></b>
+            </div>
+
+            <!-- MỤC TẢI ẢNH ĐƯỢC ĐƯA XUỐNG ĐÂY -->
+            <div class="mt-4 pt-4 border-t border-white/5">
+                <input type="file" id="input-proof-img" class="hidden" accept="image/*" onchange="previewProofImage(this)">
+                
+                <button onclick="document.getElementById('input-proof-img').click()" class="w-full py-3 bg-white/5 border border-dashed border-white/20 rounded-2xl text-slate-300 text-[10px] hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                    <span id="proof-btn-text">📸 TẢI ẢNH MINH CHỨNG (BILL)</span>
+                </button>
+
+                <div id="proof-preview-container" class="hidden mt-4 text-center">
+                    <div class="relative inline-block">
+                        <img id="proof-img-display" class="mx-auto w-24 h-36 object-cover rounded-xl border-2 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+                        <button onclick="removeProofImage()" class="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full text-[10px] flex items-center justify-center shadow-lg">✕</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2 NÚT HÀNH ĐỘNG -->
+        <div class="flex flex-col gap-3">
+            <button id="btn-transferred-request" onclick="handleTransferredRequest()" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl shadow-lg transition-all border-none">
+                ĐÃ CHUYỂN KHOẢN
+            </button>
+            <button onclick="closePremiumModal()" class="w-full py-3 bg-white/5 hover:bg-white/10 text-slate-400 font-semibold rounded-2xl transition-all border border-white/10">
+                ĐỒNG Ý (ĐÓNG)
+            </button>
+        </div>
+        
+        <p class="text-[10px] text-slate-500 text-center mt-4">Vui lòng chờ Admin duyệt sau khi nhấn chuyển khoản.</p>
+    </div>
+</div>
+
+<video autoplay muted loop playsinline class="video-bg">
+    <source src="https://res.cloudinary.com/drqnbdzx4/video/upload/v1772519461/2697038-uhd_3840_2160_30fps_k2qdnz.mp4" type="video/mp4">
+</video>
+
+<div id="overlay" onclick="toggleMenu(true)"></div>
+
+<div id="sidebar">
+    <div style="padding: 35px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <div id="side-avatar-box" class="avatar-circle">?</div>
+        <b id="side-username" class="text-shine" style="font-size: 18px;">Khách</b>
+    </div>
+    <div class="menu-item" onclick="showPage('page-home')">🏠 Trang chủ</div>
+    <div id="admin-menu-folders" class="menu-item hidden" onclick="showPage('page-folders-manager')">📂 Quản lý Bộ đề</div>
+    <div id="admin-menu-storage" class="menu-item hidden" onclick="showPage('page-storage'); renderHistoryTable();">📊 Lịch sử làm bài</div>
+    <div id="admin-menu-chat" class="menu-item hidden" onclick="showPage('page-chat-admin'); loadChatUserList();">
+    💬 Tin nhắn hỗ trợ 
+    <span id="sidebar-chat-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
+</div>
+    <div id="admin-menu-users" class="menu-item hidden" onclick="showPage('page-users-manager')">👥 Quản lý tài khoản</div>
+    <div id="admin-menu-otp" class="menu-item hidden" onclick="showPage('page-otp-manager')">🔑 Cấp mã đổi MK</div>
+    <!-- NÚT MỚI THÊM VÀO ĐÂY -->
+<div id="admin-menu-premium" class="menu-item hidden" onclick="showPage('page-premium-manager')">
+    👑 Phê duyệt Premium
+    <span id="sidebar-premium-badge" class="bg-amber-500 text-black text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
+</div>
+    <div class="menu-item" onclick="showPage('page-info')">👤 Hồ sơ & Đổi MK</div>
+    <!-- NÚT PREMIUM BỔ SUNG -->
+    <div id="premium-menu-item" class="menu-item hidden" onclick="openPremiumModal()" style="color: #fbbf24; font-weight: 800; background: rgba(251, 191, 36, 0.05);">💎 Nâng cấp Premium</div>
+    
+    <div class="menu-item" onclick="logout()" style="color: #fb7185; margin-top: 30px; font-weight: 600;">🔴 Đăng xuất</div>
+</div>
+
+<div id="header" class="header hidden">
+    <div class="flex items-center">
+        <div onclick="toggleMenu()" class="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 cursor-pointer transition">
+    ☰
+    <span id="global-menu-dot" class="menu-dot hidden"></span>
+</div>
+        <div class="font-bold text-lg ml-3 tracking-wide text-shine">
+            S-TICK Quiz
+            <span id="role-badge" class="text-white text-[10px] px-2 py-0.5 rounded-full ml-2 uppercase font-extrabold shadow-[0_0_15px_rgba(255,255,255,0.3)]"></span>
+        </div>
+    </div>
+    <div id="head-avatar-box" class="avatar-circle" style="width: 38px; height: 38px; margin:0; font-size: 14px;">?</div>
+</div>
+
+<div id="login-screen" class="container mx-auto px-4" style="max-width: 450px; margin-top: 80px;">
+    <div class="card glass shadow-2xl">
+        <div class="text-center pb-6">
+            <img src="https://i.ibb.co/nNCs81Dp/LOGO-S-STICK.png" alt="Logo" class="w-24 h-24 mx-auto rounded-full border-2 border-indigo-500/50 p-1 shadow-[0_0_20px_rgba(99,102,241,0.5)] object-cover bg-white/10 backdrop-blur-sm">
+            <h1 class="text-3xl font-extrabold mt-4 text-shine">S-TICK Quiz</h1>
+            <p class="text-slate-400 text-sm mt-1">Hệ thống thi trắc nghiệm trực truyến</p>
+        </div>
+        
+        <div class="flex bg-black/20 rounded-xl p-1 mb-6">
+            <button id="tab-login" class="flex-1 py-2.5 rounded-lg font-semibold transition" onclick="switchAuth('login')">Đăng nhập</button>
+            <button id="tab-reg" class="flex-1 py-2.5 rounded-lg font-semibold text-slate-400 transition" onclick="switchAuth('reg')">Đăng ký</button>
+            <button id="tab-join" class="flex-1 py-2.5 rounded-lg font-semibold text-slate-400 transition" onclick="switchAuth('join')">Vào thi</button>
+        </div>
+
+        <div id="form-login" class="space-y-4">
+            <div class="relative" id="login-user-container">
+                <input type="text" id="login-user" class="input-control" placeholder="Tài khoản / Số điện thoại" autocomplete="off">
+                <div id="login-suggestions" class="suggestion-box"></div>
+            </div>
+            <div class="pw-container">
+                <input type="password" id="login-pass" class="input-control" placeholder="Mật khẩu">
+                <span class="pw-toggle" onclick="togglePassword('login-pass')">👁️</span>
+            </div>
+            <button onclick="handleLogin()" class="w-full py-4 mt-2">VÀO HỆ THỐNG</button>
+            <p class="text-center text-xs text-slate-400 cursor-pointer hover:text-indigo-400" onclick="switchAuth('forgot')">Quên mật khẩu?</p>
+        </div>
+
+        <div id="form-join" class="hidden space-y-4">
+            <input type="text" id="join-code" class="input-control text-center text-2xl tracking-[5px] font-bold" placeholder="NHẬP MÃ ĐỀ" maxlength="6">
+            <input type="text" id="join-name" class="input-control" placeholder="Họ và tên của bạn">
+            <button onclick="handleJoinQuiz()" class="btn-success w-full py-4 mt-2">XÁC NHẬN VÀO THI</button>
+            <p class="text-center text-xs text-indigo-400 cursor-pointer" onclick="switchAuth('login')">Quay lại đăng nhập</p>
+        </div>
+
+        <div id="form-reg" class="hidden space-y-4">
+            <input type="text" id="reg-fullname" class="input-control" placeholder="Họ và tên thí sinh">
+            <input type="text" id="reg-user" class="input-control" placeholder="Tên tài khoản mới">
+            <div class="pw-container">
+                <input type="password" id="reg-pass" class="input-control" placeholder="Mật khẩu">
+                <span class="pw-toggle" onclick="togglePassword('reg-pass')">👁️</span>
+            </div>
+            <div class="pw-container">
+                <input type="password" id="reg-confirm" class="input-control" placeholder="Xác nhận mật khẩu">
+                <span class="pw-toggle" onclick="togglePassword('reg-confirm')">👁️</span>
+            </div>
+            <button onclick="handleRegister()" class="btn-success w-full py-4 mt-2">ĐĂNG KÝ NGAY</button>
+        </div>
+
+        <div id="form-forgot" class="hidden space-y-4">
+            <div class="flex gap-2">
+                <input type="text" id="forgot-user" class="input-control" placeholder="Tài khoản">
+                <button onclick="requestOTP()" class="px-4 text-xs whitespace-nowrap">LẤY MÃ</button>
+            </div>
+            <input type="text" id="forgot-otp" class="input-control" placeholder="Mã OTP">
+            <div class="pw-container">
+                <input type="password" id="forgot-new-pass" class="input-control" placeholder="Mật khẩu mới">
+                <span class="pw-toggle" onclick="togglePassword('forgot-new-pass')">👁️</span>
+            </div>
+            <button onclick="handleForgot()" class="w-full py-4">XÁC NHẬN ĐỔI MẬT KHẨU</button>
+            <p class="text-center text-xs text-indigo-400 cursor-pointer" onclick="switchAuth('login')">Quay lại đăng nhập</p>
+        </div>
+    </div>
+</div>
+
+<div id="app-content" class="container mx-auto max-w-5xl px-4 hidden py-8">
+    <div id="page-home" class="page">
+        <!-- Vùng Admin này sẽ hiển thị cho TẤT CẢ mọi người -->
+        <div id="admin-zone" class="hidden space-y-6">
+            <div class="card glass">
+                <h3 class="text-xl font-bold mb-6 flex items-center gap-2"><span class="p-2 bg-indigo-500/20 rounded-lg">🛠️</span> QUẢN LÝ ĐỀ THI</h3>
+                
+                <div class="space-y-4">
+                    <label class="block text-sm font-semibold text-slate-300 uppercase tracking-wider">1. Nhập từ file Word hoặc Hình ảnh</label>
+                    
+                    <!-- GHI CHÚ QUY TẮC NHẬP FILE -->
+                    <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-4">
+                        <p class="text-[11px] text-amber-400 leading-relaxed">
+                            <span class="font-bold uppercase inline-block mb-1">⚠️ Quy tắc soạn thảo:</span><br>
+                            - Câu hỏi bắt đầu bằng chữ <b class="text-white">"Câu 1:"</b>, <b class="text-white">"Câu 2:"</b>...<br>
+                            - Các đáp án bắt đầu bằng <b class="text-white">"A."</b>, <b class="text-white">"B."</b>, <b class="text-white">"C."</b>, <b class="text-white">"D."</b><br>
+                            - Phải có dòng <b class="text-white text-xs">"Đáp án: A"</b> (hoặc B, C, D) ở cuối mỗi câu để hệ thống nhận diện câu đúng.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-white/5 rounded-xl border border-white/10">
+                            <span class="text-[10px] text-indigo-400 font-bold">FILE WORD (.DOCX)</span>
+                            <div class="flex gap-2 mt-2">
+                                <input type="file" id="wordFile" accept=".docx" class="input-control text-xs">
+                                <button onclick="previewWordFile()" class="bg-indigo-600 text-xs px-3">KIỂM TRA</button>
+                            </div>
+                            <p class="mt-2 text-[9px] text-yellow-300 font-bold italic">* Hệ thống sẽ quét text và tìm dòng "Đáp án: ..."</p>
+                        </div>
+                        <div class="p-4 bg-white/5 rounded-xl border border-white/10">
+                            <span class="text-[10px] text-indigo-400 font-bold">HÌNH ẢNH (OCR)</span>
+                            <div class="flex gap-2 mt-2">
+                                <input type="file" id="imageFile" accept="image/*" class="input-control text-xs">
+                                <button onclick="previewImageFile()" class="bg-indigo-600 text-xs px-3">QUÉT ẢNH</button>
+                            </div>
+                            <p class="mt-2 text-[9px] text-yellow-300 font-bold italic">* Ảnh cần rõ nét, có dòng "Đáp án: A/B/C/D"</p>
+                            <div id="ocr-loading">🚀 Đang nhận diện chữ trong ảnh, vui lòng đợi...</div>
+                        </div>
+                    </div>
+
+                    <div id="confirm-upload-zone" class="hidden p-5 bg-orange-500/10 border border-orange-500/20 rounded-2xl">
+                        <p class="text-orange-400 font-bold mb-2">⚠️ Phát hiện <span id="temp-count">0</span> câu hỏi:</p>
+                        <div id="temp-preview" class="text-xs text-slate-400 bg-black/20 p-3 rounded-lg mb-4 italic"></div>
+                        
+                        <div class="mb-4 p-3 bg-white/5 rounded-xl border border-white/10">
+                            <label class="block text-[10px] font-bold text-indigo-300 mb-2 uppercase">Chọn bộ đề để nhập nhanh:</label>
+                            <div class="flex gap-2">
+                                <select id="import-to-folder-select" class="input-control text-xs py-2"></select>
+                                <button onclick="importTempToFolder()" class="bg-indigo-500 text-[10px] px-3 whitespace-nowrap">NHẬP VÀO BỘ ĐỀ</button>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button class="btn-success px-6" onclick="confirmImport()">LƯU VÀO NGÂN HÀNG CHUNG</button>
+                            <button onclick="cancelImport()" class="bg-transparent shadow-none hover:bg-white/5">Hủy bỏ</button>
+                        </div>
+                    </div>
+
+                    <div class="pt-6">
+                        <label class="block text-sm font-semibold text-slate-300 uppercase tracking-wider mb-2" id="label-edit-mode">2. Nhập câu hỏi thủ công</label>
+                        <textarea id="manual-q" class="input-control min-h-[100px]" placeholder="Nội dung câu hỏi..."></textarea>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                            <input type="text" id="manual-a" class="input-control" placeholder="Đáp án A">
+                            <input type="text" id="manual-b" class="input-control" placeholder="Đáp án B">
+                            <input type="text" id="manual-c" class="input-control" placeholder="Đáp án C">
+                            <input type="text" id="manual-d" class="input-control" placeholder="Đáp án D">
+                        </div>
+                        
+                        <div class="flex flex-col md:flex-row gap-4 mt-4 p-5 bg-white/5 rounded-2xl border border-white/10">
+                            <div class="flex-1">
+                                <label class="block text-[10px] font-bold text-indigo-300 mb-2 uppercase">Lựa chọn Đáp án đúng:</label>
+                                <select id="manual-correct" class="input-control">
+                                    <option value="0">A đúng</option><option value="1">B đúng</option><option value="2">C đúng</option><option value="3">D đúng</option>
+                                </select>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-[10px] font-bold text-indigo-300 mb-6 uppercase">Hành động:</label>
+                                <div class="flex flex-wrap gap-2">
+                                    <input type="hidden" id="edit-index" value="-1">
+                                    <input type="hidden" id="edit-folder-q-index" value="-1">
+                                    <button id="btn-save-q" class="btn-success flex-1" onclick="saveQuestion()">LƯU VÀO NGÂN HÀNG</button>
+                                    <button id="btn-cancel-edit" class="hidden bg-slate-600 px-4" onclick="cancelEdit()">HỦY</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/20">
+                            <label class="block text-[10px] font-bold text-emerald-400 mb-2 uppercase italic">Hoặc thêm nhanh vào Bộ đề cụ thể:</label>
+                            <div class="flex gap-2">
+                                <select id="manual-to-folder-select" class="input-control text-xs py-2"></select>
+                                <button onclick="saveManualQToFolder()" class="bg-emerald-600 text-[10px] px-6 whitespace-nowrap">➕ THÊM VÀO BỘ ĐỀ</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-10 flex justify-between items-center p-4 bg-black/20 rounded-xl">
+                    <span class="text-slate-400">Ngân hàng câu hỏi: <b id="count" class="text-indigo-400 text-xl ml-2">0</b></span>
+                    <button class="btn-danger text-xs px-4 py-2" onclick="clearAllDB()">🗑️ XÓA SẠCH ĐỀ</button>
+                </div>
+            </div>
+            <div id="preview-section" class="grid grid-cols-1 gap-4"></div>
+        </div>
+
+        <!-- VÙNG DÀNH CHO THÍ SINH (ĐÃ CẬP NHẬT NÚT BẤM) -->
+        <div id="student-zone" class="hidden">
+            <div class="card glass text-center py-16 px-8 max-w-2xl mx-auto shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-indigo-500"></div>
+                <h2 class="text-4xl font-black mb-4 text-shine">SẴN SÀNG CHƯA?</h2>
+                <p id="display-exam-name" class="text-slate-400 mb-10 text-lg font-semibold text-indigo-300">Đang tải tên bài thi...</p>
+                    <p class="text-slate-400 mb-10 text-sm"><span class="text-indigo-400">45 Phút | Tự động chấm điểm</span></p>
+                
+                <!-- THAY ĐỔI: startQuiz() thành startQuizFromCode() để kích hoạt chống F5 và kiểm tra 1 lần làm -->
+                <button onclick="startQuizFromCode()" class="text-xl py-5 px-12 rounded-2xl shadow-indigo-500/20 shadow-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all">
+                    BẮT ĐẦU THI NGAY
+                </button>
+            </div>
+        </div>
+    </div>
+
+<!-- Trang Quản lý Phê duyệt Premium -->
+<div id="page-premium-manager" class="page hidden">
+    <!-- KHỐI 1: BẢNG DUYỆT BILL (Yêu cầu chờ xử lý) -->
+    <div class="card glass">
+        <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+            <span class="p-2 bg-amber-500/20 rounded-lg text-amber-500">👑</span> YÊU CẦU NÂNG CẤP PREMIUM
+        </h3>
+        <div class="overflow-x-auto">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Người yêu cầu</th>
+                        <th>Minh chứng</th>
+                        <th>Trạng thái</th>
+                        <th>Mã kích hoạt</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="premium-requests-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- KHỐI 2: BẢN MASTER (Dán nó vào đây để nó chỉ hiện khi bấm vào Menu) -->
+    <div id="root-master-premium-panel" class="hidden">
+        <div class="card glass mt-12 border-amber-500/20 shadow-[0_0_20px_rgba(251,191,36,0.1)]">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-black text-amber-400 flex items-center gap-2">
+                    <span class="p-2 bg-amber-500/20 rounded-lg">👑</span> BẢN MASTER: HỘI VIÊN PREMIUM
+                </h3>
+                <span id="premium-count-badge" class="bg-amber-500 text-black text-[10px] font-bold px-2 py-1 rounded-full">0 THÀNH VIÊN</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-slate-400 text-[11px] uppercase tracking-wider">
+                            <th class="text-left pb-4">Tài khoản & Họ tên</th>
+                            <th class="text-center pb-4">Ngày Kích Hoạt</th>
+                            <th class="text-center pb-4">Ngày Hết Hạn</th>
+                            <th class="text-center pb-4">Đếm ngược</th>
+                            <th class="text-right pb-4">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="master-premium-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PHẦN DÀNH RIÊNG CHO ADMIN GỐC: QUẢN LÝ TẬP TRUNG -->
+<div id="root-master-premium-panel" class="hidden">
+    <div class="card glass mt-12 border-amber-500/20 shadow-[0_0_20px_rgba(251,191,36,0.1)]">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-black text-amber-400 flex items-center gap-2">
+                <span class="p-2 bg-amber-500/20 rounded-lg">👑</span> BẢN MASTER: HỘI VIÊN PREMIUM
+            </h3>
+            <span id="premium-count-badge" class="bg-amber-500 text-black text-[10px] font-bold px-2 py-1 rounded-full">0 THÀNH VIÊN</span>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-slate-400 text-[11px] uppercase tracking-wider">
+                        <th class="text-left pb-4">Tài khoản & Họ tên</th>
+                        <th class="text-center pb-4">Ngày Kích Hoạt</th>
+                        <th class="text-center pb-4">Ngày Hết Hạn</th>
+                        <th class="text-center pb-4">Đếm ngược</th>
+                        <th class="text-right pb-4">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="master-premium-body">
+                    <!-- Dữ liệu Premium sẽ tự động đổ vào đây -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+    <!-- Trang Kết Quả Hoàn Thành -->
+<div id="page-result" class="page hidden">
+    <div class="max-w-2xl mx-auto text-center">
+        <div class="card glass py-12 px-8 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-indigo-500"></div>
+            <h2 id="rs-exam-name-display" class="text-3xl font-black mb-1 text-shine uppercase">Kết quả bài thi</h2>
+            <p class="text-slate-400 text-sm mb-10">Hệ thống đã ghi nhận bài làm của bạn</p>
+
+            <div class="result-circle" id="rs-circle" style="--deg: 0deg">
+                <div class="result-val" id="rs-percent">0%</div>
+            </div>
+
+            <h3 id="rs-grade" class="text-2xl font-extrabold text-white mb-8 tracking-wide">XẾP LOẠI: ...</h3>
+
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Số câu đúng</div>
+                    <div class="stat-value text-emerald-400" id="rs-correct">0/0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Thời gian</div>
+                    <div class="stat-value" id="rs-time">00:00</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Thang điểm 10</div>
+                    <div class="stat-value text-indigo-400" id="rs-point">0.0</div>
+                </div>
+            </div>
+
+            <div class="mt-12">
+                <!-- Thay đổi hàm onclick thành handleFinishQuiz() -->
+                <button onclick="handleFinishQuiz()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-lg transition">HOÀN TẤT & THOÁT</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <div id="page-folders-manager" class="page hidden">
+        <div class="card glass">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-shine">📂 DANH SÁCH BỘ ĐỀ</h3>
+                <button class="btn-success text-xs px-4" onclick="createNewFolder()">➕ TẠO BỘ ĐỀ MỚI</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="folders-list"></div>
+        </div>
+    </div>
+
+    <div id="page-folder-detail" class="page hidden">
+        <div class="card glass">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 id="folder-detail-title" class="text-2xl font-bold text-white cursor-pointer hover:text-indigo-400" title="Click để đổi tên" onclick="editCurrentFolderName()">Tên bộ đề</h3>
+                    <p id="folder-detail-count" class="text-slate-400 text-sm"></p>
+                </div>
+                <button onclick="showPage('page-folders-manager')" class="bg-slate-700 px-6">QUAY LẠI</button>
+            </div>
+            
+            <div class="bg-black/20 p-4 rounded-xl mb-6 border border-white/10">
+                <label class="block text-xs font-bold text-indigo-400 uppercase mb-2">Thêm câu hỏi từ ngân hàng vào bộ đề này:</label>
+                <div class="flex gap-2">
+                    <select id="select-q-to-add" class="input-control flex-1"></select>
+                    <button onclick="addQToFolder()" class="btn-success whitespace-nowrap">THÊM VÀO</button>
+                </div>
+            </div>
+
+            <div id="folder-questions-list" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <div id="page-quiz-view" class="page hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-8">
+                <div class="card glass min-h-[500px] flex flex-col shadow-2xl relative">
+                    <div id="current-q-box" class="flex-1"></div>
+                    <div class="flex justify-between items-center mt-8 pt-6 border-t border-white/10">
+                        <button id="btn-prev" onclick="moveQ(-1)" class="bg-white/5 border border-white/10 shadow-none px-8">TRƯỚC</button>
+                        <button id="btn-next" onclick="moveQ(1)" class="px-8">KẾ TIẾP</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 space-y-4">
+                <div id="timer-box" class="glass font-mono">45:00</div>
+                <div class="card glass">
+                    <h4 class="text-center font-bold text-slate-400 mb-6 uppercase tracking-widest text-xs">Tiến trình làm bài</h4>
+                    <div id="nav-panel" class="nav-panel"></div>
+                    <button class="btn-success w-full mt-8 py-5 text-lg" onclick="confirmSubmit()">NỘP BÀI THI</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-storage" class="page hidden">
+        <div class="card glass">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-shine">📊 LỊCH SỬ LÀM BÀI</h3>
+                <button class="btn-danger text-xs px-4" onclick="clearAllHistory()">XÓA TẤT CẢ</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="py-4 pl-4">Thí sinh & Thời gian</th>
+                            <th class="text-center">Số câu đúng</th>
+                            <th class="text-center">Điểm số</th>
+                            <th class="text-center">Tỷ lệ</th>
+                            <th class="text-right pr-4">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-history-detail" class="page hidden">
+        <div class="card glass">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold">📝 CHI TIẾT BÀI THI</h3>
+                <button onclick="showPage('page-storage')" class="bg-slate-700 px-6">QUAY LẠI</button>
+            </div>
+            <div id="rev-info-bar" class="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl mb-6 text-indigo-300 font-semibold"></div>
+            <div id="rev-content" class="space-y-6"></div>
+        </div>
+    </div>
+
+    <div id="page-users-manager" class="page hidden">
+        <div class="card glass">
+            <h3 class="text-xl font-bold mb-6">👥 QUẢN LÝ TÀI KHOẢN</h3>
+            <div class="overflow-x-auto">
+                <table>
+                    <thead><tr><th>Họ tên</th><th>Tài khoản</th><th>Mật khẩu</th><th>Hành động</th></tr></thead>
+                    <tbody id="users-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-otp-manager" class="page hidden">
+        <div class="card glass">
+            <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <span class="p-2 bg-indigo-500/20 rounded-lg">🔑</span> QUẢN LÝ YÊU CẦU CẤP MÃ
+            </h3>
+            <div class="overflow-x-auto">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Người yêu cầu</th>
+                            <th>Trạng thái</th>
+                            <th>Mã OTP</th>
+                            <th>Hết hạn</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="otp-requests-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-info" class="page hidden">
+        <div class="card glass max-w-3xl mx-auto">
+            <h2 class="text-2xl font-bold mb-8">👤 HỒ SƠ CÁ NHÂN</h2>
+            <div class="flex flex-wrap gap-10">
+                <div class="text-center space-y-4">
+                    <div id="profile-avatar-box" class="avatar-circle w-32 h-32 text-4xl mx-auto shadow-2xl">?</div>
+                    <button class="text-xs bg-white/10 px-4 py-2 rounded-full" onclick="document.getElementById('avatar-input').click()">Thay đổi ảnh</button>
+                    <input type="file" id="avatar-input" class="hidden" onchange="processAvatar(this)">
+                </div>
+                <div class="flex-1 min-w-[300px] space-y-6">
+                    <div class="bg-black/20 p-4 rounded-xl border border-white/5">
+                        <p class="text-slate-400 text-sm">Họ và tên</p>
+                        <b id="inf-fullname" class="text-white text-lg">---</b>
+                        <p class="text-slate-400 text-sm mt-3">Tài khoản</p>
+                        <b id="inf-email" class="text-indigo-400 text-lg">---</b>
+                    </div>
+                    
+                    <div class="space-y-4 pt-4 border-t border-white/10">
+                        <h4 class="font-bold text-slate-300">🔐 ĐỔI MẬT KHẨU</h4>
+                        <div class="pw-container">
+                            <input type="password" id="info-old-pass" class="input-control" placeholder="Mật khẩu cũ">
+                            <span class="pw-toggle" onclick="togglePassword('info-old-pass')">👁️</span>
+                        </div>
+                        <div class="pw-container">
+                            <input type="password" id="info-new-pass" class="input-control" placeholder="Mật khẩu mới">
+                            <span class="pw-toggle" onclick="togglePassword('info-new-pass')">👁️</span>
+                        </div>
+                        <div class="pw-container">
+                            <input type="password" id="info-confirm-pass" class="input-control" placeholder="Xác nhận mật khẩu mới">
+                            <span class="pw-toggle" onclick="togglePassword('confirm-pass')">👁️</span>
+                        </div>
+                        <button onclick="handleUpdatePassword()" class="btn-success w-full">CẬP NHẬT MẬT KHẨU</button>
+                    </div>
+
+                    <div id="self-delete-section" class="hidden p-5 bg-red-500/10 border border-red-500/20 rounded-2xl mt-8">
+                        <h4 class="text-red-400 font-bold mb-3 uppercase text-xs">Vùng nguy hiểm</h4>
+                        <button onclick="studentSelfDelete()" class="btn-danger w-full py-3 border-none shadow-none">XÓA TÀI KHOẢN VĨNH VIỄN</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- PHẦN NHẬP MÃ PREMIUM (CHỈ HIỆN CHO BẢN THƯỜNG) -->
+<div id="premium-activation-card" class="p-5 premium-border rounded-2xl mt-8">
+    <h4 class="text-amber-400 font-extrabold mb-3 uppercase text-xs flex items-center gap-2">
+        👑 Kích hoạt gói Premium
+    </h4>
+    <p class="text-[11px] text-slate-400 mb-4 italic">Nhập mã kích hoạt Admin đã gửi cho bạn để mở khóa toàn bộ tính năng.</p>
+    <div class="flex gap-2">
+        <input type="text" id="activation-code-input" class="input-control font-mono" placeholder="Nhập mã 16 ký tự...">
+        <button onclick="handleActivatePremium()" class="btn-success whitespace-nowrap px-6">KÍCH HOẠT</button>
+    </div>
+</div>
+
+<!-- THÔNG BÁO ĐÃ LÀ PREMIUM -->
+<div id="premium-active-status" class="hidden p-5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl mt-8 text-center">
+    <span class="text-amber-400 text-2xl">👑</span>
+    <h4 class="text-emerald-400 font-bold uppercase text-sm mt-2">Tài khoản Premium Đã kích hoạt</h4>
+    <p class="text-[10px] text-slate-400">Bạn đang tận hưởng mọi quyền lợi cao cấp nhất.</p>
+</div>
+</div>
+
+<!-- THANH BĂNG CỐ ĐỊNH DƯỚI ĐÁY MÀN HÌNH -->
+<div class="fixed bottom-0 left-0 right-0 bg-slate-950/40 backdrop-blur-md border-t border-white/5 py-1.5 z-[9999] pointer-events-none">
+    <p class="text-[9px] text-slate-500/80 uppercase tracking-[2px] text-center flex items-center justify-center gap-2">
+        <span>© 2026</span> 
+        <span class="w-[1px] h-2 bg-white/10"></span> 
+        <span>Thiết kế bởi <b class="text-indigo-400/70 font-extrabold">Cao Nguyễn Hồng Phi</b></span>
+    </p>
+</div>
+
+<script>
+    let premiumProofBase64 = ""; // Lưu ảnh bill đã nén
+    const NOTI_SOUND = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+    let isFirstLogin = true; 
+    let isialLoad = true;
+    
+
+// 1. Hàm xem trước ảnh khi người dùng chọn
+function previewProofImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    sysNotify("Đang xử lý", "Đang tối ưu ảnh bill...", "info");
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width, height = img.height;
+            const MAX = 600; // Giới hạn ảnh 600px để siêu nhẹ
+            if (width > height) { if (width > MAX) { height *= MAX / width; width = MAX; } }
+            else { if (height > MAX) { width *= MAX / height; height = MAX; } }
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            premiumProofBase64 = canvas.toDataURL('image/jpeg', 0.6); // Nén 60%
+            document.getElementById('proof-img-display').src = premiumProofBase64;
+            document.getElementById('proof-preview-container').classList.remove('hidden');
+            document.getElementById('proof-btn-text').innerHTML = "✅ ĐÃ CHỌN ẢNH XONG";
+            closeNotify();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+async function handleTransferredRequest() {
+    if (!premiumProofBase64) return sysNotify("Thiếu ảnh", "Vui lòng tải bill thanh toán!", "warn");
+
+    sysNotify("Đang gửi", "Vui lòng đợi giây lát...", "info");
+    rdb.ref('system/global_premium_requests').once('value', (snap) => {
+        let preDB = snap.val() || [];
+        if(preDB.some(r => r.user === currentUser.user && r.status === 'pending')) {
+            return sysNotify("Chờ duyệt", "Bạn đã gửi yêu cầu rồi, hãy đợi Admin!", "warn");
+        }
+
+        preDB.push({
+            user: currentUser.user,
+            fullname: currentUser.name,
+            status: 'pending',
+            proofImg: premiumProofBase64,
+            createdAt: Date.now()
+        });
+
+        rdb.ref('system/global_premium_requests').set(preDB).then(() => {
+            sysNotify("Thành công", "Đã gửi bill! Admin sẽ duyệt cho bạn.", "success");
+            closePremiumModal();
+            removeProofImage();
+        });
+    });
+}
+
+// 2. Hàm xóa ảnh nếu chọn nhầm
+function removeProofImage() {
+    premiumProofBase64 = "";
+    document.getElementById('input-proof-img').value = "";
+    document.getElementById('proof-preview-container').classList.add('hidden');
+    document.getElementById('proof-btn-text').innerHTML = "📸 TẢI ẢNH MINH CHỨNG (BILL)";
+}
+
+// 3. Cập nhật hàm handleTransferredRequest (Thay thế hàm cũ của bạn)
+async function handleTransferredRequest() {
+    if (!premiumProofBase64 || premiumProofBase64.length < 100) {
+        return sysNotify("Thiếu minh chứng", "Vui lòng tải ảnh bill lên trước!", "warn");
+    }
+
+    sysNotify("Đang gửi...", "Đang tải dữ liệu lên hệ thống...", "info");
+
+    rdb.ref('system/global_premium_requests').once('value', (snap) => {
+        let preDB = snap.val() || [];
+        
+        // Chống gửi trùng
+        if(preDB.some(r => r.user === currentUser.user && r.status === 'pending')) {
+            return sysNotify("Chờ duyệt", "Yêu cầu trước đó của bạn đang được xử lý!", "warn");
+        }
+
+        const newRequest = { 
+            user: currentUser.user, 
+            fullname: currentUser.name, 
+            status: 'pending', 
+            code: '', 
+            proofImg: premiumProofBase64, // Ảnh đã nén
+            createdAt: Date.now() 
+        };
+
+        preDB.push(newRequest);
+        
+        rdb.ref('system/global_premium_requests').set(preDB).then(() => {
+            sysNotify("Thành công", "Đã gửi bill thành công! Chờ Admin duyệt.", "success");
+            closePremiumModal();
+            removeProofImage();
+        }).catch(err => {
+            sysNotify("Lỗi", "Đường truyền quá tải, hãy thử lại ảnh khác!", "error");
+        });
+    });
+}
+
+function renderHistoryTable() {
+    const container = document.getElementById('history-table-body');
+    if(!container) return;
+
+    if (quizHistory.length === 0) {
+        container.innerHTML = '<tr><td colspan="5" class="text-center text-slate-500 py-12">Chưa có dữ liệu làm bài nào.</td></tr>';
+        return;
+    }
+
+    const grouped = quizHistory.reduce((acc, item) => {
+        const key = item.examName || "Bộ đề không tên";
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(item);
+        return acc;
+    }, {});
+
+    let fullHtml = "";
+    
+    for (const examName in grouped) {
+        const folderSubmissions = grouped[examName];
+        
+        // Hàng tiêu đề của từng bộ đề + Nút xóa tất cả của bộ đề đó
+        fullHtml += `
+            <tr class="bg-indigo-500/10">
+                <td colspan="5" class="py-3 px-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-indigo-400 font-black text-sm uppercase">📂 BỘ ĐỀ: ${examName}</span>
+                            <span class="bg-indigo-500/20 text-[10px] px-2 py-0.5 rounded-full text-indigo-300">${folderSubmissions.length} lượt làm bài</span>
+                        </div>
+                        <!-- NÚT XÓA TẤT CẢ LỊCH SỬ CỦA BỘ ĐỀ NÀY -->
+                        <button onclick="clearSpecificFolderHistory('${examName}')" class="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white text-[10px] px-3 py-1 rounded-lg transition-all font-bold">
+                            🗑️ XÓA SẠCH LỊCH SỬ ĐỀ NÀY
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        folderSubmissions.slice().reverse().forEach((h) => {
+    fullHtml += `
+        <tr class="hover:bg-white/5 transition border-b border-white/5">
+            <td class="pl-8 py-4">
+                <div class="font-bold text-white">${h.fullname}</div>
+                <div class="text-[9px] text-slate-500 font-mono">
+                    Ngày: ${h.time} | Làm bài trong: <b class="text-indigo-400">${h.duration || 'N/A'}</b>
+                </div>
+            </td>
+            <td class="text-center">
+                <span class="text-emerald-400 font-black">${h.score}</span><span class="text-slate-500 text-xs">/${h.total}</span>
+            </td>
+            <td class="text-center font-mono text-indigo-400 font-bold">${h.point}</td>
+            <td class="text-center">
+                <span class="px-2 py-1 rounded-md text-[9px] font-bold ${h.percent >= 50 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}">
+                    ${h.percent}%
+                </span>
+            </td>
+            <td class="text-right pr-4">
+                <div class="flex justify-end gap-2">
+                    <button onclick="viewHistoryDetailByKey('${h.fbKey}')" class="bg-white/5 hover:bg-indigo-600 p-2 rounded-xl transition-all group">
+                        <span class="text-[10px] text-indigo-300 group-hover:text-white font-bold px-2">CHI TIẾT</span>
+                    </button>
+                    <button onclick="resetSingleAttempt('${h.fbKey}', '${h.examCode}', '${h.user}')" class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white p-2 rounded-xl transition-all" title="Xóa & Cho làm lại">
+                        🔄
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+});
+    }
+    container.innerHTML = fullHtml;
+}
+
+// Bổ sung hàm xem chi tiết theo Key
+function viewHistoryDetailByKey(fbKey) {
+    const h = quizHistory.find(item => item.fbKey === fbKey);
+    if(h) {
+        showPage('page-history-detail');
+        document.getElementById('rev-info-bar').innerText = `Thí sinh: ${h.fullname} | Điểm: ${h.point} | Ngày: ${h.time}`;
+        document.getElementById('rev-content').innerHTML = h.details.map((d, i) => `
+            <div class="p-4 rounded-xl ${d.selected === d.correct ? 'bg-emerald-500/5 border border-emerald-500/20' : 'bg-red-500/5 border border-red-500/20'}">
+                <p class="font-bold mb-2">Câu ${i+1}: ${d.text}</p>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    ${d.options.map((opt, oi) => `
+                        <div class="${oi === d.correct ? 'text-emerald-400 font-bold' : (oi === d.selected ? 'text-red-400' : 'text-slate-500')}">
+                            ${String.fromCharCode(65+oi)}. ${opt} ${oi === d.selected ? '◀' : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+// ==========================================
+// 1. CẤU HÌNH FIREBASE
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyC_DMAkkjbEhmOGZOebNxXsU_qJ5fmw1F8",
+  authDomain: "fir-stick-quiz.firebaseapp.app",
+  databaseURL: "https://fir-stick-quiz-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "fir-stick-quiz",
+  storageBucket: "fir-stick-quiz.firebasestorage.app",
+  messagingSenderId: "293945055838",
+  appId: "1:293945055838:web:8d6afb707dfcb1c25df2cf",
+  measurementId: "G-QZEXBD73LD"
+};
+
+firebase.ializeApp(firebaseConfig);
+const rdb = firebase.database();
+
+// ==========================================
+// 2. BIẾN TOÀN CỤC & HẰNG SỐ (FULL LOGIC CŨ)
+// ==========================================
+let notifyResolver = null;
+const AD_EMAIL = "cnhphi25@pdu.edu.vn", AD_PHONE = "0978877125", AD_PASS_ = "04082007";
+const SECRET_KEY = "04082007"; 
+
+let db = [], foldersDB = [], quizHistory = [];
+let usersDB = JSON.parse(localStorage.getItem('users_db') || '{}');
+let currentUser = JSON.parse(localStorage.getItem('sys_logged_user') || 'null');
+
+let currentFolderIdx = -1, currentIdx = 0, userAnswers = [], quizInterval = null, timeLeft = 45 * 60; 
+let tempQuestions = [], idleTimeout, activeQuestions = [];
+const IDLE_TIME = 15 * 60 * 1000;
+const SUGGESTION_KEY = 'recent_accounts';
+const loginInput = document.getElementById('login-user');
+const suggestionBox = document.getElementById('login-suggestions');
+
+// ==========================================
+// 3. MẠCH MÁU ĐỒNG BỘ (PC <=> MOBILE)
+// ==========================================
+function getPrefix() { return currentUser ? currentUser.user + "_" : "guest_"; }
+
+// Lưu dữ liệu (LocalStorage + Cloud)
+function saveDB() { 
+    localStorage.setItem(getPrefix() + 'quiz_db', JSON.stringify(db)); 
+    if (currentUser) rdb.ref('users_data/' + currentUser.user + '/quiz_db').set(db);
+}
+function saveFolders() { 
+    localStorage.setItem(getPrefix() + 'quiz_folders', JSON.stringify(foldersDB)); 
+    if (currentUser) rdb.ref('users_data/' + currentUser.user + '/quiz_folders').set(foldersDB);
+}
+function saveHistory() { 
+    localStorage.setItem(getPrefix() + 'quiz_history', JSON.stringify(quizHistory)); 
+    if (currentUser) rdb.ref('users_data/' + currentUser.user + '/quiz_history').set(quizHistory);
+}
+function saveGlobalUsers() {
+    localStorage.setItem('users_db', JSON.stringify(usersDB));
+    // Đẩy danh sách tài khoản lên Firebase
+    rdb.ref('system/users_db').set(usersDB).catch(err => {
+        console.error("Lỗi Firebase:", err);
+        sysNotify("Lỗi Server", "Không thể lưu tài khoản. Vui lòng kiểm tra Rules hoặc ký tự lạ!", "error");
+    });
+}
+function saveGlobalMaps() {
+    // Danh sách các key cần đồng bộ
+    const maps = ['global_premium_requests', 'global_otp_db', 'global_share_map'];
+    maps.forEach(name => {
+        let val = JSON.parse(localStorage.getItem(name) || '[]');
+        rdb.ref('system/' + name).set(val);
+    });
+}
+
+function updateGlobalMenuDot() {
+    const chatBadge = document.getElementById('sidebar-chat-badge');
+    const premiumBadge = document.getElementById('sidebar-premium-badge');
+    const globalDot = document.getElementById('global-menu-dot');
+
+    if (!globalDot) return;
+
+    // Lấy giá trị số, nếu ẩn hoặc không có số thì coi là 0
+    const chatCount = (chatBadge && !chatBadge.classList.contains('hidden')) ? parseInt(chatBadge.innerText) || 0 : 0;
+    const premiumCount = (premiumBadge && !premiumBadge.classList.contains('hidden')) ? parseInt(premiumBadge.innerText) || 0 : 0;
+
+    // Nếu cả 2 mục đều bằng 0 thì ẩn chấm đỏ ngoài menu
+    if (chatCount === 0 && premiumCount === 0) {
+        globalDot.classList.add('hidden');
+    } else {
+        globalDot.classList.remove('hidden');
+    }
+}
+
+// Tải dữ liệu từ Server về máy khi Login
+function syncDataFromServer() {
+    const safeUser = currentUser.user.replace(/\./g, '_');
+
+    rdb.ref('users_data/' + safeUser).once('value', (snapshot) => {
+        // ... (Code lấy dữ liệu db, foldersDB giữ nguyên) ...
+        const data = snapshot.val();
+        if (data) {
+            db = data.quiz_db || [];
+            foldersDB = data.quiz_folders || [];
+            localStorage.setItem(getPrefix() + 'quiz_db', JSON.stringify(db));
+            localStorage.setItem(getPrefix() + 'quiz_folders', JSON.stringify(foldersDB));
+        }
+
+        // --- ĐOẠN THÊM MỚI: LẤY LỊCH SỬ LÀM BÀI ---
+        rdb.ref('users_data/' + safeUser + '/quiz_history').on('value', (historySnap) => {
+            const historyData = historySnap.val() || {};
+            // Chuyển Object từ Firebase thành Mảng và gắn kèm Key để xóa/xem chi tiết
+            quizHistory = Object.entries(historyData).map(([key, val]) => ({
+                ...val,
+                fbKey: key
+            }));
+            localStorage.setItem(getPrefix() + 'quiz_history', JSON.stringify(quizHistory));
+            
+            // Cập nhật bảng ngay lập tức nếu đang mở trang lịch sử
+            if (!document.getElementById('page-storage').classList.contains('hidden')) {
+                if (typeof renderHistoryTable === "function") renderHistoryTable();
+            }
+        });
+        // --- HẾT ĐOẠN THÊM MỚI ---
+
+        // KÍCH HOẠT THÔNG BÁO TIN NHẮN NGAY TẠI ĐÂY
+        if (currentUser.isAdmin || currentUser.isRoot) {
+            listenToTotalUnread(); 
+        }
+        
+        // 1. Lắng nghe tài khoản cá nhân để kiểm tra hết hạn Premium
+        rdb.ref('system/users_db/' + safeUser).on('value', (snap) => {
+            const userData = snap.val();
+            if (userData) {
+                usersDB[currentUser.user] = userData;
+                if (userData.isPremium && userData.premiumExpiresAt && Date.now() > userData.premiumExpiresAt) {
+                    rdb.ref('system/users_db/' + safeUser).update({ isPremium: false });
+                    sysNotify("Thông báo", "Gói Premium của bạn đã hết hạn!", "warn");
+                }
+                checkPremiumUI();
+            }
+        });
+
+        // 2. QUAN TRỌNG: Gọi hàm kiểm tra tin nhắn chưa đọc ngay khi vào trang
+        if (currentUser.isAdmin || currentUser.isRoot) {
+            listenToTotalUnread(); 
+        }
+
+        // 3. Dành riêng cho Admin gốc: Cập nhật Bảng Duyệt Bill và Bảng Master Hội Viên
+        if (currentUser.isRoot) {
+            document.getElementById('admin-menu-premium').classList.remove('hidden');
+            document.getElementById('admin-menu-chat').classList.remove('hidden'); 
+            document.getElementById('student-zone').classList.add('hidden');
+
+            // Lắng nghe yêu cầu Duyệt Bill
+            rdb.ref('system/global_premium_requests').on('value', (s) => {
+                const requests = s.val() || [];
+                localStorage.setItem('global_premium_requests', JSON.stringify(requests));
+                
+                // Đếm số yêu cầu đang chờ (pending)
+                const pendingCount = requests.filter(r => r.status === 'pending').length;
+                const pBadge = document.getElementById('sidebar-premium-badge');
+                
+                if (pBadge) {
+                    if (pendingCount > 0) {
+                        pBadge.innerText = pendingCount;
+                        pBadge.classList.remove('hidden');
+                    } else {
+                        pBadge.innerText = "0";
+                        pBadge.classList.add('hidden');
+                    }
+                }
+                
+                // Cập nhật chấm đỏ menu
+                updateGlobalMenuDot();
+                
+                if (typeof renderPremiumRequests === "function") renderPremiumRequests();
+            });
+        }
+
+        rdb.ref('system/global_share_map').on('value', (s) => {
+            localStorage.setItem('global_share_map', JSON.stringify(s.val() || {}));
+        });
+
+        // --- LOGIC THÔNG BÁO TIN NHẮN LIVE (KHI ĐANG MỞ WEB) ---
+       if (currentUser.isRoot) {
+            rdb.ref('system/chats').on('child_changed', (snapshot) => {
+                if (isialLoad) return;
+                const data = snapshot.val();
+                const msgs = data.messages ? Object.values(data.messages) : [];
+                if (msgs.length === 0) return;
+                const lastMsg = msgs[msgs.length - 1];
+                if (lastMsg.sender !== AD_PHONE) {
+                    NOTI_SOUND.play().catch(() => {});
+                    showModernToast("Tin nhắn mới", `<b>${lastMsg.name}:</b> ${lastMsg.text}`, "info");
+                }
+            });
+        } else if (currentUser.isAdmin) {
+            // ADMIN CON: Lắng nghe phản hồi từ Admin hệ thống
+            const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
+            rdb.ref('system/chats/' + chatId + '/messages').limitToLast(1).on('child_added', (snapshot) => {
+                if (isialLoad) return;
+                const msg = snapshot.val();
+                if (msg.sender === AD_PHONE) {
+                    if (document.getElementById('chat-box').classList.contains('hidden')) {
+                        NOTI_SOUND.play().catch(() => {});
+                        showModernToast("Phản hồi từ Quản trị viên", msg.text, "success");
+                    }
+                }
+            });
+        }
+
+        // Tắt cờ load lần đầu sau 3 giây để bắt đầu nhận thông báo thực
+        setTimeout(() => { isialLoad = false; }, 3000);
+
+        loginSuccess();
+        closeNotify();
+    });
+}
+
+// ==========================================
+// 4. HÀM HỆ THỐNG (FULL LOGIC CŨ)
+// ==========================================
+function sysNotify(title, msg, type = 'info') {
+    const icon = { 'info': '🔔', 'success': '✅', 'error': '❌', 'warn': '⚠️' }[type];
+    document.getElementById('nt-icon').innerText = icon;
+    document.getElementById('nt-title').innerText = title;
+    document.getElementById('nt-msg').innerHTML = msg;
+    document.getElementById('nt-input').classList.add('hidden');
+    document.getElementById('nt-btn-cancel').classList.add('hidden');
+    document.getElementById('notify-container').classList.add('active');
+}
+
+function sysConfirm(msg) {
+    return new Promise(resolve => {
+        document.getElementById('nt-icon').innerText = '❓';
+        document.getElementById('nt-title').innerText = 'Xác nhận';
+        document.getElementById('nt-msg').innerText = msg;
+        document.getElementById('nt-input').classList.add('hidden');
+        document.getElementById('nt-btn-cancel').classList.remove('hidden');
+        document.getElementById('notify-container').classList.add('active');
+        notifyResolver = resolve;
+    });
+}
+
+function sysPrompt(title, msg, placeholder = "", defaultValue = "") {
+    return new Promise(resolve => {
+        document.getElementById('nt-icon').innerText = '📝';
+        document.getElementById('nt-title').innerText = title;
+        document.getElementById('nt-msg').innerText = msg;
+        const input = document.getElementById('nt-input');
+        input.value = defaultValue; input.placeholder = placeholder;
+        input.classList.remove('hidden');
+        document.getElementById('nt-btn-cancel').classList.remove('hidden');
+        document.getElementById('notify-container').classList.add('active');
+        setTimeout(() => input.focus(), 100);
+        notifyResolver = (res) => resolve(res ? input.value : null);
+    });
+}
+
+function closeNotify(result = true) {
+    document.getElementById('notify-container').classList.remove('active');
+    if (notifyResolver) { notifyResolver(result); notifyResolver = null; }
+}
+
+function showPage(id) { 
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); 
+    const target = document.getElementById(id); 
+    if(target) target.classList.remove('hidden'); 
+    
+    toggleMenu(true); 
+    
+    // BỔ SUNG CÁC TRƯỜNG HỢP SAU:
+    if(id === 'page-folders-manager') renderFolders();
+    if(id === 'page-otp-manager') renderOTPRequests(); 
+    
+    // Khi vào trang Premium Manager
+    if(id === 'page-premium-manager') {
+        renderPremiumRequests();   // Vẽ bảng yêu cầu (Bill)
+        if(currentUser.isRoot) {
+            renderMasterPremiumList(); // Vẽ bảng hội viên chính thức
+        }
+    }
+   if(id === 'page-chat-admin') {
+        loadChatUserList();
+    }
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleMenu(f) { 
+    const s = document.getElementById('sidebar'); if(!s) return; 
+    if(f) s.classList.remove('active'); else s.classList.toggle('active'); 
+    document.getElementById('overlay').style.display = s.classList.contains('active') ? 'block' : 'none'; 
+}
+
+function togglePassword(id) {
+    const input = document.getElementById(id);
+    const toggle = input.nextElementSibling;
+    if (input.type === "password") { input.type = "text"; toggle.innerText = "🔒"; } 
+    else { input.type = "password"; toggle.innerText = "👁️"; }
+}
+
+// ==========================================
+// 5. QUẢN LÝ TÀI KHOẢN (FULL LOGIC CŨ)
+// ==========================================
+function handleLogin() {
+    const u = document.getElementById('login-user').value.trim().toLowerCase(), 
+          p = document.getElementById('login-pass').value;
+    if(!u || !p) return sysNotify("Lỗi", "Nhập đủ thông tin!", "warn");
+
+    sysNotify("Đang kiểm tra", "Vui lòng đợi...", "info");
+
+    rdb.ref('system/users_db').once('value', (snapshot) => {
+        let cloudUsers = snapshot.val() || {};
+        
+        // Luôn đảm bảo Admin gốc có thể vào nếu Cloud trống
+        if ((u === AD_PHONE || u === AD_EMAIL.toLowerCase()) && p === AD_PASS_) {
+            if (!cloudUsers[u]) {
+                cloudUsers[u] = { pass: AD_PASS_, fullname: "Admin Hệ thống", isPremium: true };
+                rdb.ref('system/users_db').set(cloudUsers);
+            }
+        }
+        
+        usersDB = cloudUsers;
+        if (usersDB[u] && usersDB[u].pass === p) {
+            // --- CẬP NHẬT LOGIC PHÂN QUYỀN TẠI ĐÂY ---
+            const isRoot = (u === AD_PHONE || u === AD_EMAIL.toLowerCase());
+            
+            currentUser = { 
+                name: usersDB[u].fullname, 
+                user: u, 
+                isAdmin: true,   // Tất cả người đăng ký đều là Admin (Gốc hoặc Con)
+                isRoot: isRoot,  // Gắn cờ xác định đây là Admin Gốc
+                avatar: usersDB[u].avatar || null, 
+                isPremium: usersDB[u].isPremium || false 
+            };
+            // ----------------------------------------
+            
+            localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
+            syncDataFromServer(); 
+        } else {
+            sysNotify("Thất bại", "Sai thông tin đăng nhập!", "error");
+        }
+    });
+}
+
+function handleRegister() {
+    const f = document.getElementById('reg-fullname').value.trim(), 
+          u = document.getElementById('reg-user').value.trim().toLowerCase(), 
+          p = document.getElementById('reg-pass').value, 
+          c = document.getElementById('reg-confirm').value;
+
+    // 1. Kiểm tra trống
+    if(!f || !u || !p) return sysNotify("Lỗi", "Vui lòng nhập đầy đủ thông tin!", "warn");
+    
+    // 2. Kiểm tra mật khẩu khớp
+    if(p !== c) return sysNotify("Lỗi", "Mật khẩu xác nhận không khớp!", "error");
+
+    // 3. Xử lý ký tự đặc biệt cho Firebase (Thay dấu chấm bằng gạch dưới)
+    const safeUser = u.replace(/\./g, '_');
+
+    // 4. Kiểm tra trùng lặp
+    if(usersDB[safeUser]) return sysNotify("Lỗi", "Tài khoản này đã tồn tại trên hệ thống!", "error");
+    
+    // Nếu hợp lệ, tiến hành lưu
+    usersDB[safeUser] = { 
+        pass: p, 
+        fullname: f,
+        isPremium: false,
+        createdAt: Date.now()
+    };
+    
+    saveGlobalUsers();
+    sysNotify("Thành công", "Đã tạo tài khoản online thành công!", "success"); 
+    switchAuth('login');
+}
+
+function loginSuccess() {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-content').classList.remove('hidden');
+    document.getElementById('header').classList.remove('hidden');
+    
+    const chatContainer = document.getElementById('chat-container');
+
+    // TRƯỜNG HỢP 1: ADMIN GỐC (Root Admin)
+    if (currentUser.isRoot) {
+        document.getElementById('admin-zone').classList.remove('hidden');
+        document.getElementById('admin-menu-folders').classList.remove('hidden');
+        document.getElementById('admin-menu-storage').classList.remove('hidden');
+        document.getElementById('admin-menu-users').classList.remove('hidden');
+        document.getElementById('admin-menu-otp').classList.remove('hidden');
+        document.getElementById('admin-menu-premium').classList.remove('hidden');
+        document.getElementById('student-zone').classList.add('hidden');
+        
+        if(chatContainer) chatContainer.classList.add('hidden'); // Admin gốc không cần icon chat hỗ trợ
+        renderUsersManager();
+    } 
+    // TRƯỜNG HỢP 2: ADMIN CON (Người đăng ký tài khoản)
+    else if (currentUser.isAdmin) {
+        document.getElementById('admin-zone').classList.remove('hidden');
+        document.getElementById('admin-menu-folders').classList.remove('hidden');
+        document.getElementById('admin-menu-storage').classList.remove('hidden');
+        
+        // Ẩn các mục quản lý hệ thống của Admin Gốc
+        document.getElementById('admin-menu-users').classList.add('hidden');
+        document.getElementById('admin-menu-otp').classList.add('hidden');
+        document.getElementById('admin-menu-premium').classList.add('hidden');
+        document.getElementById('student-zone').classList.add('hidden');
+
+        if(chatContainer) chatContainer.classList.remove('hidden'); // HIỆN ICON CHAT CHO ADMIN CON
+    } 
+    // TRƯỜNG HỢP 3: THÍ SINH (Vào thi bằng mã, không đăng nhập)
+    else {
+        document.getElementById('admin-zone').classList.add('hidden');
+        document.getElementById('admin-menu-folders').classList.add('hidden');
+        document.getElementById('admin-menu-storage').classList.add('hidden');
+        document.getElementById('student-zone').classList.remove('hidden');
+
+        if(chatContainer) chatContainer.classList.add('hidden'); // ẨN ICON CHAT VỚI THÍ SINH
+    }
+
+    // Các thiết lập chung
+    document.getElementById('inf-email').innerText = currentUser.user;
+    document.getElementById('inf-fullname').innerText = currentUser.name;
+    document.getElementById('side-username').innerText = currentUser.name;
+    document.getElementById('role-badge').innerText = currentUser.isRoot ? "ADMIN GỐC" : (currentUser.isAdmin ? "ADMIN" : "THÍ SINH");
+    
+    updateAvatarUI(); 
+    renderAdminPreview(); 
+    renderFolders(); 
+    checkPremiumUI(); 
+    updateFolderDropdowns();
+
+        // Tìm hàm loginSuccess() và dán đoạn này vào cuối hàm
+    if (currentUser.isRoot) {
+        // Cho phép khối Master hiển thị bên trong trang quản lý (khi trang đó được mở)
+        const masterPanel = document.getElementById('root-master-premium-panel');
+        if (masterPanel) masterPanel.classList.remove('hidden');
+        
+        renderMasterPremiumList(); // Tải dữ liệu ngầm
+        renderUsersManager();      // Tải dữ liệu quản lý user
+    } else {
+        // Nếu không phải Root Admin thì ẩn hẳn khối này đi
+        const masterPanel = document.getElementById('root-master-premium-panel');
+        if (masterPanel) masterPanel.classList.add('hidden');
+    }
+}
+
+
+function logout() { localStorage.removeItem('sys_logged_user'); location.reload(); }
+
+// ==========================================
+// 6. NHẬP LIỆU: WORD (MAMMOTH) & ẢNH (OCR)
+// ==========================================
+function parseContentToQuestions(text) {
+    // Tách dòng và loại bỏ dòng trống
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    let results = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+        // Tìm dòng bắt đầu bằng "Câu X:" hoặc "Câu X."
+        if (lines[i].toLowerCase().match(/^câu\s*\d+[:.]/i)) {
+            let qText = lines[i].replace(/^câu\s*\d+[:.]\s*/i, "").trim();
+            let qObj = { text: qText, options: [], correct: 0 };
+            
+            // Tìm 4 đáp án tiếp theo
+            let j = i + 1;
+            while (j < lines.length && qObj.options.length < 4) {
+                // Regex tìm A. B. C. D. hoặc A: B: ...
+                let optMatch = lines[j].match(/^([A-D])[\.\:\)\-\s]+(.*)/i);
+                if (optMatch) {
+                    qObj.options.push(optMatch[2].trim());
+                }
+                j++;
+            }
+
+            // Tìm dòng đáp án đúng (trong phạm vi 6 dòng tiếp theo)
+            let k = i + 1;
+            while (k < lines.length && k < i + 10) {
+                if (lines[k].toLowerCase().includes("đáp án:")) {
+                    let ansPart = lines[k].split(":")[1]?.trim().toUpperCase();
+                    if (ansPart) {
+                        let ansChar = ansPart.charAt(0);
+                        qObj.correct = ({"A":0, "B":1, "C":2, "D":3})[ansChar] ?? 0;
+                    }
+                    break;
+                }
+                k++;
+            }
+
+            if (qObj.options.length === 4) {
+                results.push(qObj);
+                i = j - 1; // Nhảy qua các dòng đáp án đã đọc
+            }
+        }
+    }
+    return results;
+}
+
+function previewWordFile() {
+    const file = document.getElementById('wordFile').files[0]; if(!file) return sysNotify("Lỗi", "Chọn file Word!", "warn");
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        mammoth.convertToHtml({arrayBuffer: e.target.result}).then(res => {
+            const rawText = res.value.replace(/<\/p>|<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, "");
+            tempQuestions = parseContentToQuestions(rawText);
+            if(tempQuestions.length > 0) showPreviewZone();
+            else sysNotify("Lỗi", "Cấu trúc không đúng (Câu 1:... A. B. C. D. Đáp án: A)", "error");
+        });
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+async function previewImageFile() {
+    const file = document.getElementById('imageFile').files[0]; if(!file) return sysNotify("Lỗi", "Hãy chọn hình ảnh!", "warn");
+    const loading = document.getElementById('ocr-loading'); loading.style.display = 'block';
+    try {
+        const result = await Tesseract.recognize(file, 'vie');
+        tempQuestions = parseContentToQuestions(result.data.text);
+        if(tempQuestions.length > 0) showPreviewZone();
+        else sysNotify("Lỗi", "Không tìm thấy câu hỏi!", "error");
+    } catch (error) { sysNotify("Lỗi", "Lỗi OCR!", "error"); }
+    finally { loading.style.display = 'none'; }
+}
+
+async function clearAllHistory() {
+    if (quizHistory.length === 0) {
+        return sysNotify("Thông báo", "Không có dữ liệu lịch sử để xóa.", "info");
+    }
+
+    const confirmMsg = "CẢNH BÁO: Bạn có chắc chắn muốn XÓA SẠCH toàn bộ lịch sử làm bài?\n\nHành động này sẽ:\n1. Xóa vĩnh viễn mọi kết quả của thí sinh.\n2. MỞ KHÓA cho tất cả thí sinh đã từng thi để họ có thể vào làm lại bài.";
+
+    if (await sysConfirm(confirmMsg)) {
+        sysNotify("Đang xử lý...", "Đang xóa lịch sử và mở khóa thí sinh...", "info");
+
+        try {
+            // 1. Thu thập danh sách các "khóa chặn" cần xóa trên Firebase
+            // Chúng ta duyệt qua mảng quizHistory hiện tại để lấy cặp (Mã đề + ID Thí sinh)
+            const tasks = [];
+            quizHistory.forEach(h => {
+                if (h.examCode && h.user) {
+                    // Tạo một task xóa lệnh chặn nộp bài cho từng thí sinh
+                    const cleanSubmission = rdb.ref(`system/submissions/${h.examCode}/${h.user}`).remove();
+                    tasks.push(cleanSubmission);
+                }
+            });
+
+            // 2. Thực hiện xóa tất cả các lệnh chặn đồng thời
+            await Promise.all(tasks);
+
+            // 3. Xóa sạch kho dữ liệu lịch sử của Admin trên Firebase
+            const safeAdminPath = currentUser.user.replace(/\./g, '_');
+            await rdb.ref('users_data/' + safeAdminPath + '/quiz_history').remove();
+
+            // 4. Cập nhật LocalStorage và giao diện
+            quizHistory = [];
+            localStorage.setItem(getPrefix() + 'quiz_history', JSON.stringify(quizHistory));
+            
+            sysNotify("Thành công", "Đã xóa sạch lịch sử. Tất cả thí sinh hiện có thể vào thi lại!", "success");
+            renderHistoryTable(); // Cập nhật lại bảng (sẽ trống)
+
+        } catch (error) {
+            console.error("Lỗi khi xóa lịch sử:", error);
+            sysNotify("Lỗi hệ thống", "Không thể hoàn tất việc xóa dữ liệu. Vui lòng thử lại!", "error");
+        }
+    }
+}
+
+async function resetSingleAttempt(fbKey, examCode, studentId) {
+    const h = quizHistory.find(item => item.fbKey === fbKey);
+    if (!h) return;
+
+    const confirmMsg = `Bạn muốn xóa kết quả của thí sinh [${h.fullname}]?\n\nSau khi xóa:\n1. Kết quả này sẽ mất vĩnh viễn.\n2. Thí sinh có thể dùng lại tên cũ để thi lại mã đề ${examCode}.`;
+    
+    if (await sysConfirm(confirmMsg)) {
+        sysNotify("Đang xử lý...", "Vui lòng đợi giây lát", "info");
+
+        try {
+            const safeAdminPath = currentUser.user.replace(/\./g, '_');
+            
+            // 1. Xóa bản ghi lịch sử của Admin
+            await rdb.ref(`users_data/${safeAdminPath}/quiz_history/${fbKey}`).remove();
+
+            // 2. Mở khóa cho thí sinh thi lại (Xóa trong submissions)
+            if (examCode && studentId) {
+                await rdb.ref(`system/submissions/${examCode}/${studentId}`).remove();
+            }
+
+            sysNotify("Thành công", `Đã xóa và cho phép thí sinh ${h.fullname} thi lại.`, "success");
+            // Bảng sẽ tự động vẽ lại nhờ listener .on('value') ở hàm syncData
+            
+        } catch (error) {
+            console.error(error);
+            sysNotify("Lỗi", "Không thể thực hiện yêu cầu. Thử lại sau!", "error");
+        }
+    }
+}
+
+async function clearSpecificFolderHistory(examName) {
+    const targets = quizHistory.filter(h => (h.examName || "Bộ đề không tên") === examName);
+    if (targets.length === 0) return;
+    const confirmMsg = `Bạn có chắc chắn muốn xóa TOÀN BỘ ${targets.length} kết quả của bộ đề [${examName}]?\n\nTất cả thí sinh của đề này sẽ được phép vào thi lại.`;
+
+    if (await sysConfirm(confirmMsg)) {
+        sysNotify("Đang xử lý...", `Đang dọn dẹp lịch sử bộ đề ${examName}...`, "info");
+        try {
+            const safeAdminPath = currentUser.user.replace(/\./g, '_');
+            const tasks = [];
+            targets.forEach(h => {
+                tasks.push(rdb.ref(`users_data/${safeAdminPath}/quiz_history/${h.fbKey}`).remove());
+                if (h.examCode && h.user) {
+                    tasks.push(rdb.ref(`system/submissions/${h.examCode}/${h.user}`).remove());
+                }
+            });
+            await Promise.all(tasks);
+            sysNotify("Thành công", `Đã xóa sạch lịch sử bộ đề: ${examName}`, "success");
+        } catch (error) {
+            console.error(error);
+            sysNotify("Lỗi", "Không thể hoàn tất việc xóa dữ liệu bộ đề!", "error");
+        }
+    }
+}
+
+function showPreviewZone() {
+    document.getElementById('confirm-upload-zone').classList.remove('hidden');
+    document.getElementById('temp-count').innerText = tempQuestions.length;
+    document.getElementById('temp-preview').innerText = tempQuestions.slice(0, 2).map(q => q.text).join(" | ") + "...";
+    updateFolderDropdowns();
+}
+
+function confirmImport() { 
+    let added = 0;
+    tempQuestions.forEach(newQ => { if(!db.some(q => q.text === newQ.text)) { db.push(newQ); added++; } });
+    saveDB(); sysNotify("Hoàn tất", `Đã nhập ${added} câu mới.`, "success");
+    renderAdminPreview(); cancelImport(); 
+}
+
+// Hàm lưu các câu hỏi vừa quét (từ Word/Ảnh) vào bộ đề đã chọn
+function importTempToFolder() {
+    const folderIdx = document.getElementById('import-to-folder-select').value;
+    if (folderIdx === "" || !foldersDB[folderIdx]) {
+        return sysNotify("Lỗi", "Vui lòng chọn một bộ đề hợp lệ!", "warn");
+    }
+
+    if (tempQuestions.length === 0) return sysNotify("Lỗi", "Không có dữ liệu!", "error");
+
+    if (!foldersDB[folderIdx].questions) foldersDB[folderIdx].questions = [];
+
+    let addedCount = 0;
+    let skippedCount = 0;
+
+    tempQuestions.forEach(newQ => {
+        // Kiểm tra xem nội dung câu hỏi đã tồn tại trong bộ đề này chưa (loại bỏ khoảng trắng thừa và không phân biệt hoa thường)
+        const isDuplicate = foldersDB[folderIdx].questions.some(
+            existingQ => existingQ.text.trim().toLowerCase() === newQ.text.trim().toLowerCase()
+        );
+
+        if (!isDuplicate) {
+            foldersDB[folderIdx].questions.push(JSON.parse(JSON.stringify(newQ)));
+            addedCount++;
+        } else {
+            skippedCount++;
+        }
+    });
+
+    saveFolders();
+    renderFolders();
+    cancelImport();
+
+    if (skippedCount > 0) {
+        sysNotify("Hoàn tất", `Đã thêm ${addedCount} câu. Bỏ qua ${skippedCount} câu bị trùng lặp.`, "info");
+    } else {
+        sysNotify("Thành công", `Đã thêm toàn bộ ${addedCount} câu vào bộ đề.`, "success");
+    }
+}
+
+// Hàm lưu câu hỏi nhập tay trực tiếp vào bộ đề
+function saveManualQToFolder() {
+    const folderIdx = document.getElementById('manual-to-folder-select').value;
+    const qText = document.getElementById('manual-q').value.trim();
+    const optA = document.getElementById('manual-a').value.trim();
+    const optB = document.getElementById('manual-b').value.trim();
+    const optC = document.getElementById('manual-c').value.trim();
+    const optD = document.getElementById('manual-d').value.trim();
+    const correct = parseInt(document.getElementById('manual-correct').value);
+
+    if (folderIdx === "" || !foldersDB[folderIdx]) return sysNotify("Lỗi", "Chọn bộ đề!", "warn");
+    if (!qText || !optA) return sysNotify("Lỗi", "Nhập đủ thông tin!", "warn");
+
+    if (!foldersDB[folderIdx].questions) foldersDB[folderIdx].questions = [];
+
+    // Kiểm tra trùng lặp
+    const isDuplicate = foldersDB[folderIdx].questions.some(
+        q => q.text.trim().toLowerCase() === qText.toLowerCase()
+    );
+
+    if (isDuplicate) {
+        return sysNotify("Trùng lặp", "Câu hỏi này đã tồn tại trong bộ đề này rồi!", "warn");
+    }
+
+    foldersDB[folderIdx].questions.push({
+        text: qText,
+        options: [optA, optB, optC, optD],
+        correct: correct
+    });
+
+    saveFolders();
+    sysNotify("Thành công", "Đã thêm câu hỏi mới!", "success");
+    
+    // Reset form
+    document.getElementById('manual-q').value = "";
+    document.getElementById('manual-a').value = "";
+    document.getElementById('manual-b').value = "";
+    document.getElementById('manual-c').value = "";
+    document.getElementById('manual-d').value = "";
+}
+
+function cancelImport() { tempQuestions = []; document.getElementById('confirm-upload-zone').classList.add('hidden'); }
+
+// ==========================================
+// 7. QUẢN LÝ BỘ ĐỀ & THI CỬ (FULL LOGIC CŨ)
+// ==========================================
+function renderFolders() {
+    const container = document.getElementById('folders-list'); 
+    if (!container) return;
+    const now = Date.now();
+    
+    // Tạo mảng các thẻ HTML trước
+    const htmlFolders = foldersDB.map((f, i) => {
+        let codeBadge = "";
+        if(f.accessCode && f.expiresAt > now) {
+            // CẬP NHẬT ĐOẠN NÀY: Thêm biểu tượng sao chép 📋
+            codeBadge = `
+                <div class="mt-2 text-[13px] text-emerald-400 font-bold flex items-center gap-2">
+                    <span>🔑 Mã: <b class="font-mono tracking-widest">${f.accessCode}</b></span>
+                    <button onclick="copyToClipboard('${f.accessCode}')" class="hover:scale-125 transition-transform p-1" title="Sao chép mã">
+                        📋
+                    </button>
+                </div>`;
+        }
+        return `
+        <div class="bg-white/5 border border-white/10 p-5 rounded-2xl">
+            <h4 class="text-lg font-bold">${f.name}</h4>
+            <p class="text-xs text-slate-500 mb-1">${f.questions ? f.questions.length : 0} câu hỏi</p>
+            ${codeBadge}
+            <div class="flex flex-wrap gap-2 mt-3">
+                <button class="flex-1 py-2 bg-indigo-500/20 text-indigo-300 rounded-lg text-xs" onclick="openFolder(${i})">CHI TIẾT</button>
+                <button class="px-3 bg-red-500/20 text-red-400 rounded-lg" onclick="deleteFolder(${i})">🗑️</button>
+                <div class="flex w-full gap-2">
+                    <button class="flex-1 py-2 bg-emerald-500/20 text-emerald-300 rounded-lg text-xs" onclick="shareFolder(${i})">🔗 CẤP MÃ</button>
+                    <button class="flex-1 py-2 bg-orange-500/20 text-orange-300 rounded-lg text-xs" onclick="startFolderQuiz(${i})">🎯 THI</button>
+                </div>
+            </div>
+        </div>`;
+    });
+
+    // Đảo ngược mảng HTML để đề mới nhất hiện lên đầu, nhưng Index i vẫn giữ nguyên giá trị gốc
+    container.innerHTML = htmlFolders.reverse().join('');
+}
+
+async function createNewFolder() {
+    const isVip = usersDB[currentUser.user]?.isPremium;
+    if (!isVip && foldersDB.length >= 5) return openPremiumModal();
+    const name = await sysPrompt("Bộ đề mới", "Nhập tên bộ đề:");
+    if (!name) return;
+    foldersDB.push({ name: name, questions: [] });
+    saveFolders(); renderFolders(); updateFolderDropdowns();
+}
+
+function openFolder(i) {
+    currentFolderIdx = i; // Sửa realIdx thành i
+    const folder = foldersDB[i]; 
+    showPage('page-folder-detail');
+    document.getElementById('folder-detail-title').innerText = folder.name;
+    document.getElementById('folder-detail-count').innerText = `${folder.questions ? folder.questions.length : 0} câu hỏi`;
+    const select = document.getElementById('select-q-to-add');
+    select.innerHTML = db.map((q, idx) => `<option value="${idx}">${idx + 1}. ${q.text.substring(0, 60)}...</option>`).join('');
+    renderFolderQuestions();
+}
+
+function renderFolderQuestions() {
+    const folder = foldersDB[currentFolderIdx];
+    document.getElementById('folder-questions-list').innerHTML = (folder.questions || []).map((q, i) => `
+        <div class="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5 mb-2">
+            <p class="text-sm text-slate-300 flex-1">#${i+1} ${q.text}</p>
+            <button class="text-red-400" onclick="removeQFromFolder(${i})">✕</button>
+        </div>
+    `).join('');
+}
+
+function addQToFolder() {
+    const qIdx = document.getElementById('select-q-to-add').value; 
+    if (!db[qIdx]) return;
+    
+    if(!foldersDB[currentFolderIdx].questions) foldersDB[currentFolderIdx].questions = [];
+
+    // Kiểm tra trùng lặp dựa trên nội dung text
+    const isDuplicate = foldersDB[currentFolderIdx].questions.some(
+        q => q.text.trim().toLowerCase() === db[qIdx].text.trim().toLowerCase()
+    );
+
+    if (isDuplicate) {
+        return sysNotify("Trùng lặp", "Câu hỏi này đã có trong bộ đề này!", "warn");
+    }
+
+    foldersDB[currentFolderIdx].questions.push(JSON.parse(JSON.stringify(db[qIdx])));
+    saveFolders(); 
+    renderFolderQuestions();
+    sysNotify("Thành công", "Đã thêm câu hỏi từ ngân hàng!", "success");
+}
+
+function removeQFromFolder(i) {
+    foldersDB[currentFolderIdx].questions.splice(i, 1);
+    saveFolders(); renderFolderQuestions();
+}
+
+function shareFolder(i) {
+    // SỬA TẠI ĐÂY: Dùng trực tiếp i, không cần tính realIdx
+    const folder = foldersDB[i]; 
+    if (!folder) return;
+
+    // 1. Tạo mã mới
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = Date.now() + (24 * 60 * 60 * 1000); // Hạn 24h
+    
+    // 2. Cập nhật dữ liệu
+    folder.accessCode = code;
+    folder.expiresAt = expiry;
+    saveFolders();
+    
+    // 3. Đồng bộ lên Firebase
+    rdb.ref('system/global_share_map/' + code).set({ 
+        admin: currentUser.user, 
+        folderIdx: i, // Lưu đúng index i vào server
+        expiresAt: expiry 
+    });
+    
+    // 4. TỰ ĐỘNG SAO CHÉP
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(() => {
+            showModernToast(
+                "📋 ĐÃ SAO CHÉP MÃ", 
+                `Mã đề <b class="text-white text-lg">${code}</b> của bộ đề [${folder.name.toUpperCase()}] đã được sao chép.`,
+                "success"
+            );
+        });
+    }
+
+    // 5. Vẽ lại giao diện để cập nhật chữ "🔑 Mã: ..."
+    renderFolders();
+}
+
+let currentExamCode = ""; // Biến lưu mã đề hiện tại
+
+function handleJoinQuiz() {
+    const code = document.getElementById('join-code').value.trim();
+    const name = document.getElementById('join-name').value.trim();
+    if(!code || !name) return sysNotify("Lỗi", "Nhập đủ mã đề và họ tên!", "warn");
+
+    sysNotify("Đang kiểm tra", "Vui lòng đợi...", "info");
+
+    rdb.ref('system/global_share_map/' + code).once('value', (s) => {
+        const data = s.val();
+        if(!data || Date.now() > data.expiresAt) return sysNotify("Lỗi", "Mã đề sai hoặc hết hạn!", "error");
+
+        const safeUser = name.replace(/[.$#[\]]/g, "_") + "_" + code; 
+        currentExamCode = code;
+
+        rdb.ref('system/submissions/' + code + '/' + safeUser).once('value', (sub) => {
+            if (sub.exists()) {
+                closeNotify();
+                return sysNotify("Từ chối", "Bạn đã hoàn thành bài thi này trước đó!", "error");
+            }
+
+            // LẤY CẢ BỘ ĐỀ ĐỂ LẤY TÊN (NAME)
+            rdb.ref('users_data/' + data.admin + '/quiz_folders/' + data.folderIdx).once('value', (folderSnap) => {
+                const folderData = folderSnap.val();
+                if(!folderData || !folderData.questions) return sysNotify("Lỗi", "Bộ đề không tồn tại!", "error");
+
+                activeQuestions = folderData.questions;
+                
+                currentUser = { 
+                    name: name, 
+                    user: safeUser, 
+                    isAdmin: false, 
+                    adminSource: data.admin, 
+                    folderSourceIdx: data.folderIdx,
+                    examCode: code,
+                    examName: folderData.name // Lưu tên bài thi vào đây
+                };
+
+                loginSuccess();
+                // Hiển thị tên bài thi ra màn hình chờ
+                document.getElementById('display-exam-name').innerText = "BÀI THI: " + folderData.name;
+                closeNotify();
+            });
+        });
+    });
+}
+
+function startQuizFromCode() {
+    currentIdx = 0;
+    timeLeft = 45 * 60;
+    userAnswers = new Array(activeQuestions.length).fill(-1);
+    
+    // MẶC ĐỊNH GHI NHẬN LÚC BẮT ĐẦU
+    currentUser.startTimeMs = Date.now();
+
+    // KIỂM TRA TIẾN ĐỘ CŨ (Chống F5)
+    const savedProgress = localStorage.getItem('progress_' + currentUser.user);
+    if (savedProgress) {
+        const progress = JSON.parse(savedProgress);
+        userAnswers = progress.answers;
+        timeLeft = progress.time;
+        
+        // NẾU CÓ TIẾN ĐỘ CŨ, LẤY LẠI THỜI GIAN BẮT ĐẦU CŨ
+        if (progress.startTimeMs) {
+            currentUser.startTimeMs = progress.startTimeMs;
+        }
+        
+        sysNotify("Thông báo", "Đã khôi phục tiến độ làm bài của bạn!", "success");
+    }
+
+    showPage('page-quiz-view');
+    renderQuestion();
+    startTimer();
+}
+
+// Hàm lưu tiến độ vào máy mỗi khi thí sinh chọn đáp án
+function saveCurrentProgress() {
+    if (!currentUser.isAdmin) {
+        localStorage.setItem('progress_' + currentUser.user, JSON.stringify({
+            answers: userAnswers,
+            time: timeLeft,
+            startTimeMs: currentUser.startTimeMs // THÊM DÒNG NÀY ĐỂ LƯU THỜI GIAN BẮT ĐẦU
+        }));
+    }
+}
+
+// Cập nhật hàm selectOption để tự động lưu
+function selectOption(val) {
+    userAnswers[currentIdx] = val;
+    renderNav();
+    saveCurrentProgress(); // Lưu tiến độ ngay lập tức
+}
+
+// Cập nhật startTimer để lưu thời gian mỗi giây (hoặc mỗi 5s để tránh lag)
+function startTimer() {
+    if(quizInterval) clearInterval(quizInterval);
+    quizInterval = setInterval(() => {
+        timeLeft--; 
+        if (timeLeft % 5 === 0) saveCurrentProgress(); // Cứ 5 giây lưu thời gian 1 lần
+
+        const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+        document.getElementById('timer-box').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        
+        if(timeLeft <= 0) {
+            clearInterval(quizInterval);
+            submitQuiz();
+        }
+    }, 1000);
+}
+
+function startFolderQuiz(i) {
+    const folder = foldersDB[i]; // Sửa thành i
+    if(!folder || !folder.questions || !folder.questions.length) return sysNotify("Lỗi", "Bộ đề trống!", "warn");
+  
+    activeQuestions = JSON.parse(JSON.stringify(folder.questions));
+    // Cập nhật tên bài thi cho Admin nếu muốn
+    currentUser.examName = folder.name; 
+    
+    currentIdx = 0; 
+    userAnswers = new Array(activeQuestions.length).fill(-1); 
+    timeLeft = 45 * 60;
+    
+    showPage('page-quiz-view'); 
+    renderQuestion(); 
+    startTimer();
+}
+
+function renderQuestion() {
+    const headerTitle = document.querySelector('#page-quiz-view h2'); // Nếu bạn có thẻ h2 tiêu đề
+// Hoặc đơn giản là thông báo qua giao diện.
+    const q = activeQuestions[currentIdx];
+    let optsHtml = q.options.map((opt, i) => `
+        <label class="quiz-opt">
+            <input type="radio" name="ans" class="w-5 h-5" onchange="selectOption(${i})" ${userAnswers[currentIdx] === i ? 'checked' : ''}>
+            <span class="ml-4 text-lg text-slate-200">${String.fromCharCode(65+i)}. ${opt}</span>
+        </label>
+    `).join('');
+    document.getElementById('current-q-box').innerHTML = `
+        <div class="mb-4 text-indigo-400 font-bold uppercase text-[10px]">Câu ${currentIdx + 1} / ${activeQuestions.length}</div>
+        <p class="text-2xl font-bold mb-10 text-white">${q.text}</p>
+        <div class="space-y-3">${optsHtml}</div>
+    `;
+    renderNav();
+}
+
+function renderNav() {
+    document.getElementById('nav-panel').innerHTML = activeQuestions.map((_, i) => `
+        <button class="nav-btn ${currentIdx === i ? 'active' : ''} ${userAnswers[i] !== -1 ? 'answered' : ''}" onclick="jumpTo(${i})">${i + 1}</button>
+    `).join('');
+}
+
+function selectOption(val) { userAnswers[currentIdx] = val; renderNav(); }
+function jumpTo(idx) { currentIdx = idx; renderQuestion(); }
+function moveQ(step) { let next = currentIdx + step; if(next >= 0 && next < activeQuestions.length) { currentIdx = next; renderQuestion(); } }
+
+function startTimer() {
+    if(quizInterval) clearInterval(quizInterval);
+    quizInterval = setInterval(() => {
+        timeLeft--; 
+        const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+        document.getElementById('timer-box').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        if(timeLeft <= 0) submitQuiz();
+    }, 1000);
+}
+
+function confirmSubmit() { sysConfirm("Xác nhận nộp bài?").then(res => { if(res) submitQuiz(); }); }
+
+function submitQuiz() {
+    clearInterval(quizInterval);
+    
+    // --- BỔ SUNG: TÍNH TOÁN THỜI GIAN LÀM BÀI THỰC TẾ ---
+    const endTimeMs = Date.now();
+    const startTimeMs = currentUser.startTimeMs || endTimeMs; // Fallback nếu không lấy được lúc đầu
+    const totalSeconds = Math.floor((endTimeMs - startTimeMs) / 1000);
+    const mmTaken = Math.floor(totalSeconds / 60);
+    const ssTaken = totalSeconds % 60;
+    const timeTakenStr = `${mmTaken.toString().padStart(2, '0')}:${ssTaken.toString().padStart(2, '0')}`;
+    // --------------------------------------------------
+
+    // Xóa tiến độ tạm thời trong máy sau khi đã nộp thành công
+    localStorage.removeItem('progress_' + currentUser.user);
+
+    let score = 0, details = [];
+    activeQuestions.forEach((q, i) => { 
+        if(userAnswers[i] === q.correct) score++; 
+        details.push({ text: q.text, options: [...q.options], correct: q.correct, selected: userAnswers[i] }); 
+    });
+
+    const percent = Math.round((score / activeQuestions.length) * 100);
+    const point = ((score / activeQuestions.length) * 10).toFixed(1);
+
+    // Hiển thị kết quả lên màn hình
+    document.getElementById('rs-percent').innerText = percent + "%";
+    document.getElementById('rs-circle').style.setProperty('--deg', (percent * 3.6) + 'deg');
+    document.getElementById('rs-grade').innerText = "XẾP LOẠI: " + (percent >= 80 ? "GIỎI" : percent >= 50 ? "TRUNG BÌNH" : "CẦN CỐ GẮNG");
+    document.getElementById('rs-correct').innerText = score + "/" + activeQuestions.length;
+    document.getElementById('rs-point').innerText = point;
+    
+    // HIỂN THỊ THỜI GIAN LÀM BÀI THỰC TẾ LÊN GIAO DIỆN KẾT QUẢ
+    document.getElementById('rs-time').innerText = timeTakenStr;
+
+    showPage('page-result');
+
+    const hi = { 
+        user: currentUser.user,        // Phải có
+        fullname: currentUser.name, 
+        score, 
+        total: activeQuestions.length, 
+        percent, 
+        point: point,
+        examName: currentUser.examName, 
+        examCode: currentUser.examCode, // Phải có
+        duration: timeTakenStr,        // BỔ SUNG: Lưu thời gian vào lịch sử
+        time: new Date().toLocaleString(), 
+        details 
+    };
+    
+    // LƯU KẾT QUẢ VÀ KHÓA BÀI THI
+    const examCode = currentUser.examCode;
+    const adminPath = currentUser.adminSource.replace(/\./g, '_'); // Fix lỗi email có dấu chấm
+
+    // 1. Đẩy thẳng vào kho lịch sử của Admin trên Firebase
+    rdb.ref('users_data/' + adminPath + '/quiz_history').push(hi);
+
+    // 2. Ghi nhận đã nộp bài để chặn làm lại
+    rdb.ref('system/submissions/' + examCode + '/' + currentUser.user).set({
+        submittedAt: Date.now(),
+        score: point
+    });
+
+    document.getElementById('rs-exam-name-display').innerText = currentUser.examName || "KẾT QUẢ BÀI THI";
+}
+
+
+// ==========================================
+// 8. QUẢN LÝ PREMIUM & USER (FULL LOGIC CŨ)
+// ==========================================
+function handleTransferredRequest() {
+    let preDB = JSON.parse(localStorage.getItem('global_premium_requests') || '[]');
+    if(preDB.some(r => r.user === currentUser.user && r.status === 'pending')) return sysNotify("Chờ duyệt", "Yêu cầu cũ đang chờ Admin xử lý!", "warn");
+    preDB.push({ user: currentUser.user, fullname: currentUser.name, status: 'pending', code: '', createdAt: Date.now() });
+    localStorage.setItem('global_premium_requests', JSON.stringify(preDB));
+    saveGlobalMaps(); sysNotify("Đã gửi", "Vui lòng chờ Admin duyệt!", "success"); closePremiumModal();
+}
+
+// Hàm hiển thị danh sách yêu cầu Premium cho Admin gốc
+function renderPremiumRequests() {
+    const body = document.getElementById('premium-requests-table');
+    if (!body) return;
+    
+    const preDB = JSON.parse(localStorage.getItem('global_premium_requests') || '[]');
+    
+    if (preDB.length === 0) {
+        body.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-500">Chưa có yêu cầu nào</td></tr>';
+        return;
+    }
+
+    body.innerHTML = [...preDB].reverse().map(r => {
+        const hasImage = r.proofImg && r.proofImg.length > 50;
+        const btnXemBill = hasImage 
+            ? `<button onclick="viewFullProof('${r.createdAt}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-2 py-1 rounded shadow-sm font-bold">👁️ BILL</button>`
+            : `<span class="text-slate-500 italic text-[10px]">Ko ảnh</span>`;
+
+        // Kiểm tra xem user này thực tế có đang là Premium không (check từ bộ nhớ usersDB)
+        const isCurrentlyPremium = usersDB[r.user] && usersDB[r.user].isPremium;
+
+        let actionButtons = "";
+        if (!isCurrentlyPremium) {
+            // Nếu chưa là Premium -> Hiện nút Duyệt
+            actionButtons = `<button onclick="approvePremiumByTime('${r.createdAt}')" class="bg-emerald-600 hover:bg-emerald-500 text-white p-1 px-2 rounded text-[10px] font-bold">DUYỆT</button>`;
+        } else {
+            // Nếu ĐÃ là Premium -> Hiện nút Gỡ Quyền
+            actionButtons = `<button onclick="revokePremiumDirectly('${r.user}')" class="bg-orange-600 hover:bg-orange-500 text-white p-1 px-2 rounded text-[10px] font-bold">GỠ QUYỀN</button>`;
+        }
+
+        return `
+            <tr class="border-b border-white/5">
+                <td class="py-4 text-xs"><b>${r.fullname}</b><br><span class="opacity-50">${r.user}</span></td>
+                <td class="text-center">${btnXemBill}</td>
+                <td class="text-center">
+                    <span class="text-[9px] px-2 py-0.5 rounded-full font-black ${isCurrentlyPremium ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}">
+                        ${isCurrentlyPremium ? 'ĐÃ PREMIUM' : 'CHỜ DUYỆT'}
+                    </span>
+                </td>
+                <td class="font-mono text-[10px] text-indigo-400 text-center">${r.code || '---'}</td>
+                <td>
+                    <div class="flex gap-1 justify-end">
+                        ${actionButtons}
+                        <button onclick="deletePremiumRequestByTime('${r.createdAt}')" class="bg-red-500/20 text-red-400 p-1 px-2 rounded text-[10px]">✕</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function viewFullProof(time) {
+    const preDB = JSON.parse(localStorage.getItem('global_premium_requests') || '[]');
+    const req = preDB.find(i => i.createdAt == time);
+    if (!req) return;
+
+    const ntBox = document.getElementById('notify-container');
+    document.getElementById('nt-icon').innerText = '🧾';
+    document.getElementById('nt-title').innerText = 'BILL THANH TOÁN';
+    document.getElementById('nt-msg').innerHTML = `
+        <p style="font-size:11px; color:#94a3b8; text-align:left;">Tài khoản: ${req.user}</p>
+        <div style="background:#000; padding:5px; border-radius:10px; margin-top:10px;">
+            <img src="${req.proofImg}" style="width:100%; max-height:60vh; object-fit:contain;">
+        </div>
+    `;
+    document.getElementById('nt-btn-cancel').classList.add('hidden');
+    document.getElementById('nt-btn-ok').onclick = () => closeNotify();
+    ntBox.classList.add('active');
+}
+
+function approvePremiumByTime(time) {
+    rdb.ref('system/global_premium_requests').once('value', (snap) => {
+        let preDB = snap.val() || [];
+        const idx = preDB.findIndex(i => i.createdAt == time);
+        if (idx !== -1) {
+            const u = preDB[idx].user;
+            preDB[idx].status = 'approved';
+            preDB[idx].code = calculateVipCode(u);
+            rdb.ref('system/global_premium_requests').set(preDB);
+            rdb.ref('system/users_db/' + u.replace(/\./g, '_') + '/isPremium').set(true);
+            sysNotify("Xong", "Đã duyệt và cấp Premium!", "success");
+        }
+    });
+}
+
+// Hàm hiển thị ảnh Bill phóng to trong Popup
+// Xem ảnh minh chứng
+function viewFullProof(timestamp) {
+    const preDB = JSON.parse(localStorage.getItem('global_premium_requests') || '[]');
+    const req = preDB.find(item => item.createdAt == timestamp);
+
+    if (!req || !req.proofImg) {
+        return sysNotify("Lỗi", "Không tìm thấy ảnh bill trên máy chủ!", "error");
+    }
+
+    const ntBox = document.getElementById('notify-container');
+    document.getElementById('nt-icon').innerText = '🧾';
+    document.getElementById('nt-title').innerText = 'XÁC MINH GIAO DỊCH';
+    document.getElementById('nt-msg').innerHTML = `
+        <div style="text-align:left; margin-bottom:10px; color:#94a3b8; font-size:12px;">
+            Người gửi: <b style="color:#fff">${req.fullname}</b>
+        </div>
+        <div style="background:#000; border-radius:15px; overflow:hidden; border:2px solid #6366f1; box-shadow: 0 0 20px rgba(99,102,241,0.4);">
+            <img src="${req.proofImg}" style="width:100%; height:auto; display:block; max-height:60vh; object-fit:contain;">
+        </div>
+    `;
+    
+    const okBtn = document.getElementById('nt-btn-ok');
+    okBtn.innerText = 'ĐÓNG';
+    okBtn.onclick = () => closeNotify();
+    document.getElementById('nt-btn-cancel').classList.add('hidden');
+    ntBox.classList.add('active');
+}
+
+// Hàm tạo mã kích hoạt Premium duy nhất dựa trên tên người dùng
+function calculateVipCode(user) {
+    if (!user) return "VIP-ERROR";
+    let hash = 0;
+    // Thuật toán băm đơn giản từ chuỗi username
+    for (let i = 0; i < user.length; i++) {
+        hash = ((hash << 5) - hash) + user.charCodeAt(i);
+        hash |= 0; // Chuyển về số nguyên 32-bit
+    }
+    // Trả về định dạng: VIP - [Mã băm Hex] - [4 số cuối của timestamp]
+    const hexHash = Math.abs(hash).toString(16).toUpperCase();
+    const suffix = Date.now().toString().slice(-4);
+    return `VIP-${hexHash}-${suffix}`;
+}
+
+// Phê duyệt Premium
+// Phê duyệt theo Timestamp
+function approvePremiumByTime(timestamp) {
+    rdb.ref('system/global_premium_requests').once('value', (snap) => {
+        let preDB = snap.val() || [];
+        const index = preDB.findIndex(item => item.createdAt == timestamp);
+        
+        if (index !== -1) {
+            const userAccount = preDB[index].user;
+            const safeUser = userAccount.replace(/\./g, '_');
+            const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+            const expiryDate = Date.now() + thirtyDaysInMs; // Thời điểm hết hạn
+
+            // 1. Cập nhật danh sách yêu cầu
+            preDB[index].status = 'approved';
+            preDB[index].code = calculateVipCode(userAccount);
+            rdb.ref('system/global_premium_requests').set(preDB);
+            
+            // 2. Cấp quyền Premium có thời hạn vào hồ sơ gốc
+            rdb.ref('system/users_db/' + safeUser).update({
+                isPremium: true,
+                premiumExpiresAt: expiryDate
+            });
+
+            sysNotify("Thành công", `Đã duyệt Premium 30 ngày cho tài khoản: ${userAccount}`, "success");
+        }
+    });
+}
+
+// Xóa yêu cầu theo Timestamp
+async function deletePremiumRequestByTime(timestamp) {
+    if (await sysConfirm("Bạn có chắc chắn muốn xóa yêu cầu này?")) {
+        let preDB = JSON.parse(localStorage.getItem('global_premium_requests') || '[]');
+        preDB = preDB.filter(item => item.createdAt != timestamp);
+        
+        localStorage.setItem('global_premium_requests', JSON.stringify(preDB));
+        rdb.ref('system/global_premium_requests').set(preDB);
+        
+        renderPremiumRequests();
+        sysNotify("Đã xóa", "Yêu cầu đã được gỡ bỏ khỏi hệ thống.", "info");
+    }
+}
+
+// Xóa yêu cầu
+async function deletePremiumRequest(originalIdx) {
+    if (await sysConfirm("Bạn muốn xóa yêu cầu này?")) {
+        let preDB = JSON.parse(localStorage.getItem('global_premium_requests') || '[]');
+        preDB.splice(originalIdx, 1);
+        localStorage.setItem('global_premium_requests', JSON.stringify(preDB));
+        
+        rdb.ref('system/global_premium_requests').set(preDB);
+        renderPremiumRequests();
+        sysNotify("Đã xóa", "Đã dọn dẹp yêu cầu.", "info");
+    }
+}
+
+// Bổ sung thêm hàm Xóa yêu cầu (nếu Bill giả hoặc rác)
+async function deletePremiumRequest(idx) {
+    if (await sysConfirm("Bạn muốn xóa yêu cầu này?")) {
+        let preDB = JSON.parse(localStorage.getItem('global_premium_requests') || '[]');
+        const realIdx = preDB.length - 1 - idx;
+        preDB.splice(realIdx, 1);
+        localStorage.setItem('global_premium_requests', JSON.stringify(preDB));
+        saveGlobalMaps();
+        renderPremiumRequests();
+        sysNotify("Đã xóa", "Đã xóa yêu cầu nâng cấp.", "info");
+    }
+}
+
+function approvePremium(idx) {
+    let preDB = JSON.parse(localStorage.getItem('global_premium_requests') || '[]');
+    const realIdx = preDB.length - 1 - idx;
+    preDB[realIdx].status = 'approved';
+    preDB[realIdx].code = calculateVipCode(preDB[realIdx].user);
+    localStorage.setItem('global_premium_requests', JSON.stringify(preDB));
+    saveGlobalMaps(); renderPremiumRequests();
+}
+
+function handleActivatePremium() {
+    const code = document.getElementById('activation-code-input').value.trim();
+    if(code === calculateVipCode(currentUser.user)) {
+        usersDB[currentUser.user].isPremium = true;
+        usersDB[currentUser.user].premiumExpiresAt = Date.now() + (30*24*60*60*1000);
+        saveGlobalUsers(); checkPremiumUI();
+        sysNotify("Thành công", "Bạn đã là thành viên Premium!", "success");
+    } else sysNotify("Lỗi", "Mã kích hoạt sai!", "error");
+}
+
+// Hàm tước quyền Premium ngay lập tức
+async function revokePremiumDirectly(userAccount) {
+    if (!userAccount) return;
+
+    const confirmMsg = `Bạn muốn TƯỚC QUYỀN Premium của [${userAccount}]? \n\nTài khoản này sẽ quay về bản thường ngay lập tức.`;
+
+    if (await sysConfirm(confirmMsg)) {
+        sysNotify("Đang xử lý...", "Đang thu hồi quyền hạn...", "info");
+
+        try {
+            const safeUser = userAccount.replace(/\./g, '_');
+
+            // 1. Chuyển trạng thái trên Firebase về false
+            await rdb.ref('system/users_db/' + safeUser + '/isPremium').set(false);
+            
+            // 2. Xóa ngày hết hạn
+            await rdb.ref('system/users_db/' + safeUser + '/premiumExpiresAt').remove();
+
+            sysNotify("Thành công", `Đã hạ cấp tài khoản ${userAccount} xuống bản thường.`, "success");
+            
+            // Tự cập nhật lại bảng để nút Duyệt hiện ra lại
+            renderPremiumRequests();
+
+        } catch (error) {
+            sysNotify("Lỗi", "Không thể kết nối máy chủ!", "error");
+        }
+    }
+}
+
+function checkPremiumUI() {
+    if (!currentUser) return;
+
+    const activationCard = document.getElementById('premium-activation-card');
+    const premiumStatus = document.getElementById('premium-active-status');
+    const premiumMenuItem = document.getElementById('premium-menu-item');
+    const badge = document.getElementById('role-badge');
+
+    // --- TRƯỜNG HỢP 1: THÍ SINH (ẨN TẤT CẢ LIÊN QUAN ĐẾN PREMIUM) ---
+    if (!currentUser.isAdmin) {
+        if (activationCard) activationCard.classList.add('hidden');
+        if (premiumStatus) premiumStatus.classList.add('hidden');
+        if (premiumMenuItem) premiumMenuItem.classList.add('hidden');
+        if (badge) badge.classList.add('hidden'); // Thí sinh không cần hiện badge bản thường/vip
+        return;
+    }
+
+    // --- TRƯỜNG HỢP 2: ADMIN (ROOT HOẶC ADMIN CON) ---
+    const userInLocal = usersDB[currentUser.user];
+    
+    if (userInLocal && userInLocal.isPremium) {
+        // Nếu ĐÃ LÀ PREMIUM
+        if (activationCard) activationCard.classList.add('hidden');
+        if (premiumStatus) premiumStatus.classList.remove('hidden');
+        if (premiumMenuItem) premiumMenuItem.classList.add('hidden'); // Đã là VIP thì ẩn nút "Nâng cấp" trên menu
+
+        let daysDisplay = "";
+        if (userInLocal.premiumExpiresAt && !isNaN(userInLocal.premiumExpiresAt)) {
+            const timeLeft = userInLocal.premiumExpiresAt - Date.now();
+            const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
+            daysDisplay = daysLeft > 0 ? `(${daysLeft} ngày)` : "(Hết hạn)";
+        } else {
+            daysDisplay = "(Vô hạn)"; 
+        }
+        
+        if (badge) {
+            badge.innerHTML = `PREMIUM ${daysDisplay} 💎`; 
+            badge.className = "badge-vip-active ml-2";
+            badge.classList.remove('hidden');
+        }
+    } else {
+        // Nếu LÀ ADMIN NHƯNG CHƯA LÊN PREMIUM (Bản thường)
+        if (badge) {
+            badge.innerHTML = "BẢN THƯỜNG";
+            badge.className = "badge-normal";
+            badge.classList.remove('hidden');
+        }
+        if (activationCard) activationCard.classList.remove('hidden');
+        if (premiumStatus) premiumStatus.classList.add('hidden');
+        if (premiumMenuItem) premiumMenuItem.classList.remove('hidden');
+    }
+}
+
+function renderUsersManager() {
+    const body = document.getElementById('users-table-body'); if(!body) return;
+    body.innerHTML = Object.keys(usersDB).map(u => `
+        <tr>
+            <td class="font-bold text-white">${usersDB[u].fullname} ${usersDB[u].isPremium ? '💎' : ''}</td>
+            <td class="text-slate-400 text-[11px]">${u}</td>
+            <td class="font-mono text-indigo-400">${usersDB[u].pass}</td>
+            <td>
+                <button class="btn-danger p-1 px-2 text-[10px]" onclick="deleteAcc('${u}')">XÓA</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// ==========================================
+// HÀM XÓA TÀI KHOẢN "A ĐẾN Z" - DEEP DELETE
+// ==========================================
+async function deleteAcc(u) {
+    // 1. Ngăn chặn việc tự xóa chính mình (Admin gốc)
+    if(u === AD_PHONE || u === AD_EMAIL.toLowerCase()) {
+        return sysNotify("Cảnh báo", "Bạn không thể xóa tài khoản Admin gốc của hệ thống!", "error");
+    }
+
+    // 2. Yêu cầu nhập mật khẩu xác nhận
+    const confirmPass = await sysPrompt(
+        "XÁC NHẬN XÓA TÀI KHOẢN", 
+        `CẢNH BÁO: Mọi dữ liệu (Đề thi, lịch sử, tin nhắn) của tài khoản [${u}] sẽ bị xóa vĩnh viễn. \n\nĐể tiếp tục, hãy nhập mật khẩu Admin của bạn:`
+    );
+
+    // Nếu nhấn Hủy hoặc không nhập gì
+    if (confirmPass === null) return;
+
+    // 3. Kiểm tra mật khẩu Admin gốc
+    // Lưu ý: Lấy mật khẩu hiện tại của Admin đang đăng nhập để so sánh
+    const rootAdminPass = usersDB[currentUser.user].pass;
+    if (confirmPass !== rootAdminPass) {
+        return sysNotify("Lỗi xác thực", "Mật khẩu Admin không chính xác. Hành động bị từ chối!", "error");
+    }
+
+    // 4. Bắt đầu quá trình xóa sạch (Deep Delete)
+    sysNotify("Đang xử lý...", "Hệ thống đang xóa sạch mọi dữ liệu liên quan...", "info");
+
+    try {
+        const safeUser = u.replace(/\./g, '_'); // Đảm bảo key Firebase hợp lệ
+
+        // --- BƯỚC A: XÓA TRÊN FIREBASE ---
+        
+        // 1. Xóa đăng ký tài khoản trong system/users_db
+        const p1 = rdb.ref('system/users_db/' + safeUser).remove();
+        
+        // 2. Xóa toàn bộ dữ liệu cá nhân (Ngân hàng câu hỏi, Bộ đề, Lịch sử làm bài)
+        const p2 = rdb.ref('users_data/' + safeUser).remove();
+        
+        // 3. Xóa toàn bộ lịch sử Chat của người dùng này với Admin
+        const p3 = rdb.ref('system/chats/' + safeUser).remove();
+
+        // Đợi tất cả các tiến trình xóa trên Cloud hoàn tất
+        await Promise.all([p1, p2, p3]);
+
+        // --- BƯỚC B: XÓA TRÊN LOCAL ---
+        
+        // Xóa khỏi biến usersDB local
+        delete usersDB[u];
+        
+        // Cập nhật lại LocalStorage của hệ thống
+        localStorage.setItem('users_db', JSON.stringify(usersDB));
+        
+        // Cập nhật giao diện bảng quản lý tài khoản
+        renderUsersManager();
+
+        sysNotify("Thành công", `Đã xóa sạch mọi dấu vết của tài khoản [${u}] khỏi hệ thống!`, "success");
+
+    } catch (error) {
+        console.error("Lỗi xóa tài khoản:", error);
+        sysNotify("Lỗi hệ thống", "Không thể xóa hoàn toàn dữ liệu. Vui lòng kiểm tra kết nối mạng!", "error");
+    }
+}
+
+// --- HÀM VẼ BẢNG MASTER (CHỈ HIỆN USER ĐÃ KÍCH HOẠT) ---
+function renderMasterPremiumList() {
+    if (!currentUser || !currentUser.isRoot) return;
+    const body = document.getElementById('master-premium-body');
+    const badge = document.getElementById('premium-count-badge');
+    if (!body) return;
+
+    // Lọc ra danh sách User đang là Premium
+    const premiumUsers = Object.keys(usersDB).filter(u => usersDB[u].isPremium === true);
+    badge.innerText = `${premiumUsers.length} THÀNH VIÊN`;
+
+    if (premiumUsers.length === 0) {
+        body.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-500 italic text-sm">Chưa có hội viên Premium nào được kích hoạt.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = premiumUsers.map(u => {
+        const d = usersDB[u];
+        const expiry = d.premiumExpiresAt || 0;
+        const activation = expiry - (30 * 24 * 60 * 60 * 1000); // Ước tính ngày kích hoạt
+        
+        const actDate = new Date(activation).toLocaleDateString('vi-VN');
+        const expDate = new Date(expiry).toLocaleDateString('vi-VN');
+        
+        const diff = expiry - Date.now();
+        const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        
+        let countdownHtml = "";
+        if (daysLeft > 0) {
+            countdownHtml = `<span class="text-emerald-400 font-bold">${daysLeft} ngày</span>`;
+        } else {
+            countdownHtml = `<span class="text-red-500 font-bold">Đã hết hạn</span>`;
+        }
+
+        return `
+            <tr class="border-b border-white/5 hover:bg-white/5 transition">
+                <td class="py-4">
+                    <div class="font-bold text-white text-sm">${d.fullname}</div>
+                    <div class="text-[10px] text-indigo-400 font-mono">${u}</div>
+                </td>
+                <td class="text-center text-xs text-slate-400">${actDate}</td>
+                <td class="text-center text-xs text-amber-200 font-bold">${expDate}</td>
+                <td class="text-center text-xs">${countdownHtml}</td>
+                <td class="text-right">
+                    <button onclick="revokePremiumDirectly('${u}')" class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-black transition-all border border-red-500/20">
+                        GỠ QUYỀN
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// --- HÀM GỠ QUYỀN PREMIUM NGAY LẬP TỨC ---
+async function revokePremiumDirectly(userAcc) {
+    if (await sysConfirm(`Xác nhận TƯỚC QUYỀN Premium của tài khoản: [${userAcc}]?`)) {
+        sysNotify("Đang xử lý", "Đang thu hồi quyền hạn...", "info");
+        const safeU = userAcc.replace(/\./g, '_');
+        
+        await rdb.ref('system/users_db/' + safeU).update({
+            isPremium: false,
+            premiumExpiresAt: null
+        });
+        
+        sysNotify("Thành công", `Đã hạ cấp tài khoản ${userAcc} xuống Bản thường.`, "success");
+        // Bảng Master sẽ tự động load lại nhờ Listener trong syncDataFromServer
+    }
+}
+
+function renderMasterPremiumList() {
+    // Chỉ chạy nếu là Admin gốc và giao diện đã sẵn sàng
+    const body = document.getElementById('master-premium-body');
+    if (!body || !currentUser.isRoot) return;
+
+    // Lọc những người có isPremium = true
+    const premiumUsers = Object.keys(usersDB).filter(u => usersDB[u].isPremium === true);
+    
+    // Cập nhật số lượng hội viên lên badge
+    const badge = document.getElementById('premium-count-badge');
+    if (badge) badge.innerText = `${premiumUsers.length} THÀNH VIÊN`;
+
+    if (premiumUsers.length === 0) {
+        body.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-500 italic">Chưa có hội viên Premium nào.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = premiumUsers.map(u => {
+        const d = usersDB[u];
+        const expiry = d.premiumExpiresAt || 0;
+        const activation = expiry - (30 * 24 * 60 * 60 * 1000); 
+        const actDate = new Date(activation).toLocaleDateString('vi-VN');
+        const expDate = new Date(expiry).toLocaleDateString('vi-VN');
+        const diff = expiry - Date.now();
+        const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        
+        let countdownHtml = daysLeft > 0 ? `<b class="text-emerald-400">${daysLeft} ngày</b>` : `<b class="text-red-500">Hết hạn</b>`;
+
+        return `
+            <tr class="border-b border-white/5 hover:bg-white/5 transition">
+                <td class="py-3 text-xs"><b>${d.fullname}</b><br><span class="opacity-50">${u}</span></td>
+                <td class="text-center text-xs text-slate-400">${actDate}</td>
+                <td class="text-center text-xs text-amber-200 font-bold">${expDate}</td>
+                <td class="text-center text-xs">${countdownHtml}</td>
+                <td class="text-right">
+                    <button onclick="revokePremiumDirectly('${u}')" class="bg-red-500 text-white px-2 py-1 rounded text-[10px] font-bold">GỠ QUYỀN</button>
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+// ==========================================
+// 9. CÁC HÀM PHỤ TRỢ (GIAO DIỆN)
+// ==========================================
+function updateAvatarUI() {
+    if (!currentUser) return;
+    const url = currentUser.avatar;
+    const avatarIDs = ['side-avatar-box', 'head-avatar-box', 'profile-avatar-box'];
+    
+    avatarIDs.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (url && url.length > 100) {
+            el.innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
+            el.style.background = "transparent";
+        } else {
+            el.innerText = (currentUser.name || "U").charAt(0).toUpperCase();
+            el.style.background = "linear-gradient(135deg, #6366f1, #a855f7)";
+        }
+    });
+}
+
+function renderAdminPreview() {
+    document.getElementById('count').innerText = db.length;
+    const p = document.getElementById('preview-section'); if(!p) return;
+    p.innerHTML = db.map((q, i) => `
+        <div class="card glass flex justify-between items-center group">
+            <div class="flex-1 pr-4"><span class="text-[10px] text-indigo-400 font-bold uppercase">CÂU ${i+1}</span><p class="text-slate-200 truncate font-semibold">${q.text}</p></div>
+            <button class="bg-white/5 hover:bg-red-500 p-2 rounded-lg" onclick="deleteQ(${i})">🗑️</button>
+        </div>
+    `).reverse().join('');
+}
+
+function deleteQ(i) { db.splice(db.length-1-i, 1); saveDB(); renderAdminPreview(); }
+// Hàm xóa sạch Ngân hàng câu hỏi (Ngân hàng chung)
+async function clearAllDB() {
+    // 1. Kiểm tra xem ngân hàng có câu hỏi nào không
+    if (db.length === 0) {
+        return sysNotify("Thông báo", "Ngân hàng câu hỏi hiện đang trống.", "info");
+    }
+
+    // 2. Xác nhận từ người dùng để tránh bấm nhầm
+    const confirmMsg = "CẢNH BÁO: Bạn có chắc chắn muốn XÓA SẠCH toàn bộ câu hỏi trong Ngân hàng chung?\n\nLưu ý: Hành động này KHÔNG ảnh hưởng đến các câu hỏi bạn đã lưu vào các Bộ đề (Folders) riêng biệt.";
+
+    if (await sysConfirm(confirmMsg)) {
+        sysNotify("Đang xử lý...", "Đang dọn dẹp ngân hàng đề...", "info");
+
+        try {
+            // 3. Xóa dữ liệu trong mảng tạm (Local)
+            db = [];
+
+            // 4. Lưu trạng thái trống vào LocalStorage
+            localStorage.setItem(getPrefix() + 'quiz_db', JSON.stringify(db));
+
+            // 5. Cập nhật lên Firebase (Xóa node quiz_db của user này)
+            if (currentUser) {
+                const safeUser = currentUser.user.replace(/\./g, '_');
+                await rdb.ref('users_data/' + safeUser + '/quiz_db').remove();
+            }
+
+            // 6. Cập nhật lại giao diện hiển thị
+            renderAdminPreview(); // Vẽ lại danh sách câu hỏi (sẽ trống)
+            updateFolderDropdowns(); // Cập nhật lại các ô chọn câu hỏi trong phần quản lý bộ đề
+
+            sysNotify("Thành công", "Đã xóa sạch Ngân hàng câu hỏi chung!", "success");
+
+        } catch (error) {
+            console.error("Lỗi khi xóa ngân hàng đề:", error);
+            sysNotify("Lỗi hệ thống", "Không thể xóa dữ liệu trên Server. Vui lòng kiểm tra kết nối!", "error");
+        }
+    }
+}
+function deleteFolder(i) {
+    // Sửa foldersDB.length - 1 - i thành i
+    foldersDB.splice(i, 1); 
+    saveFolders(); 
+    renderFolders(); 
+}
+
+function switchAuth(t) { 
+    ['form-login', 'form-reg', 'form-forgot', 'form-join'].forEach(id => document.getElementById(id).classList.add('hidden')); 
+    document.getElementById('form-' + t).classList.remove('hidden');
+    ['tab-login', 'tab-reg', 'tab-join'].forEach(id => document.getElementById(id).classList.add('text-slate-400'));
+    document.getElementById('tab-' + t).classList.remove('text-slate-400');
+}
+
+function updateFolderDropdowns() {
+    const folderOptions = foldersDB.map((f, idx) => `<option value="${idx}">${f.name}</option>`).join('');
+    ['import-to-folder-select', 'manual-to-folder-select'].forEach(id => {
+        const el = document.getElementById(id); if(el) el.innerHTML = folderOptions || '<option>Chưa có bộ đề</option>';
+    });
+}
+
+// Gợi ý tài khoản
+if(loginInput) {
+    const showSuggestions = () => {
+        const recent = JSON.parse(localStorage.getItem(SUGGESTION_KEY) || '[]');
+        const val = loginInput.value.trim().toLowerCase();
+        const filtered = recent.filter(u => u.includes(val));
+
+        if(filtered.length) {
+            suggestionBox.innerHTML = filtered.map(u => `<div class="suggestion-item">👤 ${u}</div>`).join('');
+            suggestionBox.style.display = 'block';
+            suggestionBox.querySelectorAll('.suggestion-item').forEach(item => {
+                item.onclick = () => { 
+                    loginInput.value = item.innerText.split(' ')[1]; 
+                    suggestionBox.style.display = 'none'; 
+                };
+            });
+        } else {
+            suggestionBox.style.display = 'none';
+        }
+    };
+
+    loginInput.onfocus = showSuggestions;
+    loginInput.oninput = showSuggestions; // Hiện lại bảng khi đang gõ nếu có kết quả khớp
+}
+
+function openPremiumModal() {
+    document.getElementById('premium-acc-tag').innerText = `[${currentUser.user.toUpperCase()}]`;
+    document.getElementById('premium-modal').classList.remove('hidden');
+}
+function closePremiumModal() { document.getElementById('premium-modal').classList.add('hidden'); }
+
+// Khởi chạy khi tải trang
+window.onload = () => {
+    if(currentUser) syncDataFromServer();
+    else switchAuth('login');
+};
+
+// ==========================================
+// 10. XỬ LÝ PHÍM ENTER (MŨI TÊN BÀN PHÍM ĐIỆN THOẠI)
+// ==========================================
+
+// Hàm xử lý chung cho các ô nhập liệu
+function handleEnterKey(event, actionButtonId) {
+    if (event.key === "Enter") {
+        event.preventDefault(); // Ngăn việc xuống dòng
+        document.getElementById(actionButtonId).click(); // Kích hoạt nút bấm tương ứng
+    }
+}
+
+// Gán sự kiện khi trang tải xong
+const originalOnLoad = window.onload;
+window.onload = () => {
+    if (originalOnLoad) originalOnLoad();
+
+    // 1. Cho các form Đăng nhập / Đăng ký / Vào thi
+    const loginPass = document.getElementById('login-pass');
+    if (loginPass) loginPass.addEventListener("keydown", (e) => handleEnterKey(e, 'tab-login-btn')); // Bạn cần thêm id vào nút Login
+
+    const joinName = document.getElementById('join-name');
+    if (joinName) joinName.addEventListener("keydown", (e) => handleEnterKey(e, 'tab-join-btn'));
+
+    // 2. Đặc biệt cho ô nhập "Bộ đề mới" (nt-input)
+    const ntInput = document.getElementById('nt-input');
+    if (ntInput) {
+        ntInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                // Tìm nút "Đồng ý" đang hiển thị và click nó
+                document.getElementById('nt-btn-ok').click();
+            }
+        });
+    }
+    const chatInput = document.getElementById('chat-input');
+if(chatInput) chatInput.addEventListener("keydown", (e) => handleEnterKey(e, null, sendChatMessage));
+
+const adminChatInput = document.getElementById('admin-chat-input');
+if(adminChatInput) adminChatInput.addEventListener("keydown", (e) => handleEnterKey(e, null, sendAdminReply));
+
+// Cập nhật hàm handleEnterKey để nhận thêm callback
+function handleEnterKey(event, actionButtonId, callback) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        if(callback) callback();
+        else if(actionButtonId) document.getElementById(actionButtonId).click();
+    }
+}
+};
+
+// Cập nhật lại các ID nút bấm để mã bên trên tìm thấy
+document.querySelector("#form-login button").id = "tab-login-btn";
+document.querySelector("#form-join button").id = "tab-join-btn";
+document.querySelector("#form-reg button").id = "tab-reg-btn";
+
+// ==========================================
+// 11. HỆ THỐNG CHAT REALTIME
+// ==========================================
+let currentActiveChatUser = null;
+
+// Hàm mở/đóng hộp chat
+function toggleChatBox() {
+    const box = document.getElementById('chat-box');
+    box.classList.toggle('hidden');
+    if(!box.classList.contains('hidden')) {
+        document.getElementById('chat-input').focus();
+        loadChatMessages();
+    }
+}
+
+// Admin con gửi tin nhắn
+function sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text || !currentUser) return;
+
+    const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
+    const msgData = {
+        sender: currentUser.user,
+        name: currentUser.name,
+        text: text,
+        time: Date.now()
+    };
+
+    rdb.ref('system/chats/' + chatId + '/messages').push(msgData);
+    
+    // Cập nhật trạng thái unread để Admin gốc thấy số Badge nhảy
+    rdb.ref('system/chats/' + chatId + '/unread').transaction((current) => (current || 0) + 1);
+    
+    // Cập nhật thời gian tin nhắn cuối để Admin gốc sắp xếp danh sách
+    rdb.ref('system/chats/' + chatId + '/lastActive').set(Date.now());
+
+    input.value = "";
+}
+
+// Tải tin nhắn (Realtime) cho Admin con
+function loadChatMessages() {
+    if(!currentUser) return;
+    const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
+    rdb.ref('system/chats/' + chatId + '/messages').on('value', (snapshot) => {
+        const container = document.getElementById('chat-messages');
+        const data = snapshot.val();
+        if(!data) {
+            container.innerHTML = '<p class="text-center text-slate-500 text-[10px]">Bắt đầu trò chuyện với Quản trị viên...</p>';
+            return;
+        }
+        container.innerHTML = Object.values(data).map(m => `
+            <div class="msg-item ${m.sender === currentUser.user ? 'msg-right' : 'msg-left'}">
+                ${m.text}
+            </div>
+        `).join('');
+        container.scrollTop = container.scrollHeight;
+    });
+}
+
+// --- LOGIC DÀNH RIÊNG CHO ADMIN GỐC ---
+
+// Tải danh sách các admin con đang chat
+function loadChatUserList() {
+    rdb.ref('system/chats').on('value', (snapshot) => {
+        const list = document.getElementById('chat-user-list');
+        const data = snapshot.val();
+        if (!data) {
+            list.innerHTML = '<p class="text-center text-slate-500 text-xs">Chưa có tin nhắn nào</p>';
+            return;
+        }
+
+        list.innerHTML = Object.keys(data).map(userId => {
+            const messages = data[userId].messages;
+            const lastMessage = messages ? Object.values(messages).pop().text : "---";
+            const unreadCount = data[userId].unread || 0; // Lấy số chưa đọc
+            
+            const badgeHtml = unreadCount > 0 
+                ? `<span class="bg-red-500 text-white text-[11px] font-extrabold px-1.5 py-0.5 rounded-full">+${unreadCount}</span>` 
+                : '';
+
+            return `
+                <button onclick="selectChatUser('${userId}')" id="btn-chat-${userId}" class="chat-user-btn flex justify-between items-center w-full">
+                    <div class="flex-1 truncate pr-2">
+                        <div class="font-bold text-sm text-white">${userId}</div>
+                        <div class="text-[10px] opacity-60 truncate">${lastMessage}</div>
+                    </div>
+                    ${badgeHtml} 
+                </button>
+            `;
+        }).reverse().join(''); // Hiện người nhắn gần nhất lên đầu
+    });
+}
+
+function selectChatUser(userId) {
+    currentActiveChatUser = userId;
+    document.querySelectorAll('.chat-user-btn').forEach(b => b.classList.remove('active'));
+    
+    const activeBtn = document.getElementById('btn-chat-' + userId);
+    if(activeBtn) activeBtn.classList.add('active');
+    
+    document.getElementById('admin-chat-header').innerText = "Đang chat với: " + userId;
+    document.getElementById('admin-chat-input-zone').classList.remove('hidden');
+    
+    // ĐÁNH DẤU ĐÃ ĐỌC: Đưa trường unread của User này về 0 khi Admin Click vào
+    rdb.ref('system/chats/' + userId + '/unread').set(0);
+
+    // Tải tin nhắn chi tiết
+    rdb.ref('system/chats/' + userId + '/messages').on('value', (snapshot) => {
+        const container = document.getElementById('admin-chat-messages');
+        const msgs = snapshot.val();
+        if(!msgs) return;
+        
+        container.innerHTML = Object.values(msgs).map(m => `
+            <div class="msg-item ${m.sender === AD_PHONE ? 'msg-right' : 'msg-left'}">
+                <small class="block text-[9px] opacity-50">${m.name}</small>
+                ${m.text}
+            </div>
+        `).join('');
+        container.scrollTop = container.scrollHeight;
+    });
+}
+
+function sendAdminReply() {
+    const input = document.getElementById('admin-chat-input');
+    const text = input.value.trim();
+    if(!text || !currentActiveChatUser) return;
+
+    const msgData = {
+        sender: AD_PHONE,
+        name: "Admin Hệ Thống",
+        text: text,
+        time: Date.now()
+    };
+
+    rdb.ref('system/chats/' + currentActiveChatUser + '/messages').push(msgData);
+    input.value = "";
+}
+
+// ==========================================
+// 12. TỰ ĐỘNG ẨN BẢNG GỢI Ý KHI RÊ CHUỘT RA NGOÀI HOẶC CLICK NGOÀI
+// ==========================================
+
+// 1. Khi Click hoặc Chạm (Touch) vào bất kỳ đâu trên màn hình
+document.addEventListener('click', function(e) {
+    const container = document.getElementById('login-user-container');
+    if (container && !container.contains(e.target)) {
+        if (suggestionBox) suggestionBox.style.display = 'none';
+    }
+});
+
+document.addEventListener('touchstart', function(e) {
+    const container = document.getElementById('login-user-container');
+    if (container && !container.contains(e.target)) {
+        if (suggestionBox) suggestionBox.style.display = 'none';
+    }
+});
+
+// 2. Khi rê chuột ra khỏi vùng nhập liệu (Dành cho máy tính)
+const loginContainer = document.getElementById('login-user-container');
+if (loginContainer) {
+    loginContainer.addEventListener('mouseleave', function() {
+        // Trì hoãn một chút để người dùng kịp nhấn vào item nếu họ lỡ tay rê chuột ra
+        setTimeout(() => {
+            if (suggestionBox) suggestionBox.style.display = 'none';
+        }, 300);
+    });
+}
+
+// Lắng nghe tất cả các tin nhắn chưa đọc để cập nhật lên Sidebar và hiện Popup thông báo
+function listenToTotalUnread() {
+    if (!currentUser) return;
+
+    // TRƯỜNG HỢP 1: DÀNH CHO ADMIN GỐC (Tổng hợp tất cả admin con)
+    if (currentUser.isRoot) {
+        rdb.ref('system/chats').on('value', (snapshot) => {
+            const data = snapshot.val();
+            let totalUnread = 0;
+            if (data) {
+                for (const userId in data) {
+                    totalUnread += (data[userId].unread || 0);
+                }
+            }
+
+            // Cập nhật số Badge ở Sidebar
+            const badge = document.getElementById('sidebar-chat-badge');
+            if (badge) {
+                if (totalUnread > 0) {
+                    badge.innerText = totalUnread;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+
+            // --- THÔNG BÁO NGAY KHI ĐĂNG NHẬP ---
+            if (isFirstLogin && totalUnread > 0) {
+                isFirstLogin = false; // Khóa ngay để không hiện lại
+                setTimeout(() => {
+                    NOTI_SOUND.play().catch(() => {});
+                    showModernToast(
+                        "TIN NHẮN CHỜ XỬ LÝ", 
+                        `Chào Quản trị viên, có <b class="text-white">${totalUnread}</b> tin nhắn hỗ trợ mới đang chờ bạn phản hồi!`, 
+                        "info"
+                    );
+                }, 2000); // Đợi 2 giây sau khi vào trang cho mượt
+            }
+        });
+    } 
+    // TRƯỜNG HỢP 2: DÀNH CHO ADMIN CON (Nhận phản hồi từ Admin Gốc)
+    else if (currentUser.isAdmin) {
+        const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
+        rdb.ref('system/chats/' + chatId + '/unread').on('value', (snapshot) => {
+            const unreadCount = snapshot.val() || 0;
+            
+            if (isFirstLogin && unreadCount > 0) {
+                isFirstLogin = false;
+                setTimeout(() => {
+                    NOTI_SOUND.play().catch(() => {});
+                    showModernToast(
+                        "BẠN CÓ PHẢN HỒI MỚI", 
+                        `Quản trị viên đã trả lời tin nhắn của bạn. Bạn có <b class="text-white">${unreadCount}</b> tin nhắn chưa xem.`, 
+                        "success"
+                    );
+                }, 2000);
+            }
+        });
+    }
+}
+
+// 1. Hàm hiển thị Toast thông báo xịn xò
+function showModernToast(title, msg, type = "info") {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    const themes = {
+        success: { border: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', icon: '✅' },
+        info: { border: '#6366f1', bg: 'rgba(99, 102, 241, 0.15)', icon: '📩' },
+        warn: { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', icon: '⚠️' }
+    };
+    const theme = themes[type] || themes.info;
+
+    toast.className = 'modern-toast';
+    toast.style.borderLeft = `6px solid ${theme.border}`;
+    toast.style.cursor = 'pointer';
+    
+    toast.innerHTML = `
+        <div class="toast-icon" style="background: ${theme.bg}; color: ${theme.border}">${theme.icon}</div>
+        <div class="toast-content">
+            <div class="toast-title" style="color: ${theme.border}; font-weight: 800; font-size: 13px;">${title}</div>
+            <div class="toast-desc" style="font-size: 12px; line-height: 1.4;">${msg}</div>
+        </div>
+        <button onclick="this.parentElement.remove()" class="text-slate-500 hover:text-white ml-2 text-xl">✕</button>
+    `;
+    
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 100);
+    
+    // Click vào Toast là mở ngay khung chat
+    toast.onclick = (e) => {
+        if(e.target.tagName !== 'BUTTON') {
+            if (currentUser.isRoot) showPage('page-chat-admin');
+            else toggleChatBox();
+            toast.remove();
+        }
+    };
+
+    // Tự động đóng sau 10 giây
+    setTimeout(() => {
+        if(toast.parentElement) {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 600);
+        }
+    }, 10000);
+}
+
+// 2. Hàm lắng nghe tổng số tin nhắn chưa đọc từ Firebase
+function listenToTotalUnread() {
+    if (!currentUser || !currentUser.isRoot) return;
+
+    rdb.ref('system/chats').on('value', (snapshot) => {
+        const data = snapshot.val();
+        let totalUnread = 0;
+        if (data) {
+            for (const userId in data) {
+                totalUnread += (data[userId].unread || 0);
+            }
+        }
+        
+        const badge = document.getElementById('sidebar-chat-badge');
+        if (badge) {
+            if (totalUnread > 0) {
+                badge.innerText = totalUnread;
+                badge.classList.remove('hidden');
+            } else {
+                badge.innerText = "0";
+                badge.classList.add('hidden');
+            }
+        }
+        // Gọi cập nhật chấm đỏ menu ngay lập tức
+        updateGlobalMenuDot();
+    });
+}
+
+// Hàm xử lý khi bấm nút Hoàn tất ở trang kết quả (Phiên bản Thông báo Hiện đại)
+function handleFinishQuiz() {
+    // Nếu là Thí sinh (không có quyền Admin)
+    if (currentUser && !currentUser.isAdmin) {
+        // 1. Xóa tiến độ làm bài tạm thời và phiên đăng nhập
+        localStorage.removeItem('progress_' + currentUser.user);
+        localStorage.removeItem('sys_logged_user');
+
+        // 2. Hiển thị thông báo hiện đại tùy chỉnh
+        const ntBox = document.getElementById('notify-container');
+        document.getElementById('nt-icon').innerText = '🎊';
+        document.getElementById('nt-title').innerText = 'NỘP BÀI THÀNH CÔNG';
+        document.getElementById('nt-msg').innerHTML = `
+            <div class="text-center">
+                <p class="text-slate-300 mb-2">Cảm ơn bạn đã hoàn thành bài thi.</p>
+                <p class="text-[11px] text-indigo-400 font-bold uppercase tracking-wider">Kết quả đã được lưu vĩnh viễn vào hệ thống.</p>
+                <div class="mt-4 p-2 bg-white/5 rounded-lg border border-white/10 text-[10px] text-slate-500">
+                    Hệ thống sẽ tự đăng xuất để bảo mật thông tin của bạn.
+                </div>
+            </div>
+        `;
+        
+        // Đổi tên nút và gán sự kiện tải lại trang khi bấm OK
+        const okBtn = document.getElementById('nt-btn-ok');
+        okBtn.innerText = 'KẾT THÚC PHIÊN THI';
+        okBtn.onclick = function() {
+            location.reload(); // Thoát hoàn toàn về màn hình login
+        };
+
+        // Ẩn nút Hủy nếu nó đang hiện
+        document.getElementById('nt-btn-cancel').classList.add('hidden');
+        
+        // Kích hoạt hiển thị thông báo
+        ntBox.classList.add('active');
+
+        // (Tùy chọn) Tự động reload sau 10 giây nếu thí sinh treo máy không bấm
+        setTimeout(() => {
+            if(ntBox.classList.contains('active')) location.reload();
+        }, 10000);
+
+    } 
+    // Nếu là Admin đang tự bấm "Thi" để kiểm tra đề
+    else {
+        showPage('page-home');
+    }
+}
+
+// 1. Hàm xử lý nén ảnh khi người dùng chọn file
+function processAvatar(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    if (!file.type.match('image.*')) {
+        return sysNotify("Lỗi", "Vui lòng chọn file hình ảnh!", "error");
+    }
+
+    sysNotify("Đang xử lý", "Đang tối ưu ảnh hồ sơ...", "info");
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const size = 200; // Nén về 200x200px cho nhẹ hệ thống
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            // Cắt ảnh vuông từ tâm
+            const minSide = Math.min(img.width, img.height);
+            const sx = (img.width - minSide) / 2;
+            const sy = (img.height - minSide) / 2;
+            ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+
+            const base64Avatar = canvas.toDataURL('image/jpeg', 0.7);
+            saveAvatarToSystem(base64Avatar);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// 2. Hàm lưu ảnh vào Firebase và LocalStorage
+async function saveAvatarToSystem(base64Data) {
+    try {
+        const safeUser = currentUser.user.replace(/\./g, '_');
+
+        // Cập nhật phiên hiện tại
+        currentUser.avatar = base64Data;
+        localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
+
+        // Cập nhật DB nội bộ
+        if (usersDB[currentUser.user]) {
+            usersDB[currentUser.user].avatar = base64Data;
+            localStorage.setItem('users_db', JSON.stringify(usersDB));
+        }
+
+        // Lưu vĩnh viễn lên Firebase
+        await rdb.ref('system/users_db/' + safeUser + '/avatar').set(base64Data);
+
+        // Cập nhật giao diện ngay lập tức
+        updateAvatarUI();
+        sysNotify("Thành công", "Đã cập nhật ảnh hồ sơ!", "success");
+    } catch (error) {
+        sysNotify("Lỗi", "Không thể lưu ảnh!", "error");
+    }
+}
+
+function copyToClipboard(text) {
+    // Sử dụng Clipboard API hiện đại
+    navigator.clipboard.writeText(text).then(() => {
+        // Thông báo nhanh cho người dùng biết đã copy thành công
+        sysNotify("Thành công", "Đã sao chép mã đề: " + text, "success");
+        
+        // Tự động đóng thông báo sau 1.5 giây cho đỡ vướng
+        setTimeout(() => closeNotify(), 1500);
+    }).catch(err => {
+        // Fallback nếu trình duyệt cũ không hỗ trợ
+        const input = document.createElement('input');
+        input.value = text;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        sysNotify("Thành công", "Đã sao chép mã đề: " + text, "success");
+    });
+}
+
+</script>
+<!-- GIAO DIỆN CHAT CHO ADMIN CON -->
+<div id="chat-container" class="fixed bottom-12 right-6 z-[10001] hidden">
+    <!-- Icon Chat -->
+    <button onclick="toggleChatBox()" class="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-all border-2 border-white/20">
+        <span id="chat-icon-text" class="text-2xl">💬</span>
+    </button>
+
+    <!-- Khung Chat -->
+    <div id="chat-box" class="absolute bottom-16 right-0 w-[320px] h-[450px] bg-slate-900 border border-white/10 rounded-2xl shadow-2xl flex flex-col hidden overflow-hidden backdrop-blur-xl">
+        <div class="p-4 bg-indigo-600 text-white font-bold flex justify-between items-center">
+            <span>Hỗ trợ Quản trị viên</span>
+            <button onclick="toggleChatBox()" class="text-white/70 hover:text-white">✕</button>
+        </div>
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col">
+            <!-- Tin nhắn sẽ hiện ở đây -->
+        </div>
+        <div class="p-3 border-t border-white/10 bg-black/20 flex gap-2">
+            <input type="text" id="chat-input" class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500" placeholder="Nhập tin nhắn...">
+            <button onclick="sendChatMessage()" class="bg-indigo-600 px-3 rounded-lg text-sm">Gửi</button>
+        </div>
+    </div>
+</div>
+
+<!-- TRANG QUẢN LÝ CHAT DÀNH CHO ADMIN GỐC -->
+<div id="page-chat-admin" class="page hidden">
+    <div class="card glass">
+        <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+            <span class="p-2 bg-indigo-500/20 rounded-lg">💬</span> TIN NHẮN HỖ TRỢ
+        </h3>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+            <!-- Danh sách người nhắn -->
+            <div id="chat-user-list" class="bg-black/20 rounded-2xl p-4 overflow-y-auto space-y-2 border border-white/5">
+                <p class="text-slate-500 text-xs text-center">Đang tải danh sách...</p>
+            </div>
+            <!-- Khung nội dung chat -->
+            <div class="lg:col-span-2 flex flex-col bg-black/20 rounded-2xl border border-white/5 overflow-hidden">
+                <div id="admin-chat-header" class="p-4 border-b border-white/5 font-bold text-indigo-400">Chọn một admin con để xem</div>
+                <div id="admin-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col"></div>
+                <div id="admin-chat-input-zone" class="p-4 border-t border-white/5 flex gap-2 hidden">
+                    <input type="text" id="admin-chat-input" class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-indigo-500" placeholder="Trả lời admin con...">
+                    <button onclick="sendAdminReply()" class="bg-indigo-600 px-6 rounded-xl font-bold">GỬI</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

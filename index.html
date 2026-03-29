@@ -1626,7 +1626,11 @@ function loginSuccess() {
 }
 
 
-function logout() { localStorage.removeItem('sys_logged_user'); location.reload(); }
+function logout() { 
+    notifiedMessages.clear(); // Xóa sạch danh sách ID đã báo
+    localStorage.removeItem('sys_logged_user'); 
+    location.reload(); 
+}
 
 // ==========================================
 // 6. NHẬP LIỆU: WORD (MAMMOTH) & ẢNH (OCR)
@@ -3146,20 +3150,21 @@ if (currentUser.isRoot) {
         const data = snapshot.val();
         if (!data || !data.messages) return;
 
+        // Chuyển Object tin nhắn thành mảng để lấy tin nhắn cuối
         const msgEntries = Object.entries(data.messages);
         if (msgEntries.length === 0) return;
 
-        // Lấy tin nhắn cuối cùng (ID và Nội dung)
         const [msgId, lastMsg] = msgEntries[msgEntries.length - 1];
 
-        // ĐIỀU KIỆN: 
-        // 1. Người gửi không phải là mình
-        // 2. ID tin nhắn này chưa từng được thông báo (Set.has)
-        // 3. Tin nhắn mới được tạo trong vòng 1 phút trở lại (tránh báo tin nhắn cũ khi đồng bộ)
+        // CHẶN THÔNG BÁO LẶP:
+        // 1. Phải là tin nhắn từ người khác (không phải AD_PHONE gửi)
+        // 2. ID tin nhắn này chưa nằm trong Set notifiedMessages
+        // 3. Tin nhắn mới được gửi trong vòng 30 giây đổ lại (tránh báo tin nhắn cũ khi load lại dữ liệu)
         if (lastMsg.sender !== AD_PHONE && !notifiedMessages.has(msgId)) {
             const msgTime = lastMsg.time || 0;
-            if (Date.now() - msgTime < 60000) { 
-                notifiedMessages.add(msgId); // Đánh dấu đã báo
+            if (Date.now() - msgTime < 30000) { 
+                notifiedMessages.add(msgId); // Đánh dấu đã báo tin nhắn này
+                
                 NOTI_SOUND.play().catch(() => {});
                 showModernToast("Tin nhắn mới", `<b>${lastMsg.name}:</b> ${lastMsg.text}`, "info");
             }
@@ -3167,21 +3172,22 @@ if (currentUser.isRoot) {
     });
 } else if (currentUser.isAdmin) {
     const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
+    // Đối với Admin con, chỉ lấy tin nhắn cuối cùng mới thêm vào
     rdb.ref('system/chats/' + chatId + '/messages').limitToLast(1).on('child_added', (snapshot) => {
         if (isialLoad) return;
         const msgId = snapshot.key;
         const msg = snapshot.val();
 
-        // ĐIỀU KIỆN: Tin nhắn từ Admin gốc và chưa được báo
         if (msg.sender === AD_PHONE && !notifiedMessages.has(msgId)) {
             if (document.getElementById('chat-box').classList.contains('hidden')) {
-                notifiedMessages.add(msgId); // Đánh dấu đã báo
+                notifiedMessages.add(msgId);
                 NOTI_SOUND.play().catch(() => {});
                 showModernToast("Phản hồi từ Quản trị viên", msg.text, "success");
             }
         }
     });
 }
+
     // TRƯỜNG HỢP 2: DÀNH CHO ADMIN CON (Nhận phản hồi từ Admin Gốc)
     else if (currentUser.isAdmin) {
         const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");

@@ -1357,33 +1357,50 @@ function syncDataFromServer() {
             localStorage.setItem('global_share_map', JSON.stringify(s.val() || {}));
         });
 
-        // --- LOGIC THÔNG BÁO TIN NHẮN LIVE (KHI ĐANG MỞ WEB) ---
-       if (currentUser.isRoot) {
-            rdb.ref('system/chats').on('child_changed', (snapshot) => {
-                if (isialLoad) return;
-                const data = snapshot.val();
-                const msgs = data.messages ? Object.values(data.messages) : [];
-                if (msgs.length === 0) return;
-                const lastMsg = msgs[msgs.length - 1];
-                if (lastMsg.sender !== AD_PHONE) {
-                    NOTI_SOUND.play().catch(() => {});
-                    showModernToast("Tin nhắn mới", `<b>${lastMsg.name}:</b> ${lastMsg.text}`, "info");
-                }
-            });
-        } else if (currentUser.isAdmin) {
-            // ADMIN CON: Lắng nghe phản hồi từ Admin hệ thống
-            const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
-            rdb.ref('system/chats/' + chatId + '/messages').limitToLast(1).on('child_added', (snapshot) => {
-                if (isialLoad) return;
-                const msg = snapshot.val();
-                if (msg.sender === AD_PHONE) {
-                    if (document.getElementById('chat-box').classList.contains('hidden')) {
-                        NOTI_SOUND.play().catch(() => {});
-                        showModernToast("Phản hồi từ Quản trị viên", msg.text, "success");
-                    }
-                }
-            });
+       // --- LOGIC THÔNG BÁO TIN NHẮN LIVE (CHỈ BÁO 1 LẦN DUY NHẤT) ---
+if (currentUser.isRoot) {
+    rdb.ref('system/chats').on('child_changed', (snapshot) => {
+        if (isialLoad) return; 
+
+        const data = snapshot.val();
+        if (!data || !data.messages) return;
+
+        // Lấy danh sách tin nhắn và ID
+        const entries = Object.entries(data.messages);
+        if (entries.length === 0) return;
+
+        // Lấy tin nhắn cuối cùng: [ID, Nội dung]
+        const [msgId, lastMsg] = entries[entries.length - 1];
+
+        // CHẶN TRÙNG: Phải không phải mình gửi && ID chưa được báo && Mới gửi gần đây
+        if (lastMsg.sender !== AD_PHONE && !notifiedMessages.has(msgId)) {
+            const msgTime = lastMsg.time || 0;
+            if (Date.now() - msgTime < 60000) {
+                notifiedMessages.add(msgId); // Đánh dấu đã báo
+                NOTI_SOUND.play().catch(() => {});
+                showModernToast("Tin nhắn mới", `<b>${lastMsg.name}:</b> ${lastMsg.text}`, "info");
+            }
         }
+    });
+} else if (currentUser.isAdmin) {
+    // ADMIN CON: Lắng nghe phản hồi từ Admin hệ thống
+    const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
+    rdb.ref('system/chats/' + chatId + '/messages').limitToLast(1).on('child_added', (snapshot) => {
+        if (isialLoad) return;
+        
+        const msgId = snapshot.key;
+        const msg = snapshot.val();
+
+        // CHẶN TRÙNG CHO ADMIN CON: ID chưa báo && Gửi từ Admin Gốc
+        if (msg.sender === AD_PHONE && !notifiedMessages.has(msgId)) {
+            if (document.getElementById('chat-box').classList.contains('hidden')) {
+                notifiedMessages.add(msgId); // Đánh dấu đã báo
+                NOTI_SOUND.play().catch(() => {});
+                showModernToast("Phản hồi từ Quản trị viên", msg.text, "success");
+            }
+        }
+    });
+}
 
         // Tắt cờ load lần đầu sau 3 giây để bắt đầu nhận thông báo thực
         setTimeout(() => { isialLoad = false; }, 3000);

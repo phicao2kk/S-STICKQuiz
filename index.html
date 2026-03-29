@@ -279,15 +279,79 @@
     line-height: 1 !important;
 }
 
-/* CSS CHO CHAT */
-.msg-bubble { max-width: 85%; padding: 8px 12px; border-radius: 15px; font-size: 13px; line-height: 1.4; margin-bottom: 5px; position: relative; }
-.msg-left { align-self: flex-start; background: rgba(255,255,255,0.1); color: white; border-bottom-left-radius: 2px; }
-.msg-right { align-self: flex-end; background: #6366f1; color: white; border-bottom-right-radius: 2px; }
-.chat-user-item { width: 100%; text-align: left; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; margin-bottom: 8px; }
-.chat-user-item:hover { background: rgba(99, 102, 241, 0.1); border-color: #6366f1; }
-.chat-user-item.active { background: #6366f1; border-color: #6366f1; color: white; }
-#chat-messages::-webkit-scrollbar, #admin-chat-messages::-webkit-scrollbar { width: 4px; }
-#chat-messages::-webkit-scrollbar-thumb, #admin-chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+/* --- GIAO DIỆN CHAT STYLE MESSENGER PRO --- */
+#chat-messages, #admin-chat-messages { 
+    display: flex; flex-direction: column; gap: 12px; padding: 10px; 
+}
+
+.msg-row { display: flex; gap: 8px; max-width: 90%; position: relative; margin-bottom: 2px; }
+.msg-row.left { align-self: flex-start; }
+.msg-row.right { align-self: flex-end; flex-direction: row-reverse; }
+
+/* Avatar cạnh tin nhắn */
+.msg-avatar-main { 
+    width: 28px; height: 28px; border-radius: 50%; object-fit: cover; 
+    align-self: flex-end; border: 1px solid rgba(255,255,255,0.1); background: #6366f1; 
+}
+
+.msg-content-wrapper { display: flex; flex-direction: column; max-width: 100%; }
+.msg-sender-name { font-size: 10px; color: #94a3b8; margin-bottom: 2px; font-weight: 600; margin-left: 8px; }
+.msg-row.right .msg-sender-name { text-align: right; margin-right: 8px; }
+
+/* Bong bóng chat */
+.msg-bubble { 
+    padding: 8px 14px; border-radius: 18px; font-size: 13px; line-height: 1.4; 
+    color: white; position: relative; word-wrap: break-word; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.msg-row.left .msg-bubble { background: #334155; border-bottom-left-radius: 4px; }
+.msg-row.right .msg-bubble { background: #6366f1; border-bottom-right-radius: 4px; }
+
+.msg-time { font-size: 9px; opacity: 0.5; margin-top: 4px; display: block; font-weight: 400; }
+.msg-row.right .msg-time { text-align: right; }
+
+/* Hiệu ứng Avatar SEEN */
+.seen-receipts { display: flex; justify-content: flex-end; gap: 2px; margin-top: 2px; min-height: 14px; padding-right: 4px; }
+.mini-seen-avatar { 
+    width: 14px; height: 14px; border-radius: 50%; object-fit: cover;
+    border: 1px solid #0f172a; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0; transform: scale(0.5); 
+}
+.mini-seen-avatar.show { opacity: 1; transform: scale(1); }
+
+/* --- CSS BỔ SUNG CHO CHAT TIME & SEEN --- */
+.msg-time {
+    font-size: 9px;
+    opacity: 0.6;
+    margin-top: 4px;
+    display: block;
+    font-weight: 500;
+}
+.msg-left .msg-time { text-align: left; color: #cbd5e1; }
+.msg-right .msg-time { text-align: right; color: rgba(255,255,255,0.7); }
+
+.seen-container {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    height: 14px;
+    margin-top: -2px;
+    margin-bottom: 8px;
+}
+.seen-avatar-mini {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #6366f1;
+    color: white;
+    font-size: 8px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: all 0.5s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
 
 /* Hiệu ứng Toast Thông báo Hiện đại */
 #toast-container {
@@ -1005,6 +1069,12 @@
     let isFirstLogin = true; 
     let isialLoad = true;
     
+// Hàm định dạng ngày giờ cho tin nhắn
+function formatChatTime(ts) {
+    if(!ts) return "";
+    const d = new Date(ts);
+    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+}
 
 // 1. Hàm xem trước ảnh khi người dùng chọn
 function previewProofImage(input) {
@@ -3434,124 +3504,124 @@ document.querySelector("#form-join button").id = "tab-join-btn";
 document.querySelector("#form-reg button").id = "tab-reg-btn";
 
 // ==========================================
-// 11. HỆ THỐNG CHAT REALTIME
+// 11. HỆ THỐNG CHAT REALTIME (MESSENGER STYLE)
 // ==========================================
 let currentActiveChatUser = null;
 
-// Hàm mở/đóng hộp chat
+// --- PHẦN DÀNH CHO ADMIN CON / THÍ SINH ---
+
 function toggleChatBox() {
     const box = document.getElementById('chat-box');
+    if(!box) return;
     box.classList.toggle('hidden');
     if(!box.classList.contains('hidden')) {
         document.getElementById('chat-input').focus();
+        // Đánh dấu đã xem khi mở hộp chat
+        const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
+        rdb.ref('system/chats/' + chatId + '/userLastSeen').set(Date.now());
+        rdb.ref('system/chats/' + chatId + '/unread').set(0);
         loadChatMessages();
     }
 }
 
-// Admin con gửi tin nhắn
 function sendChatMessage() {
     const input = document.getElementById('chat-input');
     const text = input.value.trim();
     if (!text || !currentUser) return;
-
     const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
     const msgData = {
         sender: currentUser.user,
         name: currentUser.name,
+        avatar: currentUser.avatar || "", 
         text: text,
         time: Date.now()
     };
-
     rdb.ref('system/chats/' + chatId + '/messages').push(msgData);
-    
-    // Cập nhật trạng thái unread để Admin gốc thấy số Badge nhảy
-    rdb.ref('system/chats/' + chatId + '/unread').transaction((current) => (current || 0) + 1);
-    
-    // Cập nhật thời gian tin nhắn cuối để Admin gốc sắp xếp danh sách
-    rdb.ref('system/chats/' + chatId + '/lastActive').set(Date.now());
-
+    rdb.ref('system/chats/' + chatId + '/unread').transaction(c => (c || 0) + 1);
+    rdb.ref('system/chats/' + chatId + '/userLastSeen').set(Date.now());
     input.value = "";
 }
 
-// Tải tin nhắn (Realtime) cho Admin con
 function loadChatMessages() {
     if(!currentUser) return;
     const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
-    rdb.ref('system/chats/' + chatId + '/messages').on('value', (snapshot) => {
+    rdb.ref('system/chats/' + chatId).on('value', (snapshot) => {
         const container = document.getElementById('chat-messages');
         const data = snapshot.val();
-        if(!data) {
-            container.innerHTML = '<p class="text-center text-slate-500 text-[10px]">Bắt đầu trò chuyện với Quản trị viên...</p>';
-            return;
-        }
-        container.innerHTML = Object.values(data).map(m => `
-            <div class="msg-item ${m.sender === currentUser.user ? 'msg-right' : 'msg-left'}">
-                ${m.text}
-            </div>
-        `).join('');
+        if(!data || !data.messages) return;
+        const msgs = Object.entries(data.messages);
+        const adminSeenTime = data.adminLastSeen || 0;
+        const adminAvatar = "https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff";
+
+        container.innerHTML = msgs.map(([id, m], index) => {
+            const isMe = m.sender === currentUser.user;
+            const isLastSeenByPartner = (isMe && m.time <= adminSeenTime && (index === msgs.length - 1 || msgs[index+1][1].time > adminSeenTime));
+            return `
+                <div class="msg-row ${isMe ? 'right' : 'left'}">
+                    ${!isMe ? `<img src="${m.avatar || 'https://ui-avatars.com/api/?name=' + m.name}" class="msg-avatar-main">` : ''}
+                    <div class="msg-content-wrapper">
+                        <span class="msg-sender-name">${m.name}</span>
+                        <div class="msg-bubble">${m.text}<span class="msg-time">${formatChatTime(m.time)}</span></div>
+                        <div class="seen-receipts">
+                            ${isLastSeenByPartner ? `<img src="${adminAvatar}" class="mini-seen-avatar show" title="Admin đã xem">` : ''}
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
         container.scrollTop = container.scrollHeight;
     });
 }
 
-// --- LOGIC DÀNH RIÊNG CHO ADMIN GỐC ---
+// --- PHẦN DÀNH CHO ADMIN GỐC (ROOT) ---
 
-// Tải danh sách các admin con đang chat
 function loadChatUserList() {
     rdb.ref('system/chats').on('value', (snapshot) => {
         const list = document.getElementById('chat-user-list');
         const data = snapshot.val();
-        if (!data) {
-            list.innerHTML = '<p class="text-center text-slate-500 text-xs">Chưa có tin nhắn nào</p>';
-            return;
-        }
-
+        if (!data) return;
         list.innerHTML = Object.keys(data).map(userId => {
-            const messages = data[userId].messages;
-            const lastMessage = messages ? Object.values(messages).pop().text : "---";
-            const unreadCount = data[userId].unread || 0; // Lấy số chưa đọc
-            
-            const badgeHtml = unreadCount > 0 
-                ? `<span class="bg-red-500 text-white text-[11px] font-extrabold px-1.5 py-0.5 rounded-full">+${unreadCount}</span>` 
-                : '';
-
+            const unread = data[userId].unread || 0;
             return `
                 <button onclick="selectChatUser('${userId}')" id="btn-chat-${userId}" class="chat-user-btn flex justify-between items-center w-full">
-                    <div class="flex-1 truncate pr-2">
+                    <div class="flex-1 truncate">
                         <div class="font-bold text-sm text-white">${userId}</div>
-                        <div class="text-[10px] opacity-60 truncate">${lastMessage}</div>
                     </div>
-                    ${badgeHtml} 
-                </button>
-            `;
-        }).reverse().join(''); // Hiện người nhắn gần nhất lên đầu
+                    ${unread > 0 ? `<span class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">+${unread}</span>` : ''}
+                </button>`;
+        }).reverse().join('');
     });
 }
 
 function selectChatUser(userId) {
     currentActiveChatUser = userId;
-    document.querySelectorAll('.chat-user-btn').forEach(b => b.classList.remove('active'));
-    
-    const activeBtn = document.getElementById('btn-chat-' + userId);
-    if(activeBtn) activeBtn.classList.add('active');
-    
     document.getElementById('admin-chat-header').innerText = "Đang chat với: " + userId;
     document.getElementById('admin-chat-input-zone').classList.remove('hidden');
-    
-    // ĐÁNH DẤU ĐÃ ĐỌC: Đưa trường unread của User này về 0 khi Admin Click vào
+    rdb.ref('system/chats/' + userId + '/adminLastSeen').set(Date.now());
     rdb.ref('system/chats/' + userId + '/unread').set(0);
 
-    // Tải tin nhắn chi tiết
-    rdb.ref('system/chats/' + userId + '/messages').on('value', (snapshot) => {
+    rdb.ref('system/chats/' + userId).on('value', (snapshot) => {
         const container = document.getElementById('admin-chat-messages');
-        const msgs = snapshot.val();
-        if(!msgs) return;
+        const data = snapshot.val();
+        if(!data || !data.messages) return;
+        const msgs = Object.entries(data.messages);
+        const userSeenTime = data.userLastSeen || 0;
         
-        container.innerHTML = Object.values(msgs).map(m => `
-            <div class="msg-item ${m.sender === AD_PHONE ? 'msg-right' : 'msg-left'}">
-                <small class="block text-[9px] opacity-50">${m.name}</small>
-                ${m.text}
-            </div>
-        `).join('');
+        container.innerHTML = msgs.map(([id, m], index) => {
+            const isMe = m.sender === AD_PHONE;
+            const isLastSeenByPartner = (isMe && m.time <= userSeenTime && (index === msgs.length - 1 || msgs[index+1][1].time > userSeenTime));
+            const partnerAvatar = m.avatar || 'https://ui-avatars.com/api/?name=' + userId;
+            return `
+                <div class="msg-row ${isMe ? 'right' : 'left'}">
+                    ${!isMe ? `<img src="${partnerAvatar}" class="msg-avatar-main">` : ''}
+                    <div class="msg-content-wrapper">
+                        <span class="msg-sender-name">${m.name}</span>
+                        <div class="msg-bubble">${m.text}<span class="msg-time">${formatChatTime(m.time)}</span></div>
+                        <div class="seen-receipts">
+                            ${isLastSeenByPartner ? `<img src="${partnerAvatar}" class="mini-seen-avatar show">` : ''}
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
         container.scrollTop = container.scrollHeight;
     });
 }
@@ -3560,15 +3630,9 @@ function sendAdminReply() {
     const input = document.getElementById('admin-chat-input');
     const text = input.value.trim();
     if(!text || !currentActiveChatUser) return;
-
-    const msgData = {
-        sender: AD_PHONE,
-        name: "Admin Hệ Thống",
-        text: text,
-        time: Date.now()
-    };
-
+    const msgData = { sender: AD_PHONE, name: "Quản trị viên", text: text, time: Date.now() };
     rdb.ref('system/chats/' + currentActiveChatUser + '/messages').push(msgData);
+    rdb.ref('system/chats/' + currentActiveChatUser + '/adminLastSeen').set(Date.now());
     input.value = "";
 }
 
@@ -4058,24 +4122,38 @@ function renderOTPRequests() {
     });
 }
 
-// Hàm Admin bấm Duyệt/Cấp mã
+// Hàm Admin bấm Duyệt/Cấp mã (Cập nhật: Tự động copy mã)
 function approveOTP(idx) {
     rdb.ref('system/global_otp_db').once('value', (snapshot) => {
         let list = snapshot.val() || [];
         if(!list[idx]) return;
 
-        // Tạo mã ngẫu nhiên 4 số
+        // 1. Tạo mã ngẫu nhiên 4 số
         const generatedOTP = Math.floor(1000 + Math.random() * 9000).toString();
         
         list[idx].status = 'approved';
         list[idx].otp = generatedOTP;
 
+        // 2. Lưu lên hệ thống
         rdb.ref('system/global_otp_db').set(list).then(() => {
+            
+            // 3. TỰ ĐỘNG SAO CHÉP VÀO CLIPBOARD (BỘ NHỚ TẠM)
+            navigator.clipboard.writeText(generatedOTP).then(() => {
+                // Hiển thị một Toast nhỏ báo đã copy để Admin biết
+                showModernToast("📋 ĐÃ SAO CHÉP", "Mã OTP " + generatedOTP + " đã nằm trong bộ nhớ tạm của bạn.", "success");
+            }).catch(err => {
+                console.error("Không thể copy tự động: ", err);
+            });
+
+            // 4. HIỂN THỊ THÔNG BÁO CHI TIẾT
             sysNotify("Thành công", `
                 <div class="text-center">
                     <p class="text-slate-400 mb-2">Đã tạo mã OTP cho thí sinh:</p>
-                    <b class="text-3xl text-white font-mono tracking-widest bg-indigo-500/30 px-6 py-2 rounded-2xl border border-indigo-500/50 block w-fit mx-auto mb-2">${generatedOTP}</b>
-                    <p class="text-[11px] text-emerald-400 font-bold uppercase">Hãy gửi mã này cho thí sinh để đổi mật khẩu!</p>
+                    <b class="text-4xl text-white font-mono tracking-[8px] bg-indigo-500/30 px-8 py-3 rounded-2xl border border-indigo-500/50 block w-fit mx-auto mb-4">${generatedOTP}</b>
+                    <div class="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                         <p class="text-[11px] text-emerald-400 font-bold uppercase">⚡ ĐÃ TỰ ĐỘNG COPY VÀO BỘ NHỚ</p>
+                         <p class="text-[10px] text-slate-400">Bạn có thể dán (Ctrl+V) để gửi cho thí sinh ngay.</p>
+                    </div>
                 </div>
             `, "success");
         });

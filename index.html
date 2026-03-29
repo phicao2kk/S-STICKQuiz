@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, ial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hệ thống Trắc nghiệm v40.0 - Professional Admin Multi-User</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -1182,7 +1182,7 @@ const firebaseConfig = {
   measurementId: "G-QZEXBD73LD"
 };
 
-firebase.ializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
 const rdb = firebase.database();
 
 // ==========================================
@@ -1476,6 +1476,7 @@ function handleLogin() {
 
     sysNotify("Đang kiểm tra", "Vui lòng đợi...", "info");
 
+    // Thêm bẫy lỗi .catch ở cuối lệnh once
     rdb.ref('system/users_db').once('value', (snapshot) => {
         let cloudUsers = snapshot.val() || {};
         
@@ -1489,24 +1490,26 @@ function handleLogin() {
         
         usersDB = cloudUsers;
         if (usersDB[u] && usersDB[u].pass === p) {
-            // --- CẬP NHẬT LOGIC PHÂN QUYỀN TẠI ĐÂY ---
             const isRoot = (u === AD_PHONE || u === AD_EMAIL.toLowerCase());
             
             currentUser = { 
                 name: usersDB[u].fullname, 
                 user: u, 
-                isAdmin: true,   // Tất cả người đăng ký đều là Admin (Gốc hoặc Con)
-                isRoot: isRoot,  // Gắn cờ xác định đây là Admin Gốc
+                isAdmin: true,
+                isRoot: isRoot,
                 avatar: usersDB[u].avatar || null, 
                 isPremium: usersDB[u].isPremium || false 
             };
-            // ----------------------------------------
             
             localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
             syncDataFromServer(); 
         } else {
             sysNotify("Thất bại", "Sai thông tin đăng nhập!", "error");
         }
+    }).catch(error => {
+        // NẾU CÓ LỖI (Ví dụ: Firebase chặn quyền truy cập), NÓ SẼ HIỆN Ở ĐÂY
+        console.error("Lỗi Firebase:", error);
+        sysNotify("Lỗi kết nối", "Không thể truy cập dữ liệu: " + error.message, "error");
     });
 }
 

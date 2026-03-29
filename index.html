@@ -2574,17 +2574,40 @@ function checkPremiumUI() {
 }
 
 function renderUsersManager() {
-    const body = document.getElementById('users-table-body'); if(!body) return;
-    body.innerHTML = Object.keys(usersDB).map(u => `
-        <tr>
-            <td class="font-bold text-white">${usersDB[u].fullname} ${usersDB[u].isPremium ? '💎' : ''}</td>
-            <td class="text-slate-400 text-[11px]">${u}</td>
-            <td class="font-mono text-indigo-400">${usersDB[u].pass}</td>
+    const body = document.getElementById('users-table-body'); 
+    if(!body) return;
+
+    body.innerHTML = Object.keys(usersDB).map(u => {
+        const safeU = u.replace(/\./g, '_'); // Tạo ID an toàn cho HTML (thay dấu chấm bằng gạch dưới)
+        const userData = usersDB[u];
+        
+        return `
+        <tr class="border-b border-white/5 hover:bg-white/5 transition">
+            <td class="py-4">
+                <div class="font-bold text-white">${userData.fullname} ${userData.isPremium ? '💎' : ''}</div>
+                <div class="text-[10px] text-slate-500">${u}</div>
+            </td>
+            <td class="text-slate-400 text-[11px] font-mono">${u}</td>
             <td>
-                <button class="btn-danger p-1 px-2 text-[10px]" onclick="deleteAcc('${u}')">XÓA</button>
+                <div class="flex items-center gap-2">
+                    <!-- Hiển thị mặc định là dấu chấm -->
+                    <span id="pw-display-${safeU}" class="font-mono text-indigo-400 tracking-widest text-xs">••••••</span>
+                    
+                    <!-- Nút icon con mắt -->
+                    <button onclick="toggleRowPassword('${safeU}', '${userData.pass}')" class="text-slate-500 hover:text-indigo-400 transition-all p-1">
+                        <span id="pw-icon-${safeU}">👁️</span>
+                    </button>
+                </div>
+            </td>
+            <td>
+                <div class="flex gap-2">
+                    <button class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white p-1.5 rounded-lg text-[10px] transition-all" onclick="deleteAcc('${u}')">
+                        XÓA
+                    </button>
+                </div>
             </td>
         </tr>
-    `).join('');
+    `}).join('');
 }
 
 // ==========================================
@@ -3515,32 +3538,42 @@ function renderOTPRequests() {
             const originalIndex = requests.length - 1 - index;
             const timeStr = new Date(r.createdAt).toLocaleString('vi-VN', {hour: '2-digit', minute:'2-digit', second:'2-digit', day:'2-digit', month:'2-digit'});
             
+            // Xử lý hiển thị cột OTP với nút Sao chép
+            let otpDisplay = '<span class="opacity-10 text-xs">----</span>';
+            if (r.otp) {
+                otpDisplay = `
+                    <div class="flex items-center justify-center gap-2">
+                        <span class="font-mono font-bold text-indigo-300 bg-indigo-500/20 px-3 py-1 rounded-md border border-indigo-500/30">
+                            ${r.otp}
+                        </span>
+                        <button onclick="copyToClipboard('${r.otp}')" class="text-indigo-400 hover:text-white hover:scale-125 transition-all p-1" title="Sao chép mã OTP">
+                            📋
+                        </button>
+                    </div>
+                `;
+            }
+
             return `
             <tr class="border-b border-white/5 hover:bg-white/5 transition group">
-                <!-- Cột 1: Căn trái -->
                 <td class="py-4 pl-4 text-left">
                     <div class="font-bold text-white text-sm">${r.fullname}</div>
                     <div class="text-[10px] text-indigo-400 font-mono">${r.user}</div>
                 </td>
                 
-                <!-- Cột 2: Căn giữa -->
                 <td class="text-center">
                     <span class="px-2 py-0.5 rounded-full text-[9px] font-black tracking-tighter ${r.status === 'pending' ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}">
                         ${r.status === 'pending' ? 'ĐANG ĐỢI' : 'HOÀN TẤT'}
                     </span>
                 </td>
                 
-                <!-- Cột 3: Căn giữa -->
                 <td class="text-center">
-                    ${r.otp ? `<span class="font-mono font-bold text-indigo-300 bg-indigo-500/20 px-3 py-1 rounded-md border border-indigo-500/30">${r.otp}</span>` : '<span class="opacity-10 text-xs">----</span>'}
+                    ${otpDisplay}
                 </td>
                 
-                <!-- Cột 4: Căn giữa -->
                 <td class="text-center text-[10px] text-slate-500 font-mono whitespace-nowrap">
                     ${timeStr}
                 </td>
                 
-                <!-- Cột 5: Căn phải -->
                 <td class="pr-4 text-right">
                     <div class="flex gap-2 justify-end">
                         ${r.status === 'pending' ? 
@@ -3700,6 +3733,75 @@ async function handleUpdatePassword() {
     } catch (error) {
         console.error("Lỗi đổi mật khẩu:", error);
         sysNotify("Lỗi hệ thống", "Không thể kết nối máy chủ để đổi mật khẩu!", "error");
+    }
+}
+
+// ==========================================
+// 13. TỰ ĐỘNG ĐĂNG XUẤT KHI KHÔNG TƯƠNG TÁC (15 PHÚT)
+// ==========================================
+let idleLogoutTimer;
+
+function resetIdleTimer() {
+    // Nếu chưa đăng nhập thì không cần chạy đếm ngược
+    if (!currentUser) return;
+
+    // Xóa bộ đếm cũ
+    clearTimeout(idleLogoutTimer);
+
+    // Thiết lập bộ đếm mới: 15 phút = 15 * 60 * 1000 ms
+    idleLogoutTimer = setTimeout(() => {
+        handleAutoLogout();
+    }, 15 * 60 * 1000); 
+}
+
+function handleAutoLogout() {
+    // Nếu đang trong màn hình thi, có thể thông báo trước khi thoát
+    if (!document.getElementById('page-quiz-view').classList.contains('hidden')) {
+        // Lưu tiến độ thi lần cuối trước khi đá ra ngoài
+        saveCurrentProgress();
+    }
+
+    // Hiển thị thông báo và thực hiện logout
+    console.log("Hệ thống tự động đăng xuất do 15 phút không tương tác.");
+    
+    // Xóa dữ liệu phiên làm việc
+    localStorage.removeItem('sys_logged_user');
+    
+    // Chuyển hướng về trang chủ/login
+    alert("Phiên đăng nhập đã hết hạn do bạn không tương tác trong 15 phút.");
+    location.reload();
+}
+
+// Danh sách các sự kiện được coi là "đang tương tác"
+const activityEvents = [
+    'mousedown', 'mousemove', 'keypress', 
+    'scroll', 'touchstart', 'click', 'keydown'
+];
+
+// Gắn trình lắng nghe sự kiện vào cửa sổ trình duyệt
+activityEvents.forEach(eventName => {
+    window.addEventListener(eventName, resetIdleTimer, true);
+});
+
+// Khởi tạo lần đầu khi trang tải xong
+resetIdleTimer();
+
+// Hàm xử lý ẩn/hiện mật khẩu trong từng dòng của bảng
+function toggleRowPassword(safeU, actualPass) {
+    const textEl = document.getElementById(`pw-display-${safeU}`);
+    const iconEl = document.getElementById(`pw-icon-${safeU}`);
+
+    // Nếu đang là dấu chấm thì hiện mật khẩu thật
+    if (textEl.innerText === "••••••") {
+        textEl.innerText = actualPass;
+        textEl.classList.remove('tracking-widest'); // Bỏ giãn cách dòng của dấu chấm
+        iconEl.innerText = "🔒"; // Đổi icon sang khóa (hoặc mắt gạch chéo)
+    } 
+    // Nếu đang hiện mật khẩu thật thì ẩn đi
+    else {
+        textEl.innerText = "••••••";
+        textEl.classList.add('tracking-widest'); // Thêm lại giãn cách cho đẹp
+        iconEl.innerText = "👁️";
     }
 }
 

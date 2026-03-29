@@ -13,6 +13,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
 
+@keyframes pulse-yellow {
+    0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+}
+.loading-file {
+    animation: pulse-yellow 1.5s infinite;
+    background-color: #ca8a04 !important; /* Màu vàng đậm */
+}
+
 /* Chấm thông báo nhỏ trên nút Menu */
 .menu-dot {
     position: absolute;
@@ -558,23 +568,31 @@
                         </p>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="p-4 bg-white/5 rounded-xl border border-white/10">
-                            <span class="text-[10px] text-indigo-400 font-bold">FILE WORD (.DOCX)</span>
-                            <div class="flex gap-2 mt-2">
-                                <input type="file" id="wordFile" accept=".docx" class="input-control text-xs">
-                                <button onclick="previewWordFile()" class="bg-indigo-600 text-xs px-3">KIỂM TRA</button>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- FILE WORD -->
+                        <div class="p-4 bg-white/5 rounded-xl border border-white/10 flex flex-col justify-between">
+                            <div>
+                                <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">FILE WORD (.DOCX)</span>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <!-- flex-1 giúp ô chọn tệp co dãn, shrink-0 giữ nút bấm không bị méo -->
+                                    <input type="file" id="wordFile" accept=".docx" class="input-control text-xs flex-1" onchange="validateWordContent(this)">
+                                    <button id="btn-check-word" onclick="showPreviewZone()" class="bg-indigo-600 text-[10px] font-bold px-3 py-2 rounded-lg transition-all duration-300 whitespace-nowrap shrink-0">KIỂM TRA</button>
+                                </div>
                             </div>
                             <p class="mt-2 text-[9px] text-yellow-300 font-bold italic">* Hệ thống sẽ quét text và tìm dòng "Đáp án: ..."</p>
                         </div>
-                        <div class="p-4 bg-white/5 rounded-xl border border-white/10">
-                            <span class="text-[10px] text-indigo-400 font-bold">HÌNH ẢNH (OCR)</span>
-                            <div class="flex gap-2 mt-2">
-                                <input type="file" id="imageFile" accept="image/*" class="input-control text-xs">
-                                <button onclick="previewImageFile()" class="bg-indigo-600 text-xs px-3">QUÉT ẢNH</button>
+
+                        <!-- HÌNH ẢNH -->
+                        <div class="p-4 bg-white/5 rounded-xl border border-white/10 flex flex-col justify-between">
+                            <div>
+                                <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">HÌNH ẢNH (OCR)</span>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <input type="file" id="imageFile" accept="image/*" class="input-control text-xs flex-1" onchange="validateImageContent(this)">
+                                    <button id="btn-scan-image" onclick="showPreviewZone()" class="bg-indigo-600 text-[10px] font-bold px-3 py-2 rounded-lg transition-all duration-300 whitespace-nowrap shrink-0">QUÉT ẢNH</button>
+                                </div>
                             </div>
                             <p class="mt-2 text-[9px] text-yellow-300 font-bold italic">* Ảnh cần rõ nét, có dòng "Đáp án: A/B/C/D"</p>
-                            <div id="ocr-loading">🚀 Đang nhận diện chữ trong ảnh, vui lòng đợi...</div>
+                            <div id="ocr-loading" class="hidden mt-1 text-[9px] text-indigo-400 animate-pulse">🚀 Đang nhận diện chữ...</div>
                         </div>
                     </div>
 
@@ -599,18 +617,41 @@
                     <div class="pt-6">
                         <label class="block text-sm font-semibold text-slate-300 uppercase tracking-wider mb-2" id="label-edit-mode">2. Nhập câu hỏi thủ công</label>
                         <textarea id="manual-q" class="input-control min-h-[100px]" placeholder="Nội dung câu hỏi..."></textarea>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                            <input type="text" id="manual-a" class="input-control" placeholder="Đáp án A">
-                            <input type="text" id="manual-b" class="input-control" placeholder="Đáp án B">
-                            <input type="text" id="manual-c" class="input-control" placeholder="Đáp án C">
-                            <input type="text" id="manual-d" class="input-control" placeholder="Đáp án D">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                            <!-- Đáp án A -->
+                            <div class="flex items-center">
+                                <div class="manual-label bg-indigo-600 px-4 py-3 rounded-l-xl text-white font-black shadow-lg">A</div>
+                                <input type="text" id="manual-a" class="input-control !m-0 !rounded-l-none" placeholder="Nội dung đáp án A...">
+                            </div>
+
+                            <!-- Đáp án B -->
+                            <div class="flex items-center">
+                                <div class="manual-label bg-indigo-600 px-4 py-3 rounded-l-xl text-white font-black shadow-lg">B</div>
+                                <input type="text" id="manual-b" class="input-control !m-0 !rounded-l-none" placeholder="Nội dung đáp án B...">
+                            </div>
+
+                            <!-- Đáp án C - Tìm dòng này và sửa id thành manual-c -->
+                            <div class="flex items-center">
+                                <div class="manual-label bg-indigo-600 px-4 py-3 rounded-l-xl text-white font-black shadow-lg">C</div>
+                                <input type="text" id="manual-c" class="input-control !m-0 !rounded-l-none" placeholder="Nội dung đáp án C...">
+                            </div>
+
+                            <!-- Đáp án D -->
+                            <div class="flex items-center">
+                                <div class="manual-label bg-indigo-600 px-4 py-3 rounded-l-xl text-white font-black shadow-lg">D</div>
+                                <input type="text" id="manual-d" class="input-control !m-0 !rounded-l-none" placeholder="Nội dung đáp án D...">
+                            </div>
                         </div>
                         
                         <div class="flex flex-col md:flex-row gap-4 mt-4 p-5 bg-white/5 rounded-2xl border border-white/10">
                             <div class="flex-1">
                                 <label class="block text-[10px] font-bold text-indigo-300 mb-2 uppercase">Lựa chọn Đáp án đúng:</label>
-                                <select id="manual-correct" class="input-control">
-                                    <option value="0">A đúng</option><option value="1">B đúng</option><option value="2">C đúng</option><option value="3">D đúng</option>
+                                <select id="manual-correct" class="input-control font-bold text-emerald-400">
+                                    <option value="0" class="text-black">✅ ĐÁP ÁN A ĐÚNG</option>
+                                    <option value="1" class="text-black">✅ ĐÁP ÁN B ĐÚNG</option>
+                                    <option value="2" class="text-black">✅ ĐÁP ÁN C ĐÚNG</option>
+                                    <option value="3" class="text-black">✅ ĐÁP ÁN D ĐÚNG</option>
                                 </select>
                             </div>
                             <div class="flex-1">
@@ -939,17 +980,6 @@
             </div>
         </div>
     </div>
-    <!-- PHẦN NHẬP MÃ PREMIUM (CHỈ HIỆN CHO BẢN THƯỜNG) -->
-<div id="premium-activation-card" class="p-5 premium-border rounded-2xl mt-8">
-    <h4 class="text-amber-400 font-extrabold mb-3 uppercase text-xs flex items-center gap-2">
-        👑 Kích hoạt gói Premium
-    </h4>
-    <p class="text-[11px] text-slate-400 mb-4 italic">Nhập mã kích hoạt Admin đã gửi cho bạn để mở khóa toàn bộ tính năng.</p>
-    <div class="flex gap-2">
-        <input type="text" id="activation-code-input" class="input-control font-mono" placeholder="Nhập mã 16 ký tự...">
-        <button onclick="handleActivatePremium()" class="btn-success whitespace-nowrap px-6">KÍCH HOẠT</button>
-    </div>
-</div>
 
 <!-- THÔNG BÁO ĐÃ LÀ PREMIUM -->
 <div id="premium-active-status" class="hidden p-5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl mt-8 text-center">
@@ -1077,6 +1107,61 @@ async function handleTransferredRequest() {
     });
 }
 
+function editQ(i) {
+    const q = db[i]; // Lấy trực tiếp theo index i được truyền vào
+    if (!q) return;
+
+    document.getElementById('manual-q').value = q.text;
+    document.getElementById('manual-a').value = q.options[0];
+    document.getElementById('manual-b').value = q.options[1];
+    document.getElementById('manual-c').value = q.options[2];
+    document.getElementById('manual-d').value = q.options[3];
+    document.getElementById('manual-correct').value = q.correct;
+
+    document.getElementById('edit-index').value = i; // Lưu index gốc i
+    document.getElementById('edit-folder-q-index').value = "-1";
+
+    // Đổi màu nhãn sang Cam
+    document.querySelectorAll('.manual-label').forEach(label => {
+        label.classList.remove('bg-indigo-600');
+        label.classList.add('bg-orange-500');
+    });
+
+    document.getElementById('btn-save-q').innerText = "CẬP NHẬT CÂU HỎI";
+    document.getElementById('btn-save-q').classList.replace('btn-success', 'bg-orange-600');
+    document.getElementById('btn-cancel-edit').classList.remove('hidden');
+    document.getElementById('label-edit-mode').innerHTML = "🛠️ ĐANG CHỈNH SỬA CÂU HỎI";
+    document.getElementById('label-edit-mode').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelEdit() {
+    // 1. Reset các ID về trạng thái không chỉnh sửa
+    document.getElementById('edit-index').value = "-1";
+    document.getElementById('edit-folder-q-index').value = "-1"; 
+
+    // 2. Xóa trắng các nội dung đã nhập
+    document.getElementById('manual-q').value = "";
+    document.getElementById('manual-a').value = "";
+    document.getElementById('manual-b').value = "";
+    document.getElementById('manual-c').value = "";
+    document.getElementById('manual-d').value = "";
+
+    // 3. Đưa màu các nhãn A, B, C, D từ Cam quay về Tím (Indigo)
+    document.querySelectorAll('.manual-label').forEach(label => {
+        label.classList.remove('bg-orange-500');
+        label.classList.add('bg-indigo-600');
+    });
+
+    // 4. Khôi phục trạng thái nút bấm và tiêu đề
+    const saveBtn = document.getElementById('btn-save-q');
+    saveBtn.innerText = "LƯU VÀO NGÂN HÀNG";
+    saveBtn.classList.remove('bg-orange-600');
+    saveBtn.classList.add('btn-success');
+
+    document.getElementById('btn-cancel-edit').classList.add('hidden');
+    document.getElementById('label-edit-mode').innerText = "2. Nhập câu hỏi thủ công";
+}
+
 function renderHistoryTable() {
     const container = document.getElementById('history-table-body');
     if(!container) return;
@@ -1172,6 +1257,64 @@ function viewHistoryDetailByKey(fbKey) {
     }
 }
 
+function saveQuestion() {
+    const qText = document.getElementById('manual-q').value.trim();
+    
+    // Lấy dữ liệu từ 4 ô nhập (đã sửa lỗi ID manual-c)
+    const opts = [
+        document.getElementById('manual-a').value.trim(),
+        document.getElementById('manual-b').value.trim(),
+        document.getElementById('manual-c').value.trim(),
+        document.getElementById('manual-d').value.trim()
+    ];
+    const correct = parseInt(document.getElementById('manual-correct').value);
+    
+    // Lấy ID của 2 chế độ sửa
+    const editIdx = parseInt(document.getElementById('edit-index').value);
+    const folderQIdx = parseInt(document.getElementById('edit-folder-q-index').value);
+
+    // Kiểm tra nhập liệu
+    if (!qText || opts.some(o => !o)) {
+        return sysNotify("Lỗi", "Vui lòng nhập đầy đủ nội dung câu hỏi và 4 đáp án!", "warn");
+    }
+
+    const newQ = { text: qText, options: opts, correct: correct };
+
+    // --- PHÂN LOẠI CHẾ ĐỘ LƯU ---
+
+    if (folderQIdx !== -1) {
+        // CHẾ ĐỘ 1: Cập nhật vào BỘ ĐỀ (Folder) cụ thể
+        if (currentFolderIdx !== -1 && foldersDB[currentFolderIdx]) {
+            foldersDB[currentFolderIdx].questions[folderQIdx] = newQ;
+            saveFolders(); // Lưu lên Firebase/Local
+            sysNotify("Thành công", "Đã cập nhật câu hỏi vào bộ đề!", "success");
+            
+            // Tự động quay lại trang chi tiết bộ đề sau 1 giây
+            setTimeout(() => {
+                showPage('page-folder-detail');
+                renderFolderQuestions();
+            }, 1000);
+        }
+    } 
+    else if (editIdx !== -1) {
+        // CHẾ ĐỘ 2: Cập nhật vào NGÂN HÀNG CHUNG
+        db[editIdx] = newQ;
+        saveDB();
+        renderAdminPreview();
+        sysNotify("Thành công", "Đã cập nhật câu hỏi ngân hàng!", "success");
+    } 
+    else {
+        // CHẾ ĐỘ 3: THÊM MỚI HOÀN TOÀN
+        db.push(newQ);
+        saveDB();
+        renderAdminPreview();
+        sysNotify("Thành công", "Đã thêm câu hỏi mới vào ngân hàng!", "success");
+    }
+
+    // --- QUAN TRỌNG: Dọn dẹp form và đưa màu nhãn về Tím ---
+    cancelEdit(); 
+}
+
 // ==========================================
 // 1. CẤU HÌNH FIREBASE
 // ==========================================
@@ -1242,6 +1385,98 @@ function saveGlobalMaps() {
     });
 }
 
+// --- HÀM 1: Kiểm tra nội dung FILE WORD ngay khi chọn ---
+function validateWordContent(input) {
+    const file = input.files[0];
+    const btn = document.getElementById('btn-check-word'); // ID nút bấm Word
+    
+    // Nếu người dùng bấm Cancel không chọn file nữa
+    if (!file) {
+        btn.className = "bg-indigo-600 text-xs px-3 rounded-lg";
+        btn.innerText = "KIỂM TRA";
+        return;
+    }
+
+    // Trạng thái chờ: Chuyển màu vàng
+    btn.innerHTML = `⏳ ĐANG ĐỌC...`;
+    btn.className = "bg-yellow-600 text-xs px-3 rounded-lg animate-pulse";
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        // Sử dụng thư viện mammoth để đọc file docx
+        mammoth.convertToHtml({ arrayBuffer: e.target.result }).then(res => {
+            const rawText = res.value.replace(/<\/p>|<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, "");
+            
+            // Gọi hàm parse có sẵn trong code của bạn để tách câu hỏi
+            const questions = parseContentToQuestions(rawText);
+
+            if (questions.length > 0) {
+                // THÀNH CÔNG: Chuyển màu xanh lá
+                btn.className = "bg-emerald-600 text-xs px-3 shadow-[0_0_15px_rgba(16,185,129,0.5)] rounded-lg";
+                btn.innerHTML = `✅ HỢP LỆ (${questions.length} CÂU)`;
+                tempQuestions = questions; // Lưu vào biến tạm để nộp
+            } else {
+                // THẤT BẠI: Chuyển màu đỏ
+                btn.className = "bg-red-600 text-xs px-3 rounded-lg";
+                btn.innerHTML = `❌ SAI ĐỊNH DẠNG`;
+                sysNotify("Lỗi nội dung", "File không chứa câu hỏi trắc nghiệm hoặc thiếu dòng 'Đáp án: ...'", "error");
+                input.value = ""; // Xóa file lỗi
+            }
+        });
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// --- HÀM 2: Kiểm tra nội dung HÌNH ẢNH ngay khi chọn ---
+async function validateImageContent(input) {
+    const file = input.files[0];
+    const btn = document.getElementById('btn-scan-image'); // ID nút bấm Ảnh
+    
+    if (!file) {
+        btn.className = "bg-indigo-600 text-xs px-3 rounded-lg";
+        btn.innerText = "QUÉT ẢNH";
+        return;
+    }
+
+    // Trạng thái chờ: Chuyển màu vàng (vì OCR quét ảnh khá lâu)
+    btn.innerHTML = `⏳ ĐANG SOÁT...`;
+    btn.className = "bg-yellow-600 text-xs px-3 rounded-lg animate-pulse";
+
+    try {
+        // Sử dụng Tesseract (OCR) để lấy chữ từ ảnh
+        const result = await Tesseract.recognize(file, 'vie');
+        const questions = parseContentToQuestions(result.data.text);
+
+        if (questions.length > 0) {
+            // THÀNH CÔNG: Chuyển màu xanh lá
+            btn.className = "bg-emerald-600 text-xs px-3 shadow-[0_0_15px_rgba(16,185,129,0.5)] rounded-lg";
+            btn.innerHTML = `✅ HỢP LỆ (${questions.length} CÂU)`;
+            tempQuestions = questions;
+        } else {
+            // THẤT BẠI: Chuyển màu đỏ
+            btn.className = "bg-red-600 text-xs px-3 rounded-lg";
+            btn.innerHTML = `❌ SAI ĐỊNH DẠNG`;
+            sysNotify("Lỗi nội dung", "Ảnh mờ hoặc không đúng định dạng trắc nghiệm.", "warn");
+            input.value = "";
+        }
+    } catch (err) {
+        btn.className = "bg-red-600 text-xs px-3 rounded-lg";
+        btn.innerHTML = `❌ LỖI HỆ THỐNG`;
+    }
+}
+
+// --- HÀM 3: Hiển thị vùng xác nhận (Khi bấm vào nút Xanh lá) ---
+function showPreviewZone() {
+    if (tempQuestions.length === 0) {
+        sysNotify("Thông báo", "Bạn chưa chọn file hoặc file không hợp lệ!", "warn");
+        return;
+    }
+    document.getElementById('confirm-upload-zone').classList.remove('hidden');
+    document.getElementById('temp-count').innerText = tempQuestions.length;
+    document.getElementById('temp-preview').innerText = tempQuestions.slice(0, 2).map(q => q.text).join(" | ") + "...";
+    updateFolderDropdowns();
+}
+
 function updateGlobalMenuDot() {
     const chatBadge = document.getElementById('sidebar-chat-badge');
     const premiumBadge = document.getElementById('sidebar-premium-badge');
@@ -1300,17 +1535,23 @@ function syncDataFromServer() {
         }
         
         // 1. Lắng nghe tài khoản cá nhân để kiểm tra hết hạn Premium
-        rdb.ref('system/users_db/' + safeUser).on('value', (snap) => {
-            const userData = snap.val();
-            if (userData) {
-                usersDB[currentUser.user] = userData;
-                if (userData.isPremium && userData.premiumExpiresAt && Date.now() > userData.premiumExpiresAt) {
-                    rdb.ref('system/users_db/' + safeUser).update({ isPremium: false });
-                    sysNotify("Thông báo", "Gói Premium của bạn đã hết hạn!", "warn");
-                }
-                checkPremiumUI();
-            }
-        });
+        rdb.ref('system/users_db').on('value', (snap) => {
+    const data = snap.val();
+    if (data) {
+        usersDB = data; // Cập nhật bộ nhớ cục bộ
+        localStorage.setItem('users_db', JSON.stringify(usersDB));
+        
+        // --- TỰ ĐỘNG VẼ LẠI GIAO DIỆN KHI CÓ BẤT KỲ THAY ĐỔI NÀO ---
+        if (!document.getElementById('page-premium-manager').classList.contains('hidden')) {
+            renderPremiumRequests();   // Vẽ lại bảng Duyệt Bill
+            renderMasterPremiumList(); // Vẽ lại bảng Hội viên Master
+        }
+        if (!document.getElementById('page-users-manager').classList.contains('hidden')) {
+            renderUsersManager();      // Vẽ lại bảng Quản lý tài khoản
+        }
+        checkPremiumUI(); // Cập nhật huy hiệu Diamond/Bản thường trên Menu
+    }
+});
 
         // 2. QUAN TRỌNG: Gọi hàm kiểm tra tin nhắn chưa đọc ngay khi vào trang
         if (currentUser.isAdmin || currentUser.isRoot) {
@@ -1414,12 +1655,23 @@ if (currentUser.isRoot) {
 // 4. HÀM HỆ THỐNG (FULL LOGIC CŨ)
 // ==========================================
 function sysNotify(title, msg, type = 'info') {
-    const icon = { 'info': '🔔', 'success': '✅', 'error': '❌', 'warn': '⚠️' }[type];
+    // Đảm bảo có icon warn (tam giác vàng)
+    const icon = { 
+        'info': '🔔', 
+        'success': '✅', 
+        'error': '❌', 
+        'warn': '⚠️'  // <--- Đây chính là icon trong ảnh bạn muốn
+    }[type] || '🔔';
+
     document.getElementById('nt-icon').innerText = icon;
     document.getElementById('nt-title').innerText = title;
     document.getElementById('nt-msg').innerHTML = msg;
+    
+    // Ẩn các ô nhập liệu và nút hủy nếu là thông báo thường
     document.getElementById('nt-input').classList.add('hidden');
     document.getElementById('nt-btn-cancel').classList.add('hidden');
+    
+    // Hiển thị popup
     document.getElementById('notify-container').classList.add('active');
 }
 
@@ -1915,7 +2167,23 @@ function saveManualQToFolder() {
     document.getElementById('manual-d').value = "";
 }
 
-function cancelImport() { tempQuestions = []; document.getElementById('confirm-upload-zone').classList.add('hidden'); }
+function cancelImport() {
+    tempQuestions = [];
+    document.getElementById('confirm-upload-zone').classList.add('hidden');
+    
+    // RESET TRẠNG THÁI NÚT VỀ BAN ĐẦU
+    const resetBtn = (id, text) => {
+        const b = document.getElementById(id);
+        if(b) {
+            b.className = "bg-indigo-600 text-xs px-3 transition-all duration-300";
+            b.innerText = text;
+        }
+    };
+    resetBtn('btn-check-word', 'KIỂM TRA');
+    resetBtn('btn-scan-image', 'QUÉT ẢNH');
+    document.getElementById('wordFile').value = ""; // Xóa tên file đã chọn
+    document.getElementById('imageFile').value = ""; // Xóa tên file đã chọn
+}
 
 // ==========================================
 // 7. QUẢN LÝ BỘ ĐỀ & THI CỬ (FULL LOGIC CŨ)
@@ -1981,11 +2249,45 @@ function openFolder(i) {
 function renderFolderQuestions() {
     const folder = foldersDB[currentFolderIdx];
     document.getElementById('folder-questions-list').innerHTML = (folder.questions || []).map((q, i) => `
-        <div class="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5 mb-2">
+        <div class="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5 mb-2 group">
             <p class="text-sm text-slate-300 flex-1">#${i+1} ${q.text}</p>
-            <button class="text-red-400" onclick="removeQFromFolder(${i})">✕</button>
+            <div class="flex gap-3">
+                <!-- NÚT SỬA CÂU HỎI TRONG BỘ ĐỀ -->
+                <button class="text-orange-400 hover:scale-125 transition-all" onclick="editFolderQ(${i})" title="Sửa câu này">✏️</button>
+                <button class="text-red-400 hover:scale-125 transition-all" onclick="removeQFromFolder(${i})" title="Xóa khỏi bộ đề">✕</button>
+            </div>
         </div>
     `).join('');
+}
+
+function editFolderQ(i) {
+    const folder = foldersDB[currentFolderIdx];
+    const q = folder.questions[i];
+    if (!q) return;
+    
+    showPage('page-home');
+
+    document.getElementById('manual-q').value = q.text;
+    document.getElementById('manual-a').value = q.options[0];
+    document.getElementById('manual-b').value = q.options[1];
+    document.getElementById('manual-c').value = q.options[2];
+    document.getElementById('manual-d').value = q.options[3];
+    document.getElementById('manual-correct').value = q.correct;
+
+    document.getElementById('edit-folder-q-index').value = i;
+    document.getElementById('edit-index').value = "-1";
+
+    document.querySelectorAll('.manual-label').forEach(label => {
+        label.classList.remove('bg-indigo-600');
+        label.classList.add('bg-orange-500');
+    });
+
+    const saveBtn = document.getElementById('btn-save-q');
+    saveBtn.innerText = "CẬP NHẬT VÀO BỘ ĐỀ";
+    saveBtn.className = "bg-orange-600 text-white font-bold py-3 px-6 rounded-xl transition-all flex-1";
+    document.getElementById('btn-cancel-edit').classList.remove('hidden');
+    document.getElementById('label-edit-mode').innerHTML = `🛠️ ĐANG SỬA CÂU #${i+1} CỦA BỘ ĐỀ: <b class="text-white">${folder.name}</b>`;
+    document.getElementById('label-edit-mode').scrollIntoView({ behavior: 'smooth' });
 }
 
 function addQToFolder() {
@@ -2348,7 +2650,7 @@ function renderPremiumRequests() {
     const body = document.getElementById('premium-requests-table');
     if (!body) return;
     
-    // Lấy dữ liệu từ LocalStorage (được đồng bộ bởi Firebase listener)
+    // Lấy dữ liệu từ LocalStorage (do Firebase đồng bộ về)
     const preDB = JSON.parse(localStorage.getItem('global_premium_requests') || '[]');
     
     if (preDB.length === 0) {
@@ -2359,16 +2661,21 @@ function renderPremiumRequests() {
     body.innerHTML = [...preDB].reverse().map(r => {
         const hasImage = r.proofImg && r.proofImg.length > 50;
         const btnXemBill = hasImage 
-            ? `<button onclick="viewFullProof('${r.createdAt}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-2 py-1 rounded shadow-sm font-bold transition-all">👁️ BILL</button>`
+            ? `<button onclick="viewFullProof('${r.createdAt}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-2 py-1 rounded font-bold transition-all">👁️ BILL</button>`
             : `<span class="text-slate-500 italic text-[10px]">Ko ảnh</span>`;
 
+        // KIỂM TRA TRẠNG THÁI THỰC TẾ CỦA USER
         const isCurrentlyPremium = usersDB[r.user] && usersDB[r.user].isPremium;
 
-        let actionButtons = "";
-        if (!isCurrentlyPremium) {
-            actionButtons = `<button onclick="approvePremiumByTime('${r.createdAt}')" class="bg-emerald-600 hover:bg-emerald-500 text-white p-1 px-3 rounded-lg text-[10px] font-bold shadow-lg transition-all">DUYỆT</button>`;
+        let actionBtn = "";
+        let statusBadge = "";
+
+        if (isCurrentlyPremium) {
+            statusBadge = `<span class="text-[9px] px-2 py-0.5 rounded-full font-black bg-emerald-500/20 text-emerald-400">ĐÃ CẤP QUYỀN</span>`;
+            actionBtn = `<button onclick="revokePremiumDirectly('${r.user}')" class="bg-orange-600 hover:bg-orange-500 text-white p-1 px-3 rounded-lg text-[10px] font-bold shadow-lg">GỠ</button>`;
         } else {
-            actionButtons = `<button onclick="revokePremiumDirectly('${r.user}')" class="bg-orange-600 hover:bg-orange-500 text-white p-1 px-3 rounded-lg text-[10px] font-bold shadow-lg transition-all">GỠ QUYỀN</button>`;
+            statusBadge = `<span class="text-[9px] px-2 py-0.5 rounded-full font-black bg-amber-500/20 text-amber-400">CHỜ DUYỆT</span>`;
+            actionBtn = `<button onclick="approvePremiumByTime('${r.createdAt}')" class="bg-emerald-600 hover:bg-emerald-500 text-white p-1 px-3 rounded-lg text-[10px] font-bold shadow-lg">DUYỆT</button>`;
         }
 
         return `
@@ -2378,19 +2685,13 @@ function renderPremiumRequests() {
                     <div class="text-[10px] text-indigo-400 font-mono">${r.user}</div>
                 </td>
                 <td class="text-center">${btnXemBill}</td>
-                <td class="text-center">
-                    <span class="text-[9px] px-2 py-0.5 rounded-full font-black tracking-tighter ${isCurrentlyPremium ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}">
-                        ${isCurrentlyPremium ? 'ĐÃ PREMIUM' : 'CHỜ DUYỆT'}
-                    </span>
-                </td>
-                <td class="font-mono text-[10px] text-indigo-300 text-center">
-                    ${r.code || '<span class="opacity-20">---</span>'}
-                </td>
+                <td class="text-center">${statusBadge}</td>
+                <td class="font-mono text-[10px] text-indigo-300 text-center">${r.code || '---'}</td>
                 <td class="pr-4 text-right">
-                    <div class="flex gap-2 justify-end items-center">
-                        ${actionButtons}
-                        <button onclick="deletePremiumRequestByTime('${r.createdAt}')" class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white p-1.5 rounded-lg transition-all">
-                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" /></svg>
+                    <div class="flex gap-2 justify-end">
+                        ${actionBtn}
+                        <button onclick="deletePremiumRequestByTime('${r.createdAt}')" class="text-red-500/50 hover:text-red-500 p-1.5 transition-all">
+                             ✕
                         </button>
                     </div>
                 </td>
@@ -2464,30 +2765,129 @@ function calculateVipCode(user) {
 // Phê duyệt Premium
 // Phê duyệt theo Timestamp
 function approvePremiumByTime(timestamp) {
+    const targetTime = Number(timestamp);
+    sysNotify("Đang xử lý", "Đang kích hoạt gói Premium...", "info");
+    
     rdb.ref('system/global_premium_requests').once('value', (snap) => {
-        let preDB = snap.val() || [];
-        const index = preDB.findIndex(item => item.createdAt == timestamp);
+        let requests = snap.val() || [];
+        const idx = requests.findIndex(r => Number(r.createdAt) === targetTime);
         
-        if (index !== -1) {
-            const userAccount = preDB[index].user;
-            const safeUser = userAccount.replace(/\./g, '_');
-            const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-            const expiryDate = Date.now() + thirtyDaysInMs; // Thời điểm hết hạn
+        if (idx === -1) return sysNotify("Lỗi", "Không tìm thấy yêu cầu!", "error");
 
-            // 1. Cập nhật danh sách yêu cầu
-            preDB[index].status = 'approved';
-            preDB[index].code = calculateVipCode(userAccount);
-            rdb.ref('system/global_premium_requests').set(preDB);
-            
-            // 2. Cấp quyền Premium có thời hạn vào hồ sơ gốc
-            rdb.ref('system/users_db/' + safeUser).update({
-                isPremium: true,
-                premiumExpiresAt: expiryDate
-            });
+        const userAccount = requests[idx].user;
+        const safeUser = userAccount.replace(/\./g, '_');
+        const expiryDate = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 ngày
+        const vipCode = calculateVipCode(userAccount);
 
-            sysNotify("Thành công", `Đã duyệt Premium 30 ngày cho tài khoản: ${userAccount}`, "success");
-        }
+        // Cập nhật trạng thái yêu cầu
+        requests[idx].status = 'approved';
+        requests[idx].code = vipCode;
+
+        // Đẩy lên Firebase - Listener ở Bước 1 sẽ tự lo việc cập nhật UI
+        rdb.ref('system/global_premium_requests').set(requests);
+        rdb.ref('system/users_db/' + safeUser).update({
+            isPremium: true,
+            premiumExpiresAt: expiryDate
+        }).then(() => {
+            sysNotify("Thành công", `Đã nâng cấp Premium cho: ${userAccount}`, "success");
+        });
     });
+}
+
+// 2. Hàm Gỡ quyền Premium
+async function revokePremiumDirectly(userAcc) {
+    if (await sysConfirm(`Xác nhận TƯỚC QUYỀN Premium của tài khoản: [${userAcc}]?`)) {
+        sysNotify("Đang xử lý", "Đang thu hồi quyền hạn...", "info");
+        const safeU = userAcc.replace(/\./g, '_');
+        
+        await rdb.ref('system/users_db/' + safeU).update({
+            isPremium: false,
+            premiumExpiresAt: null
+        });
+        
+        sysNotify("Đã gỡ", `Tài khoản ${userAcc} đã về bản thường.`, "info");
+    }
+}
+
+// 3. Hàm vẽ bảng Duyệt Bill (Thông minh)
+function renderPremiumRequests() {
+    const body = document.getElementById('premium-requests-table');
+    if (!body) return;
+    
+    const preDB = JSON.parse(localStorage.getItem('global_premium_requests') || '[]');
+    if (preDB.length === 0) {
+        body.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-500 italic">Chưa có yêu cầu nào</td></tr>';
+        return;
+    }
+
+    body.innerHTML = [...preDB].reverse().map(r => {
+        // Kiểm tra thực tế trong usersDB để hiển thị trạng thái Realtime
+        const isVip = usersDB[r.user] && usersDB[r.user].isPremium;
+
+        const btnBill = r.proofImg ? `<button onclick="viewFullProof('${r.createdAt}')" class="bg-indigo-600 text-white text-[10px] px-2 py-1 rounded font-bold">👁️ BILL</button>` : `<span class="opacity-30 text-[10px]">Ko ảnh</span>`;
+
+        return `
+            <tr class="border-b border-white/5 hover:bg-white/5 transition">
+                <td class="py-4 pl-4">
+                    <div class="font-bold text-white text-sm">${r.fullname}</div>
+                    <div class="text-[10px] text-indigo-400 font-mono">${r.user}</div>
+                </td>
+                <td class="text-center">${btnBill}</td>
+                <td class="text-center">
+                    <span class="text-[9px] px-2 py-0.5 rounded-full font-black ${isVip ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}">
+                        ${isVip ? 'ĐÃ CẤP QUYỀN' : 'CHỜ DUYỆT'}
+                    </span>
+                </td>
+                <td class="font-mono text-[10px] text-indigo-300 text-center">${r.code || '---'}</td>
+                <td class="pr-4 text-right">
+                    <div class="flex gap-2 justify-end">
+                        ${isVip 
+                            ? `<button onclick="revokePremiumDirectly('${r.user}')" class="bg-orange-600 hover:bg-orange-500 text-white p-1 px-3 rounded-lg text-[10px] font-bold shadow-lg">GỠ</button>`
+                            : `<button onclick="approvePremiumByTime('${r.createdAt}')" class="bg-emerald-600 hover:bg-emerald-500 text-white p-1 px-3 rounded-lg text-[10px] font-bold shadow-lg">DUYỆT</button>`
+                        }
+                        <button onclick="deletePremiumRequestByTime('${r.createdAt}')" class="text-red-500/40 hover:text-red-500 p-1.5 transition-all">✕</button>
+                    </div>
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+// 4. Hàm vẽ Bản Master Hội viên (Tự động cập nhật)
+function renderMasterPremiumList() {
+    const body = document.getElementById('master-premium-body');
+    const badge = document.getElementById('premium-count-badge');
+    if (!body) return;
+
+    const premiumUsers = Object.keys(usersDB).filter(u => usersDB[u].isPremium === true);
+    if (badge) badge.innerText = `${premiumUsers.length} THÀNH VIÊN`;
+
+    if (premiumUsers.length === 0) {
+        body.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-500 italic text-sm">Chưa có hội viên Premium nào.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = premiumUsers.map(u => {
+        const d = usersDB[u];
+        const expiry = d.premiumExpiresAt || 0;
+        const diff = expiry - Date.now();
+        const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        
+        return `
+            <tr class="border-b border-white/5 hover:bg-white/5 transition">
+                <td class="py-4 pl-4">
+                    <div class="font-bold text-white text-sm">${d.fullname}</div>
+                    <div class="text-[10px] text-indigo-400 font-mono">${u}</div>
+                </td>
+                <td class="text-center text-xs text-slate-400">${new Date(expiry - 2592000000).toLocaleDateString('vi-VN')}</td>
+                <td class="text-center text-xs text-amber-200 font-bold">${new Date(expiry).toLocaleDateString('vi-VN')}</td>
+                <td class="text-center text-xs">
+                    <span class="${daysLeft > 0 ? 'text-emerald-400' : 'text-red-500'} font-bold">${daysLeft > 0 ? daysLeft + ' ngày' : 'Hết hạn'}</span>
+                </td>
+                <td class="text-right pr-4">
+                    <button onclick="revokePremiumDirectly('${u}')" class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-3 py-1 rounded text-[10px] font-black transition-all">GỠ QUYỀN</button>
+                </td>
+            </tr>`;
+    }).join('');
 }
 
 // Xóa yêu cầu theo Timestamp
@@ -2539,16 +2939,6 @@ function approvePremium(idx) {
     saveGlobalMaps(); renderPremiumRequests();
 }
 
-function handleActivatePremium() {
-    const code = document.getElementById('activation-code-input').value.trim();
-    if(code === calculateVipCode(currentUser.user)) {
-        usersDB[currentUser.user].isPremium = true;
-        usersDB[currentUser.user].premiumExpiresAt = Date.now() + (30*24*60*60*1000);
-        saveGlobalUsers(); checkPremiumUI();
-        sysNotify("Thành công", "Bạn đã là thành viên Premium!", "success");
-    } else sysNotify("Lỗi", "Mã kích hoạt sai!", "error");
-}
-
 // Hàm tước quyền Premium ngay lập tức
 async function revokePremiumDirectly(userAccount) {
     if (!userAccount) return;
@@ -2592,36 +2982,28 @@ async function revokePremiumDirectly(userAccount) {
 function checkPremiumUI() {
     if (!currentUser) return;
 
-    const activationCard = document.getElementById('premium-activation-card');
     const premiumStatus = document.getElementById('premium-active-status');
     const premiumMenuItem = document.getElementById('premium-menu-item');
     const badge = document.getElementById('role-badge');
 
-    // --- TRƯỜNG HỢP 1: THÍ SINH (ẨN TẤT CẢ LIÊN QUAN ĐẾN PREMIUM) ---
     if (!currentUser.isAdmin) {
-        if (activationCard) activationCard.classList.add('hidden');
         if (premiumStatus) premiumStatus.classList.add('hidden');
         if (premiumMenuItem) premiumMenuItem.classList.add('hidden');
-        if (badge) badge.classList.add('hidden'); // Thí sinh không cần hiện badge bản thường/vip
+        if (badge) badge.classList.add('hidden');
         return;
     }
 
-    // --- TRƯỜNG HỢP 2: ADMIN (ROOT HOẶC ADMIN CON) ---
     const userInLocal = usersDB[currentUser.user];
     
     if (userInLocal && userInLocal.isPremium) {
-        // Nếu ĐÃ LÀ PREMIUM
-        if (activationCard) activationCard.classList.add('hidden');
         if (premiumStatus) premiumStatus.classList.remove('hidden');
-        if (premiumMenuItem) premiumMenuItem.classList.add('hidden'); // Đã là VIP thì ẩn nút "Nâng cấp" trên menu
+        if (premiumMenuItem) premiumMenuItem.classList.add('hidden'); 
 
         let daysDisplay = "";
-        if (userInLocal.premiumExpiresAt && !isNaN(userInLocal.premiumExpiresAt)) {
+        if (userInLocal.premiumExpiresAt) {
             const timeLeft = userInLocal.premiumExpiresAt - Date.now();
             const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
             daysDisplay = daysLeft > 0 ? `(${daysLeft} ngày)` : "(Hết hạn)";
-        } else {
-            daysDisplay = "(Vô hạn)"; 
         }
         
         if (badge) {
@@ -2630,13 +3012,11 @@ function checkPremiumUI() {
             badge.classList.remove('hidden');
         }
     } else {
-        // Nếu LÀ ADMIN NHƯNG CHƯA LÊN PREMIUM (Bản thường)
         if (badge) {
             badge.innerHTML = "BẢN THƯỜNG";
             badge.className = "badge-normal";
             badge.classList.remove('hidden');
         }
-        if (activationCard) activationCard.classList.remove('hidden');
         if (premiumStatus) premiumStatus.classList.add('hidden');
         if (premiumMenuItem) premiumMenuItem.classList.remove('hidden');
     }
@@ -2750,19 +3130,20 @@ function renderMasterPremiumList() {
     const badge = document.getElementById('premium-count-badge');
     if (!body) return;
 
-    // Lọc ra danh sách User đang là Premium
+    // Lọc ra danh sách User đang có thuộc tính isPremium = true
     const premiumUsers = Object.keys(usersDB).filter(u => usersDB[u].isPremium === true);
-    badge.innerText = `${premiumUsers.length} THÀNH VIÊN`;
+    
+    if (badge) badge.innerText = `${premiumUsers.length} THÀNH VIÊN`;
 
     if (premiumUsers.length === 0) {
-        body.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-500 italic text-sm">Chưa có hội viên Premium nào được kích hoạt.</td></tr>';
+        body.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-500 italic text-sm">Chưa có hội viên Premium nào.</td></tr>';
         return;
     }
 
     body.innerHTML = premiumUsers.map(u => {
         const d = usersDB[u];
         const expiry = d.premiumExpiresAt || 0;
-        const activation = expiry - (30 * 24 * 60 * 60 * 1000); // Ước tính ngày kích hoạt
+        const activation = expiry - (30 * 24 * 60 * 60 * 1000); 
         
         const actDate = new Date(activation).toLocaleDateString('vi-VN');
         const expDate = new Date(expiry).toLocaleDateString('vi-VN');
@@ -2770,29 +3151,25 @@ function renderMasterPremiumList() {
         const diff = expiry - Date.now();
         const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
         
-        let countdownHtml = "";
-        if (daysLeft > 0) {
-            countdownHtml = `<span class="text-emerald-400 font-bold">${daysLeft} ngày</span>`;
-        } else {
-            countdownHtml = `<span class="text-red-500 font-bold">Đã hết hạn</span>`;
-        }
+        let countdownHtml = daysLeft > 0 
+            ? `<span class="text-emerald-400 font-bold">${daysLeft} ngày</span>`
+            : `<span class="text-red-500 font-bold">Hết hạn</span>`;
 
         return `
             <tr class="border-b border-white/5 hover:bg-white/5 transition">
-                <td class="py-4">
+                <td class="py-4 pl-4">
                     <div class="font-bold text-white text-sm">${d.fullname}</div>
                     <div class="text-[10px] text-indigo-400 font-mono">${u}</div>
                 </td>
                 <td class="text-center text-xs text-slate-400">${actDate}</td>
                 <td class="text-center text-xs text-amber-200 font-bold">${expDate}</td>
                 <td class="text-center text-xs">${countdownHtml}</td>
-                <td class="text-right">
-                    <button onclick="revokePremiumDirectly('${u}')" class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-black transition-all border border-red-500/20">
+                <td class="text-right pr-4">
+                    <button onclick="revokePremiumDirectly('${u}')" class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-3 py-1 rounded text-[10px] font-black transition-all">
                         GỠ QUYỀN
                     </button>
                 </td>
-            </tr>
-        `;
+            </tr>`;
     }).join('');
 }
 
@@ -2876,16 +3253,33 @@ function updateAvatarUI() {
 
 function renderAdminPreview() {
     document.getElementById('count').innerText = db.length;
-    const p = document.getElementById('preview-section'); if(!p) return;
-    p.innerHTML = db.map((q, i) => `
+    const p = document.getElementById('preview-section'); 
+    if(!p) return;
+
+    // Lưu mảng đã có index gốc rồi mới đảo ngược
+    const html = db.map((q, i) => ({...q, realIdx: i}))
+                   .reverse()
+                   .map(q => `
         <div class="card glass flex justify-between items-center group">
-            <div class="flex-1 pr-4"><span class="text-[10px] text-indigo-400 font-bold uppercase">CÂU ${i+1}</span><p class="text-slate-200 truncate font-semibold">${q.text}</p></div>
-            <button class="bg-white/5 hover:bg-red-500 p-2 rounded-lg" onclick="deleteQ(${i})">🗑️</button>
+            <div class="flex-1 pr-4">
+                <span class="text-[10px] text-indigo-400 font-bold uppercase">ID: ${q.realIdx + 1}</span>
+                <p class="text-slate-200 truncate font-semibold">${q.text}</p>
+            </div>
+            <div class="flex gap-2">
+                <button class="bg-white/5 hover:bg-orange-500 p-2 rounded-lg" onclick="editQ(${q.realIdx})">✏️</button>
+                <button class="bg-white/5 hover:bg-red-500 p-2 rounded-lg" onclick="deleteQ(${q.realIdx})">🗑️</button>
+            </div>
         </div>
-    `).reverse().join('');
+    `).join('');
+    p.innerHTML = html;
 }
 
-function deleteQ(i) { db.splice(db.length-1-i, 1); saveDB(); renderAdminPreview(); }
+function deleteQ(i) { 
+    db.splice(i, 1); // i đã là index chuẩn từ map()
+    saveDB(); 
+    renderAdminPreview(); 
+}
+
 // Hàm xóa sạch Ngân hàng câu hỏi (Ngân hàng chung)
 async function clearAllDB() {
     // 1. Kiểm tra xem ngân hàng có câu hỏi nào không
@@ -2924,8 +3318,9 @@ async function clearAllDB() {
         }
     }
 }
+
 function deleteFolder(i) {
-    // Sửa foldersDB.length - 1 - i thành i
+    // Phải xóa theo index i được truyền từ originalIndex
     foldersDB.splice(i, 1); 
     saveFolders(); 
     renderFolders(); 
@@ -3876,6 +4271,107 @@ function toggleRowPassword(safeU, actualPass) {
         textEl.classList.add('tracking-widest'); // Thêm lại giãn cách cho đẹp
         iconEl.innerText = "👁️";
     }
+}
+
+// Hàm cập nhật trạng thái nút bấm sau khi chọn tệp
+// Hàm kiểm tra file ngay khi chọn
+function validateFileSelection(inputId, btnId) {
+    const fileInput = document.getElementById(inputId);
+    const btn = document.getElementById(btnId);
+    const file = fileInput.files[0];
+    const originalText = (inputId === 'wordFile') ? "KIỂM TRA" : "QUÉT ẢNH";
+
+    // 1. Trường hợp không chọn file (bấm cancel)
+    if (!file) {
+        resetSingleBtn(btnId, originalText);
+        return;
+    }
+
+    let isError = false;
+    let errorMsg = "";
+
+    // 2. Kiểm tra logic cho từng loại file
+    if (inputId === 'wordFile') {
+        const extension = file.name.split('.').pop().toLowerCase();
+        if (extension !== 'docx') {
+            isError = true;
+            errorMsg = "Chỉ chấp nhận file Word (.docx)";
+        }
+    } else if (inputId === 'imageFile') {
+        if (!file.type.startsWith('image/')) {
+            isError = true;
+            errorMsg = "Tệp bạn chọn không phải là hình ảnh!";
+        }
+    }
+
+    // Kiểm tra dung lượng (Ví dụ chặn file > 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        isError = true;
+        errorMsg = "Dung lượng tệp quá lớn (>10MB)";
+    }
+
+    // 3. Hiển thị trạng thái lên Button
+    if (isError) {
+        // TRẠNG THÁI LỖI: Màu đỏ + dấu X
+        btn.className = "bg-red-600 text-xs px-3 transition-all duration-300 shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-shake";
+        btn.innerHTML = `❌ LỖI FILE`;
+        sysNotify("Lỗi tệp tin", errorMsg, "error");
+        
+        // Tự động xóa file trong input để bắt người dùng chọn lại
+        fileInput.value = ""; 
+    } else {
+        // TRẠNG THÁI HỢP LỆ: Màu xanh lá + dấu tích
+        btn.className = "bg-emerald-600 text-xs px-3 transition-all duration-300 shadow-[0_0_15px_rgba(16,185,129,0.4)]";
+        btn.innerHTML = `✅ ${originalText}`;
+    }
+}
+
+// Hàm bổ trợ để reset nút về ban đầu
+function resetSingleBtn(btnId, text) {
+    const b = document.getElementById(btnId);
+    if(b) {
+        b.className = "bg-indigo-600 text-xs px-3 transition-all duration-300";
+        b.innerText = text;
+    }
+}
+
+async function handleTransferredRequest() {
+    // Kiểm tra nếu chưa có ảnh (chuỗi base64 quá ngắn hoặc trống)
+    if (!premiumProofBase64 || premiumProofBase64.length < 100) {
+        // Hiện thông báo CẢNH BÁO với icon tam giác vàng (warn)
+        return sysNotify("Thiếu minh chứng", "Vui lòng tải ảnh bill lên trước!", "warn");
+    }
+
+    // Nếu đã có ảnh, tiến hành gửi
+    sysNotify("Đang gửi...", "Đang tải dữ liệu lên hệ thống...", "info");
+
+    rdb.ref('system/global_premium_requests').once('value', (snap) => {
+        let preDB = snap.val() || [];
+        
+        // Chống gửi trùng yêu cầu đang chờ duyệt
+        if(preDB.some(r => r.user === currentUser.user && r.status === 'pending')) {
+            return sysNotify("Chờ duyệt", "Yêu cầu trước đó của bạn đang được xử lý!", "warn");
+        }
+
+        const newRequest = { 
+            user: currentUser.user, 
+            fullname: currentUser.name, 
+            status: 'pending', 
+            code: '', 
+            proofImg: premiumProofBase64, 
+            createdAt: Date.now() 
+        };
+
+        preDB.push(newRequest);
+        
+        rdb.ref('system/global_premium_requests').set(preDB).then(() => {
+            sysNotify("Thành công", "Đã gửi bill thành công! Chờ Admin duyệt.", "success");
+            closePremiumModal();
+            removeProofImage(); // Xóa ảnh hiển thị sau khi gửi thành công
+        }).catch(err => {
+            sysNotify("Lỗi", "Đường truyền quá tải, hãy thử lại sau!", "error");
+        });
+    });
 }
 
 </script>

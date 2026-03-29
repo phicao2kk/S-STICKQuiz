@@ -444,7 +444,10 @@
     <span id="sidebar-chat-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
 </div>
     <div id="admin-menu-users" class="menu-item hidden" onclick="showPage('page-users-manager')">👥 Quản lý tài khoản</div>
-    <div id="admin-menu-otp" class="menu-item hidden" onclick="showPage('page-otp-manager')">🔑 Cấp mã đổi MK</div>
+    <div id="admin-menu-otp" class="menu-item hidden" onclick="showPage('page-otp-manager')">
+    🔑 Cấp mã đổi MK
+    <span id="sidebar-otp-badge" class="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
+</div>
     <!-- NÚT MỚI THÊM VÀO ĐÂY -->
 <div id="admin-menu-premium" class="menu-item hidden" onclick="showPage('page-premium-manager')">
     👑 Phê duyệt Premium
@@ -880,12 +883,12 @@
             <div class="overflow-x-auto">
                 <table>
                     <thead>
-                        <tr>
-                            <th>Người yêu cầu</th>
-                            <th>Trạng thái</th>
-                            <th>Mã OTP</th>
-                            <th>Hết hạn</th>
-                            <th>Thao tác</th>
+                        <tr class="text-slate-400 text-[11px] uppercase tracking-wider border-b border-white/10">
+                            <th class="text-left py-4 pl-4">Người yêu cầu</th>
+                            <th class="text-center py-4">Trạng thái</th>
+                            <th class="text-center py-4">Mã OTP</th>
+                            <th class="text-center py-4">Thời gian</th>
+                            <th class="text-right py-4 pr-4">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="otp-requests-table"></tbody>
@@ -923,7 +926,7 @@
                         </div>
                         <div class="pw-container">
                             <input type="password" id="info-confirm-pass" class="input-control" placeholder="Xác nhận mật khẩu mới">
-                            <span class="pw-toggle" onclick="togglePassword('confirm-pass')">👁️</span>
+                            <span class="pw-toggle" onclick="togglePassword('info-confirm-pass')">👁️</span>
                         </div>
                         <button onclick="handleUpdatePassword()" class="btn-success w-full">CẬP NHẬT MẬT KHẨU</button>
                     </div>
@@ -1241,6 +1244,7 @@ function saveGlobalMaps() {
 function updateGlobalMenuDot() {
     const chatBadge = document.getElementById('sidebar-chat-badge');
     const premiumBadge = document.getElementById('sidebar-premium-badge');
+    const otpBadge = document.getElementById('sidebar-otp-badge'); // Thêm dòng này
     const globalDot = document.getElementById('global-menu-dot');
 
     if (!globalDot) return;
@@ -1248,9 +1252,10 @@ function updateGlobalMenuDot() {
     // Lấy giá trị số, nếu ẩn hoặc không có số thì coi là 0
     const chatCount = (chatBadge && !chatBadge.classList.contains('hidden')) ? parseInt(chatBadge.innerText) || 0 : 0;
     const premiumCount = (premiumBadge && !premiumBadge.classList.contains('hidden')) ? parseInt(premiumBadge.innerText) || 0 : 0;
+    const otpCount = (otpBadge && !otpBadge.classList.contains('hidden')) ? parseInt(otpBadge.innerText) || 0 : 0; // Thêm dòng này
 
-    // Nếu cả 2 mục đều bằng 0 thì ẩn chấm đỏ ngoài menu
-    if (chatCount === 0 && premiumCount === 0) {
+    // Nếu cả 3 mục đều bằng 0 thì ẩn chấm đỏ ngoài menu
+    if (chatCount === 0 && premiumCount === 0 && otpCount === 0) {
         globalDot.classList.add('hidden');
     } else {
         globalDot.classList.remove('hidden');
@@ -1315,7 +1320,11 @@ function syncDataFromServer() {
         if (currentUser.isRoot) {
             document.getElementById('admin-menu-premium').classList.remove('hidden');
             document.getElementById('admin-menu-chat').classList.remove('hidden'); 
+            document.getElementById('admin-menu-otp').classList.remove('hidden'); // Thêm dòng này nếu chưa có
             document.getElementById('student-zone').classList.add('hidden');
+
+            listenToTotalUnread(); 
+            listenToOTPRequests(); // <--- DÁN DÒNG NÀY VÀO ĐÂY
 
             // Lắng nghe yêu cầu Duyệt Bill
             rdb.ref('system/global_premium_requests').on('value', (s) => {
@@ -3167,6 +3176,37 @@ function listenToTotalUnread() {
     }
 }
 
+function listenToOTPRequests() {
+    if (!currentUser || !currentUser.isRoot) return;
+
+    rdb.ref('system/global_otp_db').on('value', (snapshot) => {
+        const requests = snapshot.val() || [];
+        
+        // Chỉ đếm những yêu cầu có trạng thái là 'pending'
+        const pendingOTP = requests.filter(r => r.status === 'pending').length;
+        
+        const badge = document.getElementById('sidebar-otp-badge');
+        if (badge) {
+            if (pendingOTP > 0) {
+                badge.innerText = pendingOTP;
+                badge.classList.remove('hidden');
+            } else {
+                badge.innerText = "0";
+                badge.classList.add('hidden');
+            }
+        }
+        
+        // Sau khi cập nhật số ở badge, cập nhật luôn chấm đỏ ở nút Menu chính
+        updateGlobalMenuDot();
+        
+        // Thông báo Toast nếu có yêu cầu mới (khi web đang mở)
+        if (!isialLoad && pendingOTP > 0) {
+            // Bạn có thể mở dòng dưới nếu muốn hiện thông báo nổi
+            // showModernToast("Yêu cầu OTP", `Có ${pendingOTP} yêu cầu cấp mã mới!`, "warn");
+        }
+    });
+}
+
 // 1. Hàm hiển thị Toast thông báo xịn xò
 function showModernToast(title, msg, type = "info") {
     const container = document.getElementById('toast-container');
@@ -3239,6 +3279,38 @@ function listenToTotalUnread() {
         }
         // Gọi cập nhật chấm đỏ menu ngay lập tức
         updateGlobalMenuDot();
+    });
+}
+
+// Hàm lắng nghe yêu cầu OTP mới
+function listenToOTPRequests() {
+    if (!currentUser || !currentUser.isRoot) return;
+
+    rdb.ref('system/global_otp_db').on('value', (snapshot) => {
+        const requests = snapshot.val() || [];
+        
+        // Chỉ đếm những yêu cầu có trạng thái là 'pending'
+        const pendingOTP = requests.filter(r => r.status === 'pending').length;
+        
+        const badge = document.getElementById('sidebar-otp-badge');
+        if (badge) {
+            if (pendingOTP > 0) {
+                badge.innerText = pendingOTP;
+                badge.classList.remove('hidden');
+            } else {
+                badge.innerText = "0";
+                badge.classList.add('hidden');
+            }
+        }
+        
+        // Cập nhật chấm đỏ ngoài menu
+        updateGlobalMenuDot();
+        
+        // Nếu có yêu cầu mới và không phải lần load đầu tiên, hiện thông báo Toast
+        if (!isialLoad && pendingOTP > 0) {
+             NOTI_SOUND.play().catch(() => {});
+             showModernToast("Yêu cầu OTP", `Có <b>${pendingOTP}</b> yêu cầu cấp mã mới đang chờ duyệt!`, "warn");
+        }
     });
 }
 
@@ -3368,6 +3440,267 @@ function copyToClipboard(text) {
         document.body.removeChild(input);
         sysNotify("Thành công", "Đã sao chép mã đề: " + text, "success");
     });
+}
+
+// ==========================================
+// 1. LOGIC DÀNH CHO NGƯỜI DÙNG: YÊU CẦU LẤY MÃ
+// ==========================================
+async function requestOTP() {
+    const u = document.getElementById('forgot-user').value.trim().toLowerCase();
+    if(!u) return sysNotify("Lỗi", "Vui lòng nhập tài khoản cần lấy mã!", "warn");
+
+    sysNotify("Đang xử lý", "Vui lòng đợi giây lát...", "info");
+
+    rdb.ref('system/users_db').once('value', (snapshot) => {
+        const users = snapshot.val() || {};
+        const safeU = u.replace(/\./g, '_');
+        
+        if(!users[safeU]) {
+            return sysNotify("Thất bại", "Tài khoản này không tồn tại trên hệ thống!", "error");
+        }
+
+        const fullname = users[safeU].fullname;
+
+        rdb.ref('system/global_otp_db').once('value', (otpSnap) => {
+            let otpList = otpSnap.val() || [];
+            
+            if(otpList.some(r => r.user === u && r.status === 'pending')) {
+                return sysNotify("Thông báo", "Yêu cầu của bạn đang được xử lý, vui lòng không gửi thêm!", "warn");
+            }
+
+            otpList.push({
+                user: u,
+                fullname: fullname,
+                status: 'pending',
+                otp: '',
+                createdAt: Date.now()
+            });
+
+            rdb.ref('system/global_otp_db').set(otpList).then(() => {
+                // NỘI DUNG THÔNG BÁO ĐÃ ĐƯỢC LÀM ĐẸP TẠI ĐÂY
+                sysNotify("Đã gửi yêu cầu", `
+                    <div class="text-left space-y-2 text-slate-300">
+                        <p>Vui lòng liên hệ Quản trị viên:</p>
+                        <div class="bg-black/20 p-3 rounded-xl border border-white/5">
+                            <p class="text-white font-extrabold text-lg uppercase tracking-wider mb-1">👑 CAO NGUYỄN HỒNG PHI</p>
+                            <p>📞 Số điện thoại: <b class="text-amber-400 font-mono text-lg">0978877125</b></p>
+                            <p>📧 Email: <b class="text-indigo-400 italic">cnhphi25@pdu.edu.vn</b></p>
+                        </div>
+                        <p class="text-[11px] mt-2 italic text-slate-500">* Cung cấp tài khoản của bạn để nhận mã OTP.</p>
+                    </div>
+                `, "success");
+            });
+        });
+    });
+}
+
+// ==========================================
+// 2. LOGIC DÀNH CHO ADMIN: HIỂN THỊ VÀ DUYỆT MÃ
+// ==========================================
+
+// Hàm hiển thị danh sách yêu cầu lấy mã cho Admin
+function renderOTPRequests() {
+    const body = document.getElementById('otp-requests-table');
+    if(!body) return;
+
+    rdb.ref('system/global_otp_db').on('value', (snapshot) => {
+        const requests = snapshot.val() || [];
+        
+        if(requests.length === 0) {
+            body.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-500 italic text-sm">Chưa có yêu cầu lấy mã nào.</td></tr>';
+            return;
+        }
+
+        body.innerHTML = [...requests].reverse().map((r, index) => {
+            const originalIndex = requests.length - 1 - index;
+            const timeStr = new Date(r.createdAt).toLocaleString('vi-VN', {hour: '2-digit', minute:'2-digit', second:'2-digit', day:'2-digit', month:'2-digit'});
+            
+            return `
+            <tr class="border-b border-white/5 hover:bg-white/5 transition group">
+                <!-- Cột 1: Căn trái -->
+                <td class="py-4 pl-4 text-left">
+                    <div class="font-bold text-white text-sm">${r.fullname}</div>
+                    <div class="text-[10px] text-indigo-400 font-mono">${r.user}</div>
+                </td>
+                
+                <!-- Cột 2: Căn giữa -->
+                <td class="text-center">
+                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black tracking-tighter ${r.status === 'pending' ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}">
+                        ${r.status === 'pending' ? 'ĐANG ĐỢI' : 'HOÀN TẤT'}
+                    </span>
+                </td>
+                
+                <!-- Cột 3: Căn giữa -->
+                <td class="text-center">
+                    ${r.otp ? `<span class="font-mono font-bold text-indigo-300 bg-indigo-500/20 px-3 py-1 rounded-md border border-indigo-500/30">${r.otp}</span>` : '<span class="opacity-10 text-xs">----</span>'}
+                </td>
+                
+                <!-- Cột 4: Căn giữa -->
+                <td class="text-center text-[10px] text-slate-500 font-mono whitespace-nowrap">
+                    ${timeStr}
+                </td>
+                
+                <!-- Cột 5: Căn phải -->
+                <td class="pr-4 text-right">
+                    <div class="flex gap-2 justify-end">
+                        ${r.status === 'pending' ? 
+                            `<button onclick="approveOTP(${originalIndex})" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold shadow-lg transition-all border-none">CẤP MÃ</button>` 
+                            : ''
+                        }
+                        <button onclick="deleteOTP(${originalIndex})" class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white p-1.5 rounded-lg transition-all border-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    });
+}
+
+// Hàm Admin bấm Duyệt/Cấp mã
+function approveOTP(idx) {
+    rdb.ref('system/global_otp_db').once('value', (snapshot) => {
+        let list = snapshot.val() || [];
+        if(!list[idx]) return;
+
+        // Tạo mã ngẫu nhiên 4 số
+        const generatedOTP = Math.floor(1000 + Math.random() * 9000).toString();
+        
+        list[idx].status = 'approved';
+        list[idx].otp = generatedOTP;
+
+        rdb.ref('system/global_otp_db').set(list).then(() => {
+            sysNotify("Thành công", `
+                <div class="text-center">
+                    <p class="text-slate-400 mb-2">Đã tạo mã OTP cho thí sinh:</p>
+                    <b class="text-3xl text-white font-mono tracking-widest bg-indigo-500/30 px-6 py-2 rounded-2xl border border-indigo-500/50 block w-fit mx-auto mb-2">${generatedOTP}</b>
+                    <p class="text-[11px] text-emerald-400 font-bold uppercase">Hãy gửi mã này cho thí sinh để đổi mật khẩu!</p>
+                </div>
+            `, "success");
+        });
+    });
+}
+
+// Hàm Admin xóa yêu cầu
+async function deleteOTP(idx) {
+    if(await sysConfirm("Bạn muốn xóa yêu cầu này khỏi danh sách?")) {
+        rdb.ref('system/global_otp_db').once('value', (snapshot) => {
+            let list = snapshot.val() || [];
+            list.splice(idx, 1);
+            rdb.ref('system/global_otp_db').set(list);
+            sysNotify("Đã xóa", "Yêu cầu đã được dọn dẹp.", "info");
+        });
+    }
+}
+
+// ==========================================
+// HÀM XÁC NHẬN ĐỔI MẬT KHẨU (CHO NGƯỜI DÙNG)
+// ==========================================
+async function handleForgot() {
+    const u = document.getElementById('forgot-user').value.trim().toLowerCase();
+    const otp = document.getElementById('forgot-otp').value.trim();
+    const newPass = document.getElementById('forgot-new-pass').value.trim();
+
+    if (!u || !otp || !newPass) {
+        return sysNotify("Lỗi", "Vui lòng nhập đầy đủ: Tài khoản, Mã OTP và Mật khẩu mới!", "warn");
+    }
+
+    if (newPass.length < 4) {
+        return sysNotify("Lỗi", "Mật khẩu mới phải có ít nhất 4 ký tự!", "warn");
+    }
+
+    sysNotify("Đang xác thực", "Vui lòng đợi giây lát...", "info");
+
+    // Bước 1: Kiểm tra mã OTP trong kho dữ liệu hệ thống
+    rdb.ref('system/global_otp_db').once('value', (snapshot) => {
+        let otpList = snapshot.val() || [];
+        
+        // Tìm yêu cầu của user này mà đã được 'approved' và khớp mã OTP
+        const validRequestIndex = otpList.findIndex(r => 
+            r.user === u && 
+            r.status === 'approved' && 
+            r.otp === otp
+        );
+
+        if (validRequestIndex === -1) {
+            return sysNotify("Thất bại", "Mã OTP không chính xác hoặc chưa được Admin phê duyệt!", "error");
+        }
+
+        // Bước 2: Tiến hành cập nhật mật khẩu mới vào tài khoản
+        const safeU = u.replace(/\./g, '_');
+        rdb.ref('system/users_db/' + safeU).update({
+            pass: newPass
+        }).then(() => {
+            // Bước 3: Xóa mã OTP này đi để không dùng lại được lần 2 (Bảo mật)
+            otpList.splice(validRequestIndex, 1);
+            rdb.ref('system/global_otp_db').set(otpList);
+
+            sysNotify("Thành công", "Mật khẩu của bạn đã được thay đổi! Hãy đăng nhập bằng mật khẩu mới.", "success");
+            
+            // Quay lại màn hình đăng nhập
+            setTimeout(() => {
+                switchAuth('login');
+                // Tự điền luôn tài khoản vừa đổi cho tiện
+                document.getElementById('login-user').value = u;
+                document.getElementById('login-pass').value = "";
+            }, 2000);
+        }).catch(err => {
+            sysNotify("Lỗi hệ thống", "Không thể cập nhật mật khẩu. Vui lòng thử lại sau!", "error");
+        });
+    });
+}
+
+// ==========================================
+// HÀM CẬP NHẬT MẬT KHẨU TRONG TRANG HỒ SƠ
+// ==========================================
+async function handleUpdatePassword() {
+    const oldP = document.getElementById('info-old-pass').value;
+    const newP = document.getElementById('info-new-pass').value;
+    const confP = document.getElementById('info-confirm-pass').value;
+
+    // 1. Kiểm tra trống
+    if(!oldP || !newP || !confP) {
+        return sysNotify("Lỗi", "Vui lòng nhập đầy đủ thông tin!", "warn");
+    }
+
+    // 2. Kiểm tra mật khẩu cũ (So khớp với dữ liệu đã lưu khi đăng nhập)
+    // Lấy mật khẩu hiện tại từ bộ nhớ usersDB
+    if (usersDB[currentUser.user].pass !== oldP) {
+        return sysNotify("Lỗi", "Mật khẩu cũ không chính xác!", "error");
+    }
+
+    // 3. Kiểm tra mật khẩu mới và xác nhận
+    if (newP !== confP) {
+        return sysNotify("Lỗi", "Mật khẩu xác nhận không khớp!", "error");
+    }
+
+    if (newP.length < 4) {
+        return sysNotify("Lỗi", "Mật khẩu mới phải từ 4 ký tự trở lên!", "warn");
+    }
+
+    sysNotify("Đang xử lý", "Vui lòng đợi giây lát...", "info");
+
+    try {
+        const safeUser = currentUser.user.replace(/\./g, '_');
+
+        // Bước A: Cập nhật mật khẩu mới lên Firebase
+        await rdb.ref('system/users_db/' + safeUser + '/pass').set(newP);
+
+        // Bước B: Cập nhật lại bộ nhớ Local (máy hiện tại)
+        usersDB[currentUser.user].pass = newP;
+        localStorage.setItem('users_db', JSON.stringify(usersDB));
+
+        sysNotify("Thành công", "Mật khẩu của bạn đã được cập nhật thành công!", "success");
+
+        // Xóa trắng các ô nhập
+        document.getElementById('info-old-pass').value = "";
+        document.getElementById('info-new-pass').value = "";
+        document.getElementById('info-confirm-pass').value = "";
+
+    } catch (error) {
+        console.error("Lỗi đổi mật khẩu:", error);
+        sysNotify("Lỗi hệ thống", "Không thể kết nối máy chủ để đổi mật khẩu!", "error");
+    }
 }
 
 </script>

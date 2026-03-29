@@ -969,6 +969,7 @@
 </div>
 
 <script>
+    let notifiedMessages = new Set(); // Lưu trữ ID các tin nhắn đã hiện thông báo
     let premiumProofBase64 = ""; // Lưu ảnh bill đã nén
     const NOTI_SOUND = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
     let isFirstLogin = true; 
@@ -3139,45 +3140,48 @@ if (loginContainer) {
 }
 
 // Lắng nghe tất cả các tin nhắn chưa đọc để cập nhật lên Sidebar và hiện Popup thông báo
-function listenToTotalUnread() {
-    if (!currentUser) return;
+if (currentUser.isRoot) {
+    rdb.ref('system/chats').on('child_changed', (snapshot) => {
+        if (isialLoad) return;
+        const data = snapshot.val();
+        if (!data || !data.messages) return;
 
-    // TRƯỜNG HỢP 1: DÀNH CHO ADMIN GỐC (Tổng hợp tất cả admin con)
-    if (currentUser.isRoot) {
-        rdb.ref('system/chats').on('value', (snapshot) => {
-            const data = snapshot.val();
-            let totalUnread = 0;
-            if (data) {
-                for (const userId in data) {
-                    totalUnread += (data[userId].unread || 0);
-                }
-            }
+        const msgEntries = Object.entries(data.messages);
+        if (msgEntries.length === 0) return;
 
-            // Cập nhật số Badge ở Sidebar
-            const badge = document.getElementById('sidebar-chat-badge');
-            if (badge) {
-                if (totalUnread > 0) {
-                    badge.innerText = totalUnread;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.classList.add('hidden');
-                }
-            }
+        // Lấy tin nhắn cuối cùng (ID và Nội dung)
+        const [msgId, lastMsg] = msgEntries[msgEntries.length - 1];
 
-            // --- THÔNG BÁO NGAY KHI ĐĂNG NHẬP ---
-            if (isFirstLogin && totalUnread > 0) {
-                isFirstLogin = false; // Khóa ngay để không hiện lại
-                setTimeout(() => {
-                    NOTI_SOUND.play().catch(() => {});
-                    showModernToast(
-                        "TIN NHẮN CHỜ XỬ LÝ", 
-                        `Chào Quản trị viên, có <b class="text-white">${totalUnread}</b> tin nhắn hỗ trợ mới đang chờ bạn phản hồi!`, 
-                        "info"
-                    );
-                }, 2000); // Đợi 2 giây sau khi vào trang cho mượt
+        // ĐIỀU KIỆN: 
+        // 1. Người gửi không phải là mình
+        // 2. ID tin nhắn này chưa từng được thông báo (Set.has)
+        // 3. Tin nhắn mới được tạo trong vòng 1 phút trở lại (tránh báo tin nhắn cũ khi đồng bộ)
+        if (lastMsg.sender !== AD_PHONE && !notifiedMessages.has(msgId)) {
+            const msgTime = lastMsg.time || 0;
+            if (Date.now() - msgTime < 60000) { 
+                notifiedMessages.add(msgId); // Đánh dấu đã báo
+                NOTI_SOUND.play().catch(() => {});
+                showModernToast("Tin nhắn mới", `<b>${lastMsg.name}:</b> ${lastMsg.text}`, "info");
             }
-        });
-    } 
+        }
+    });
+} else if (currentUser.isAdmin) {
+    const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
+    rdb.ref('system/chats/' + chatId + '/messages').limitToLast(1).on('child_added', (snapshot) => {
+        if (isialLoad) return;
+        const msgId = snapshot.key;
+        const msg = snapshot.val();
+
+        // ĐIỀU KIỆN: Tin nhắn từ Admin gốc và chưa được báo
+        if (msg.sender === AD_PHONE && !notifiedMessages.has(msgId)) {
+            if (document.getElementById('chat-box').classList.contains('hidden')) {
+                notifiedMessages.add(msgId); // Đánh dấu đã báo
+                NOTI_SOUND.play().catch(() => {});
+                showModernToast("Phản hồi từ Quản trị viên", msg.text, "success");
+            }
+        }
+    });
+}
     // TRƯỜNG HỢP 2: DÀNH CHO ADMIN CON (Nhận phản hồi từ Admin Gốc)
     else if (currentUser.isAdmin) {
         const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
@@ -3197,7 +3201,6 @@ function listenToTotalUnread() {
             }
         });
     }
-}
 
 function listenToOTPRequests() {
     if (!currentUser || !currentUser.isRoot) return;

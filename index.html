@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -203,7 +204,20 @@
         .suggestion-item { padding: 8px 16px; cursor: pointer; font-size: 13px; color: #cbd5e1; transition: all 0.2s; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
         .suggestion-item:hover { background: rgba(99, 102, 241, 0.25); color: #fff; padding-left: 20px; }
 
-        #notify-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); opacity: 0; visibility: hidden; transition: 0.3s; }
+        #notify-container { 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            z-index: 300000 !important; /* <--- Sửa thành 300000 để nó nhảy lên trên cùng */
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: rgba(0,0,0,0.8); 
+            backdrop-filter: blur(5px); 
+            opacity: 0; 
+            visibility: hidden; 
+            transition: 0.3s; 
+        }
         #notify-container.active { opacity: 1; visibility: visible; }
         #notify-box { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); padding: 30px; border-radius: 24px; width: 90%; max-width: 400px; text-align: center; transform: scale(0.9); transition: 0.3s; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
         #notify-container.active #notify-box { transform: scale(1); }
@@ -1073,6 +1087,7 @@
 </div>
 
 <script>
+    let isCheckingPremiumFirstTime = true; // Cờ đánh dấu lần đầu load dữ liệu
     let notifiedMessages = new Set(); // Lưu trữ ID các tin nhắn đã hiện thông báo
     let premiumProofBase64 = ""; // Lưu ảnh bill đã nén
     const NOTI_SOUND = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
@@ -1116,31 +1131,6 @@ function previewProofImage(input) {
     reader.readAsDataURL(file);
 }
 
-async function handleTransferredRequest() {
-    if (!premiumProofBase64) return sysNotify("Thiếu ảnh", "Vui lòng tải bill thanh toán!", "warn");
-
-    sysNotify("Đang gửi", "Vui lòng đợi giây lát...", "info");
-    rdb.ref('system/global_premium_requests').once('value', (snap) => {
-        let preDB = snap.val() || [];
-        if(preDB.some(r => r.user === currentUser.user && r.status === 'pending')) {
-            return sysNotify("Chờ duyệt", "Bạn đã gửi yêu cầu rồi, hãy đợi Admin!", "warn");
-        }
-
-        preDB.push({
-            user: currentUser.user,
-            fullname: currentUser.name,
-            status: 'pending',
-            proofImg: premiumProofBase64,
-            createdAt: Date.now()
-        });
-
-        rdb.ref('system/global_premium_requests').set(preDB).then(() => {
-            sysNotify("Thành công", "Đã gửi bill! Admin sẽ duyệt cho bạn.", "success");
-            closePremiumModal();
-            removeProofImage();
-        });
-    });
-}
 
 // 2. Hàm xóa ảnh nếu chọn nhầm
 function removeProofImage() {
@@ -1148,43 +1138,6 @@ function removeProofImage() {
     document.getElementById('input-proof-img').value = "";
     document.getElementById('proof-preview-container').classList.add('hidden');
     document.getElementById('proof-btn-text').innerHTML = "📸 TẢI ẢNH MINH CHỨNG (BILL)";
-}
-
-// 3. Cập nhật hàm handleTransferredRequest (Thay thế hàm cũ của bạn)
-async function handleTransferredRequest() {
-    if (!premiumProofBase64 || premiumProofBase64.length < 100) {
-        return sysNotify("Thiếu minh chứng", "Vui lòng tải ảnh bill lên trước!", "warn");
-    }
-
-    sysNotify("Đang gửi...", "Đang tải dữ liệu lên hệ thống...", "info");
-
-    rdb.ref('system/global_premium_requests').once('value', (snap) => {
-        let preDB = snap.val() || [];
-        
-        // Chống gửi trùng
-        if(preDB.some(r => r.user === currentUser.user && r.status === 'pending')) {
-            return sysNotify("Chờ duyệt", "Yêu cầu trước đó của bạn đang được xử lý!", "warn");
-        }
-
-        const newRequest = { 
-            user: currentUser.user, 
-            fullname: currentUser.name, 
-            status: 'pending', 
-            code: '', 
-            proofImg: premiumProofBase64, // Ảnh đã nén
-            createdAt: Date.now() 
-        };
-
-        preDB.push(newRequest);
-        
-        rdb.ref('system/global_premium_requests').set(preDB).then(() => {
-            sysNotify("Thành công", "Đã gửi bill thành công! Chờ Admin duyệt.", "success");
-            closePremiumModal();
-            removeProofImage();
-        }).catch(err => {
-            sysNotify("Lỗi", "Đường truyền quá tải, hãy thử lại ảnh khác!", "error");
-        });
-    });
 }
 
 function editQ(i) {
@@ -1616,22 +1569,47 @@ function syncDataFromServer() {
         
         // 1. Lắng nghe tài khoản cá nhân để kiểm tra hết hạn Premium
         rdb.ref('system/users_db').on('value', (snap) => {
-    const data = snap.val();
-    if (data) {
-        usersDB = data; // Cập nhật bộ nhớ cục bộ
-        localStorage.setItem('users_db', JSON.stringify(usersDB));
-        
-        // --- TỰ ĐỘNG VẼ LẠI GIAO DIỆN KHI CÓ BẤT KỲ THAY ĐỔI NÀO ---
-        if (!document.getElementById('page-premium-manager').classList.contains('hidden')) {
-            renderPremiumRequests();   // Vẽ lại bảng Duyệt Bill
-            renderMasterPremiumList(); // Vẽ lại bảng Hội viên Master
-        }
-        if (!document.getElementById('page-users-manager').classList.contains('hidden')) {
-            renderUsersManager();      // Vẽ lại bảng Quản lý tài khoản
-        }
-        checkPremiumUI(); // Cập nhật huy hiệu Diamond/Bản thường trên Menu
-    }
-});
+            const data = snap.val();
+            if (data && currentUser) {
+                usersDB = data;
+                localStorage.setItem('users_db', JSON.stringify(usersDB));
+                
+                const safeU = currentUser.user.replace(/\./g, '_');
+                const updatedUserData = data[safeU];
+
+                if (updatedUserData) {
+                    // Lấy trạng thái Premium mới nhất từ Server
+                    const newPremiumStatus = updatedUserData.isPremium || false;
+
+                    // --- ĐOẠN QUAN TRỌNG: PHÁT HIỆN KÍCH HOẠT PREMIUM ---
+                    // Nếu không phải lần đầu load trang VÀ trước đó là false VÀ bây giờ là true
+                    if (!isCheckingPremiumFirstTime && currentUser.isPremium === false && newPremiumStatus === true) {
+                        // Kích hoạt ngay thông báo chúc mừng
+                        showPremiumSuccessAlert(); 
+                    }
+
+                    // Cập nhật trạng thái vào bộ nhớ máy để đồng bộ UI
+                    currentUser.isPremium = newPremiumStatus;
+                    currentUser.premiumExpiresAt = updatedUserData.premiumExpiresAt;
+                    localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
+                    
+                    // Sau lần kiểm tra đầu tiên, đặt cờ về false để bắt đầu canh chừng sự thay đổi
+                    isCheckingPremiumFirstTime = false;
+                }
+
+                // Cập nhật các bảng quản trị nếu đang mở
+                if (!document.getElementById('page-premium-manager').classList.contains('hidden')) {
+                    renderPremiumRequests();
+                    renderMasterPremiumList();
+                }
+                if (!document.getElementById('page-users-manager').classList.contains('hidden')) {
+                    renderUsersManager();
+                }
+
+                // Luôn cập nhật lại giao diện (Huy hiệu, Menu)
+                checkPremiumUI(); 
+            }
+        });
 
         // 2. QUAN TRỌNG: Gọi hàm kiểm tra tin nhắn chưa đọc ngay khi vào trang
         if (currentUser.isAdmin || currentUser.isRoot) {
@@ -1735,23 +1713,13 @@ if (currentUser.isRoot) {
 // 4. HÀM HỆ THỐNG (FULL LOGIC CŨ)
 // ==========================================
 function sysNotify(title, msg, type = 'info') {
-    // Đảm bảo có icon warn (tam giác vàng)
-    const icon = { 
-        'info': '🔔', 
-        'success': '✅', 
-        'error': '❌', 
-        'warn': '⚠️'  // <--- Đây chính là icon trong ảnh bạn muốn
-    }[type] || '🔔';
-
+    // ĐẢM BẢO KHÔNG CÓ LỆNH ĐÓNG MODAL Ở ĐÂY
+    const icon = { 'info': '🔔', 'success': '✅', 'error': '❌', 'warn': '⚠️' }[type] || '🔔';
     document.getElementById('nt-icon').innerText = icon;
     document.getElementById('nt-title').innerText = title;
     document.getElementById('nt-msg').innerHTML = msg;
-    
-    // Ẩn các ô nhập liệu và nút hủy nếu là thông báo thường
     document.getElementById('nt-input').classList.add('hidden');
     document.getElementById('nt-btn-cancel').classList.add('hidden');
-    
-    // Hiển thị popup
     document.getElementById('notify-container').classList.add('active');
 }
 
@@ -2635,6 +2603,15 @@ function submitQuiz() {
     document.getElementById('rs-time').innerText = timeTakenStr;
 
     showPage('page-result');
+
+    // HIỆU ỨNG PHÁO HOA NẾU ĐIỂM >= 8
+    if (parseFloat(point) >= 8) {
+        // Đợi một chút để màn hình kết quả hiện lên rồi nổ pháo
+        setTimeout(() => {
+            launchFireworks();
+            showModernToast("XUẤT SẮC!", "Chúc mừng bạn đã đạt điểm giỏi! 🏆", "success");
+        }, 500);
+    }
 
     const hi = { 
         user: currentUser.user,        // Phải có
@@ -4474,43 +4451,173 @@ function resetSingleBtn(btnId, text) {
     }
 }
 
-async function handleTransferredRequest() {
-    // Kiểm tra nếu chưa có ảnh (chuỗi base64 quá ngắn hoặc trống)
-    if (!premiumProofBase64 || premiumProofBase64.length < 100) {
-        // Hiện thông báo CẢNH BÁO với icon tam giác vàng (warn)
-        return sysNotify("Thiếu minh chứng", "Vui lòng tải ảnh bill lên trước!", "warn");
+// Hàm tạo hiệu ứng pháo hoa liên tục trong 5 giây
+function launchFireworks() {
+    var duration = 4 * 1000; // Pháo nổ trong 4 giây
+    var animationEnd = Date.now() + duration;
+    var defaults = { startVelocity: 45, spread: 70, ticks: 100, zIndex: 10005, particleCount: 3 };
+
+    function randomInRange(min, max) {
+        return Math.random() * (max - min) + min;
     }
 
-    // Nếu đã có ảnh, tiến hành gửi
-    sysNotify("Đang gửi...", "Đang tải dữ liệu lên hệ thống...", "info");
+    var interval = setInterval(function() {
+        var timeLeft = animationEnd - Date.now();
 
-    rdb.ref('system/global_premium_requests').once('value', (snap) => {
-        let preDB = snap.val() || [];
-        
-        // Chống gửi trùng yêu cầu đang chờ duyệt
-        if(preDB.some(r => r.user === currentUser.user && r.status === 'pending')) {
-            return sysNotify("Chờ duyệt", "Yêu cầu trước đó của bạn đang được xử lý!", "warn");
+        if (timeLeft <= 0) {
+            return clearInterval(interval);
         }
 
-        const newRequest = { 
-            user: currentUser.user, 
-            fullname: currentUser.name, 
-            status: 'pending', 
-            code: '', 
-            proofImg: premiumProofBase64, 
-            createdAt: Date.now() 
-        };
+        // Bắn từ góc dưới bên trái (Góc 60 độ hướng vào giữa)
+        confetti(Object.assign({}, defaults, {
+            origin: { x: 0, y: 1 }, 
+            angle: 60,
+            colors: ['#6366f1', '#10b981', '#fbbf24', '#f472b6', '#ffffff']
+        }));
 
-        preDB.push(newRequest);
-        
-        rdb.ref('system/global_premium_requests').set(preDB).then(() => {
-            sysNotify("Thành công", "Đã gửi bill thành công! Chờ Admin duyệt.", "success");
-            closePremiumModal();
-            removeProofImage(); // Xóa ảnh hiển thị sau khi gửi thành công
-        }).catch(err => {
-            sysNotify("Lỗi", "Đường truyền quá tải, hãy thử lại sau!", "error");
-        });
-    });
+        // Bắn từ góc dưới bên phải (Góc 120 độ hướng vào giữa)
+        confetti(Object.assign({}, defaults, {
+            origin: { x: 1, y: 1 },
+            angle: 120,
+            colors: ['#6366f1', '#10b981', '#fbbf24', '#f472b6', '#ffffff']
+        }));
+    }, 150); // Tốc độ nổ mỗi đợt pháo
+}
+
+// HÀM DUY NHẤT VÀ TỐI ƯU NHẤT: CHỐNG TREO TUYỆT ĐỐI
+function handleTransferredRequest() {
+    // 1. Kiểm tra biến ảnh ngay lập tức
+    if (!premiumProofBase64 || premiumProofBase64.length < 100) {
+        // Gọi thông báo cảnh báo và dừng hàm luôn
+        sysNotify("Thiếu ảnh bill", "Vui lòng bấm vào nút 'Tải ảnh minh chứng' trước khi xác nhận!", "warn");
+        return; // Dừng lại ở đây, không chạy tiếp xuống dưới
+    }
+
+    // 2. Nếu có ảnh, thực hiện quy trình gửi (Đã giải thích ở lượt trước)
+    closePremiumModal(); 
+    sysNotify("Đang gửi...", "Vui lòng đợi trong giây lát...", "info");
+
+    setTimeout(async () => {
+        try {
+            const snap = await rdb.ref('system/global_premium_requests').once('value');
+            let requestsArray = snap.val() ? (Array.isArray(snap.val()) ? snap.val() : Object.values(snap.val())) : [];
+
+            const newRequest = { 
+                user: currentUser.user, 
+                fullname: currentUser.name, 
+                status: 'pending', 
+                code: '', 
+                proofImg: premiumProofBase64, 
+                createdAt: Date.now() 
+            };
+
+            requestsArray.push(newRequest);
+            if (requestsArray.length > 30) requestsArray = requestsArray.slice(-30);
+
+            await rdb.ref('system/global_premium_requests').set(requestsArray);
+            
+            closeNotify();
+            sysNotify("Thành công", "Đã gửi bill thành công!", "success");
+            removeProofImage();
+        } catch (err) {
+            closeNotify();
+            sysNotify("Lỗi", "Không thể kết nối Server!", "error");
+        }
+    }, 200);
+}
+
+// BẢN FIX CUỐI CÙNG: CHỐNG TREO & GIỮ NGUYÊN GIAO DIỆN SAU KHI ĐÓNG
+async function handleTransferredRequest() {
+    if (!premiumProofBase64 || premiumProofBase64.length < 100) {
+        sysNotify("Thiếu minh chứng", "Vui lòng tải ảnh bill lên trước!", "warn");
+        return;
+    }
+
+    // 1. Đóng modal ngay lập tức để người dùng thấy mượt
+    closePremiumModal(); 
+
+    // 2. Hiện thông báo nạp dữ liệu (Notify này sẽ đè lên giao diện hiện tại)
+    sysNotify("Đang xử lý", "Hệ thống đang tải bill lên, bạn có thể tiếp tục sử dụng web...", "info");
+
+    setTimeout(async () => {
+        try {
+            const snap = await rdb.ref('system/global_premium_requests').once('value');
+            let data = snap.val();
+            let requestsArray = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+
+            const newRequest = { 
+                user: currentUser.user, 
+                fullname: currentUser.name, 
+                status: 'pending', 
+                code: '', 
+                proofImg: premiumProofBase64, 
+                createdAt: Date.now() 
+            };
+
+            requestsArray.push(newRequest);
+            if (requestsArray.length > 30) requestsArray = requestsArray.slice(-30);
+
+            await rdb.ref('system/global_premium_requests').set(requestsArray);
+            
+            closeNotify(); // Tắt bảng "Đang xử lý"
+            showModernToast("Thành công", "Đã gửi bill cho Admin duyệt!", "success");
+            removeProofImage();
+        } catch (err) {
+            closeNotify();
+            sysNotify("Lỗi mạng", "Không thể gửi dữ liệu, hãy thử lại!", "error");
+        }
+    }, 200);
+}
+
+function showPremiumSuccessAlert() {
+    // 1. Âm thanh thông báo
+    NOTI_SOUND.play().catch(() => {});
+
+    // 2. Bắn pháo hoa (Sử dụng hàm launchFireworks bạn đã có sẵn)
+    launchFireworks();
+
+    // 3. Cấu hình giao diện Popup thông báo
+    const ntBox = document.getElementById('notify-container');
+    const ntMsg = document.getElementById('nt-msg');
+    const ntTitle = document.getElementById('nt-title');
+    const ntIcon = document.getElementById('nt-icon');
+    const okBtn = document.getElementById('nt-btn-ok');
+
+    // Thiết lập nội dung Popup
+    ntIcon.innerText = '💎';
+    ntTitle.innerHTML = '<span style="color: #fbbf24; font-weight: 900; letter-spacing: 2px;">PREMIUM ACTIVATED</span>';
+    ntMsg.innerHTML = `
+        <div style="text-align: center; padding: 10px;">
+            <p style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 15px;">Chúc mừng bạn đã trở thành Hội viên Premium!</p>
+            <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 20px; padding: 20px; margin-bottom: 20px;">
+                <ul style="text-align: left; color: #cbd5e1; font-size: 12px; list-style: none; padding: 0; margin: 0; line-height: 2;">
+                    <li>✨ Không giới hạn số lượng bộ đề</li>
+                    <li>✨ Mở khóa toàn bộ Ngân hàng câu hỏi</li>
+                    <li>✨ Tốc độ quét ảnh OCR siêu tốc</li>
+                    <li>✨ Ưu tiên hỗ trợ từ Quản trị viên</li>
+                </ul>
+            </div>
+            <p style="color: #94a3b8; font-size: 11px; font-style: italic;">Hệ thống đã tự động nâng cấp quyền hạn tài khoản của bạn.</p>
+        </div>
+    `;
+
+    // Tùy chỉnh nút bấm "Trải nghiệm"
+    okBtn.innerText = 'TRẢI NGHIỆM NGAY';
+    okBtn.className = "w-full py-4 bg-gradient-to-r from-amber-600 to-amber-400 text-black font-black rounded-2xl shadow-[0_0_30px_rgba(251,191,36,0.4)] border-none transition-all hover:scale-105 active:scale-95";
+    
+    okBtn.onclick = () => {
+        closeNotify();
+        // Chuyển về trang chủ để người dùng thấy sự thay đổi
+        showPage('page-home');
+        // Hiện thêm một Toast nhỏ thông báo nhanh
+        showModernToast("Premium 💎", "Mọi tính năng cao cấp đã sẵn sàng!", "success");
+    };
+
+    // Ẩn nút Hủy
+    document.getElementById('nt-btn-cancel').classList.add('hidden');
+    
+    // Hiển thị Popup
+    ntBox.classList.add('active');
 }
 
 </script>

@@ -1274,7 +1274,7 @@ function renderHistoryTable() {
             </td>
             <td class="text-center font-mono text-indigo-400 font-bold">${h.point}</td>
             <td class="text-center">
-                <span class="px-2 py-1 rounded-md text-[9px] font-bold ${h.percent >= 50 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}">
+                <span class="px-2 py-1 rounded-md text-[9px] font-bold ${h.point >= 8 ? 'bg-emerald-500/20 text-emerald-400' : (h.point >= 4 ? 'bg-orange-500/20 text-orange-400' : 'bg-red-500/20 text-red-400')}">
                     ${h.percent}%
                 </span>
             </td>
@@ -2641,16 +2641,13 @@ function confirmSubmit() { sysConfirm("Xác nhận nộp bài?").then(res => { i
 function submitQuiz() {
     clearInterval(quizInterval);
     
-    // --- BỔ SUNG: TÍNH TOÁN THỜI GIAN LÀM BÀI THỰC TẾ ---
     const endTimeMs = Date.now();
-    const startTimeMs = currentUser.startTimeMs || endTimeMs; // Fallback nếu không lấy được lúc đầu
+    const startTimeMs = currentUser.startTimeMs || endTimeMs;
     const totalSeconds = Math.floor((endTimeMs - startTimeMs) / 1000);
     const mmTaken = Math.floor(totalSeconds / 60);
     const ssTaken = totalSeconds % 60;
     const timeTakenStr = `${mmTaken.toString().padStart(2, '0')}:${ssTaken.toString().padStart(2, '0')}`;
-    // --------------------------------------------------
 
-    // Xóa tiến độ tạm thời trong máy sau khi đã nộp thành công
     localStorage.removeItem('progress_' + currentUser.user);
 
     let score = 0, details = [];
@@ -2661,50 +2658,67 @@ function submitQuiz() {
 
     const percent = Math.round((score / activeQuestions.length) * 100);
     const point = ((score / activeQuestions.length) * 10).toFixed(1);
+    const pointNum = parseFloat(point);
 
-    // Hiển thị kết quả lên màn hình
+    // --- LOGIC MÀU SẮC MỚI TẠI ĐÂY ---
+    let resultColor = "#ef4444"; // Mặc định Đỏ (Dưới 4)
+    let gradeText = "CẦN CỐ GẮNG";
+
+    if (pointNum >= 8) {
+        resultColor = "#10b981"; // Xanh lá (Từ 8 trở lên)
+        gradeText = "GIỎI";
+    } else if (pointNum >= 4) {
+        resultColor = "#f97316"; // Cam (Từ 4 đến dưới 8)
+        gradeText = "TRUNG BÌNH - KHÁ";
+    }
+
+    // Hiển thị kết quả lên giao diện
+    const rsCircle = document.getElementById('rs-circle');
+    const rsGrade = document.getElementById('rs-grade');
+    const rsPoint = document.getElementById('rs-point');
+
     document.getElementById('rs-percent').innerText = percent + "%";
-    document.getElementById('rs-circle').style.setProperty('--deg', (percent * 3.6) + 'deg');
-    document.getElementById('rs-grade').innerText = "XẾP LOẠI: " + (percent >= 80 ? "GIỎI" : percent >= 50 ? "TRUNG BÌNH" : "CẦN CỐ GẮNG");
-    document.getElementById('rs-correct').innerText = score + "/" + activeQuestions.length;
-    document.getElementById('rs-point').innerText = point;
+    rsCircle.style.setProperty('--deg', (percent * 3.6) + 'deg');
+    rsCircle.style.setProperty('--primary', resultColor); // Đổi màu vòng tròn
     
-    // HIỂN THỊ THỜI GIAN LÀM BÀI THỰC TẾ LÊN GIAO DIỆN KẾT QUẢ
+    rsGrade.innerText = "XẾP LOẠI: " + gradeText;
+    rsGrade.style.color = resultColor; // Đổi màu chữ xếp loại
+    
+    document.getElementById('rs-correct').innerText = score + "/" + activeQuestions.length;
+    rsPoint.innerText = point;
+    rsPoint.style.color = resultColor; // Đổi màu con số điểm
+    
     document.getElementById('rs-time').innerText = timeTakenStr;
 
     showPage('page-result');
 
-    // HIỆU ỨNG PHÁO HOA NẾU ĐIỂM >= 8
-    if (parseFloat(point) >= 8) {
-        // Đợi một chút để màn hình kết quả hiện lên rồi nổ pháo
+    // Hiệu ứng pháo hoa nếu điểm giỏi
+    if (pointNum >= 8) {
         setTimeout(() => {
             launchFireworks();
             showModernToast("XUẤT SẮC!", "Chúc mừng bạn đã đạt điểm giỏi! 🏆", "success");
         }, 500);
     }
 
+    // Lưu vào Firebase
     const hi = { 
-        user: currentUser.user,        // Phải có
+        user: currentUser.user,
         fullname: currentUser.name, 
         score, 
         total: activeQuestions.length, 
         percent, 
-        point: point,
+        point: pointNum, // Lưu dạng số để dễ so sánh
         examName: currentUser.examName, 
-        examCode: currentUser.examCode, // Phải có
-        duration: timeTakenStr,        // BỔ SUNG: Lưu thời gian vào lịch sử
+        examCode: currentUser.examCode,
+        duration: timeTakenStr,
         time: new Date().toLocaleString(), 
         details 
     };
     
-    // LƯU KẾT QUẢ VÀ KHÓA BÀI THI
     const examCode = currentUser.examCode;
-    const adminPath = currentUser.adminSource.replace(/\./g, '_'); // Fix lỗi email có dấu chấm
+    const adminPath = currentUser.adminSource.replace(/\./g, '_');
 
-    // 1. Đẩy thẳng vào kho lịch sử của Admin trên Firebase
     rdb.ref('users_data/' + adminPath + '/quiz_history').push(hi);
-
-    // 2. Ghi nhận đã nộp bài để chặn làm lại
     rdb.ref('system/submissions/' + examCode + '/' + currentUser.user).set({
         submittedAt: Date.now(),
         score: point

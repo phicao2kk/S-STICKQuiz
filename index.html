@@ -4405,42 +4405,46 @@ async function handleUpdatePassword() {
 }
 
 // ==========================================
-// 13. TỰ ĐỘNG ĐĂNG XUẤT KHI KHÔNG TƯƠNG TÁC (15 PHÚT)
+// 13. TỰ ĐỘNG ĐĂNG XUẤT KHI KHÔNG TƯƠNG TÁC (5 PHÚT)
 // ==========================================
 let idleLogoutTimer;
+const IDLE_TIME_LIMIT = 5 * 60 * 1000; // 5 phút (tính bằng miligiây)
 
 function resetIdleTimer() {
-    // Nếu chưa đăng nhập thì không cần chạy đếm ngược
+    // Nếu chưa đăng nhập (đang ở màn hình login) thì không chạy đếm ngược
     if (!currentUser) return;
 
-    // Xóa bộ đếm cũ
+    // Xóa bộ đếm cũ mỗi khi có tương tác
     clearTimeout(idleLogoutTimer);
 
-    // Thiết lập bộ đếm mới: 15 phút = 15 * 60 * 1000 ms
+    // Thiết lập bộ đếm mới
     idleLogoutTimer = setTimeout(() => {
         handleAutoLogout();
-    }, 15 * 60 * 1000); 
+    }, IDLE_TIME_LIMIT); 
 }
 
 function handleAutoLogout() {
-    // Nếu đang trong màn hình thi, có thể thông báo trước khi thoát
-    if (!document.getElementById('page-quiz-view').classList.contains('hidden')) {
-        // Lưu tiến độ thi lần cuối trước khi đá ra ngoài
-        saveCurrentProgress();
+    // 1. Kiểm tra nếu đang trong bài thi, lưu tiến độ lần cuối để tránh mất dữ liệu
+    if (document.getElementById('page-quiz-view') && !document.getElementById('page-quiz-view').classList.contains('hidden')) {
+        if (typeof saveCurrentProgress === "function") {
+            saveCurrentProgress();
+        }
     }
 
-    // Hiển thị thông báo và thực hiện logout
-    console.log("Hệ thống tự động đăng xuất do 15 phút không tương tác.");
-    
-    // Xóa dữ liệu phiên làm việc
+    // 2. Xóa dữ liệu phiên đăng nhập trong LocalStorage
     localStorage.removeItem('sys_logged_user');
     
-    // Chuyển hướng về trang chủ/login
-    alert("Phiên đăng nhập đã hết hạn do bạn không tương tác trong 15 phút.");
+    // 3. Thông báo và làm mới trang để quay về màn hình đăng nhập
+    console.warn("Phiên làm việc đã kết thúc do 5 phút không có tương tác.");
+    
+    // Sử dụng thông báo hệ thống của bạn để báo cho người dùng
+    alert("Phiên đăng nhập của bạn đã hết hạn do không tương tác trong 5 phút. Vui lòng đăng nhập lại!");
+    
+    // Tải lại trang
     location.reload();
 }
 
-// Danh sách các sự kiện được coi là "đang tương tác"
+// Danh sách các sự kiện được coi là "người dùng đang hoạt động"
 const activityEvents = [
     'mousedown', 'mousemove', 'keypress', 
     'scroll', 'touchstart', 'click', 'keydown'
@@ -4451,7 +4455,7 @@ activityEvents.forEach(eventName => {
     window.addEventListener(eventName, resetIdleTimer, true);
 });
 
-// Khởi tạo lần đầu khi trang tải xong
+// Khởi tạo bộ đếm lần đầu tiên khi trang web vừa tải xong
 resetIdleTimer();
 
 // Hàm xử lý ẩn/hiện mật khẩu trong từng dòng của bảng

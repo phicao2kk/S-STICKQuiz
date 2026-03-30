@@ -407,6 +407,16 @@
 .toast-title { font-weight: 800; font-size: 14px; margin-bottom: 2px; color: #818cf8; }
 .toast-desc { font-size: 12px; color: #cbd5e1; line-height: 1.4; }
 
+/* Hiệu ứng 3 dấu chấm đang gõ cho AI */
+.typing { width: 3.5em; height: 1.6em; position: relative; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 3px; margin-bottom: 10px; }
+.typing span { content: ""; width: 5px; height: 5px; background: #6366f1; border-radius: 50%; animation: blink 1.4s infinite both; }
+.typing span:nth-child(2) { animation-delay: .2s; }
+.typing span:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%, 100% { opacity: .2; } 20% { opacity: 1; } }
+
+/* Nhãn hiệu Bot AI */
+.bot-badge { background: #f59e0b; color: #000; font-size: 8px; padding: 1px 4px; border-radius: 4px; font-weight: 800; margin-left: 5px; vertical-align: middle; }
+
     </style>
 </head>
 <body>
@@ -3524,11 +3534,35 @@ function toggleChatBox() {
     }
 }
 
+// --- BỘ NÃO AI HỖ TRỢ TỰ ĐỘNG ---
+function getSmartAIResponse(userText) {
+    const text = userText.toLowerCase();
+    
+    if (text.includes("premium") || text.includes("nâng cấp") || text.includes("vip") || text.includes("mua")) {
+        return "Chào bạn! Gói **Premium (20k/tháng)** giúp bạn không giới hạn bộ đề và tăng tốc độ quét ảnh OCR. Bạn hãy vào mục **'Nâng cấp Premium'** trong Menu, chuyển khoản và tải ảnh bill lên để Admin duyệt nhé! 💎";
+    }
+    if (text.includes("otp") || text.includes("mật khẩu") || text.includes("quên")) {
+        return "Bạn cần cấp mã OTP? Hãy thoát ra màn hình đăng nhập, chọn **'Quên mật khẩu'** và gửi yêu cầu. Admin sẽ gửi mã cho bạn ngay tại đây! 🔑";
+    }
+    if (text.includes("lỗi") || text.includes("word") || text.includes("không quét được")) {
+        return "Nếu gặp lỗi file, bạn lưu ý file Word phải đúng định dạng: *Câu 1: ... A. B. C. D. Đáp án: A*. Với hình ảnh, hãy đảm bảo ảnh rõ nét và không bị nghiêng nhé! 📸";
+    }
+    if (text.includes("chào") || text.includes("hi") || text.includes("admin ơi") || text.includes("hello")) {
+        return "S-TICK Quiz xin chào! Tôi là AI hỗ trợ tự động. Bạn cần giúp đỡ về Premium, OTP hay cách soạn đề thi ạ? 😊";
+    }
+    
+    return "Cảm ơn bạn đã nhắn tin! Tôi đã ghi nhận yêu cầu. Quản trị viên sẽ sớm phản hồi bạn trực tiếp nếu câu trả lời tự động này chưa giải quyết được vấn đề. ❤️";
+}
+
+// --- CẬP NHẬT HÀM GỬI TIN NHẮN CÓ AI ---
 function sendChatMessage() {
     const input = document.getElementById('chat-input');
     const text = input.value.trim();
     if (!text || !currentUser) return;
+    
     const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
+
+    // 1. Gửi tin nhắn của người dùng lên Firebase
     const msgData = {
         sender: currentUser.user,
         name: currentUser.name,
@@ -3538,8 +3572,35 @@ function sendChatMessage() {
     };
     rdb.ref('system/chats/' + chatId + '/messages').push(msgData);
     rdb.ref('system/chats/' + chatId + '/unread').transaction(c => (c || 0) + 1);
-    rdb.ref('system/chats/' + chatId + '/userLastSeen').set(Date.now());
     input.value = "";
+
+    // 2. HIỆU ỨNG AI ĐANG GÕ CHỮ
+    const container = document.getElementById('chat-messages');
+    const typingDiv = document.createElement('div');
+    typingDiv.id = "ai-typing";
+    typingDiv.className = "msg-row left";
+    typingDiv.innerHTML = `<div class="typing"><span></span><span></span><span></span></div>`;
+    container.appendChild(typingDiv);
+    container.scrollTop = container.scrollHeight;
+
+    // 3. AI PHẢN HỒI SAU 1.5 GIÂY
+    setTimeout(() => {
+        // Xóa hiệu ứng đang gõ
+        const el = document.getElementById('ai-typing');
+        if(el) el.remove();
+
+        const aiResponse = getSmartAIResponse(text);
+        const aiMsg = {
+            sender: AD_PHONE, // Giả danh Admin gốc
+            name: "HỖ TRỢ TỰ ĐỘNG",
+            text: aiResponse,
+            time: Date.now(),
+            isAI: true // Đánh dấu là AI
+        };
+        
+        rdb.ref('system/chats/' + chatId + '/messages').push(aiMsg);
+        NOTI_SOUND.play().catch(() => {});
+    }, 1500);
 }
 
 function loadChatMessages() {
@@ -3560,7 +3621,7 @@ function loadChatMessages() {
                 <div class="msg-row ${isMe ? 'right' : 'left'}">
                     ${!isMe ? `<img src="${m.avatar || 'https://ui-avatars.com/api/?name=' + m.name}" class="msg-avatar-main">` : ''}
                     <div class="msg-content-wrapper">
-                        <span class="msg-sender-name">${m.name}</span>
+                        <span class="msg-sender-name">${m.name} ${m.isAI ? '<span class="bot-badge">BOT AI</span>' : ''}</span>
                         <div class="msg-bubble">${m.text}<span class="msg-time">${formatChatTime(m.time)}</span></div>
                         <div class="seen-receipts">
                             ${isLastSeenByPartner ? `<img src="${adminAvatar}" class="mini-seen-avatar show" title="Admin đã xem">` : ''}

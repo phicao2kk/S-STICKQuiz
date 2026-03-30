@@ -558,7 +558,11 @@ html, body {
     </div>
     <div class="menu-item" onclick="showPage('page-home')">🏠 Trang chủ</div>
     <div id="admin-menu-folders" class="menu-item hidden" onclick="showPage('page-folders-manager')">📂 Quản lý Bộ đề</div>
-    <div id="admin-menu-storage" class="menu-item hidden" onclick="showPage('page-storage'); renderHistoryTable();">📊 Lịch sử làm bài</div>
+    <!-- Tìm đoạn này và thay thế -->
+    <div id="admin-menu-storage" class="menu-item hidden" onclick="showPage('page-storage'); renderHistoryTable();">
+        📊 Lịch sử làm bài
+        <span id="sidebar-history-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
+    </div>
     <div id="admin-menu-chat" class="menu-item hidden" onclick="showPage('page-chat-admin'); loadChatUserList();">
     💬 Tin nhắn hỗ trợ 
     <span id="sidebar-chat-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
@@ -1535,18 +1539,19 @@ function showPreviewZone() {
 function updateGlobalMenuDot() {
     const chatBadge = document.getElementById('sidebar-chat-badge');
     const premiumBadge = document.getElementById('sidebar-premium-badge');
-    const otpBadge = document.getElementById('sidebar-otp-badge'); // Thêm dòng này
+    const otpBadge = document.getElementById('sidebar-otp-badge');
+    const historyBadge = document.getElementById('sidebar-history-badge'); // Thêm dòng này
     const globalDot = document.getElementById('global-menu-dot');
 
     if (!globalDot) return;
 
-    // Lấy giá trị số, nếu ẩn hoặc không có số thì coi là 0
     const chatCount = (chatBadge && !chatBadge.classList.contains('hidden')) ? parseInt(chatBadge.innerText) || 0 : 0;
     const premiumCount = (premiumBadge && !premiumBadge.classList.contains('hidden')) ? parseInt(premiumBadge.innerText) || 0 : 0;
-    const otpCount = (otpBadge && !otpBadge.classList.contains('hidden')) ? parseInt(otpBadge.innerText) || 0 : 0; // Thêm dòng này
+    const otpCount = (otpBadge && !otpBadge.classList.contains('hidden')) ? parseInt(otpBadge.innerText) || 0 : 0;
+    const historyCount = (historyBadge && !historyBadge.classList.contains('hidden')) ? parseInt(historyBadge.innerText) || 0 : 0; // Thêm dòng này
 
-    // Nếu cả 3 mục đều bằng 0 thì ẩn chấm đỏ ngoài menu
-    if (chatCount === 0 && premiumCount === 0 && otpCount === 0) {
+    // Nếu tất cả các mục đều bằng 0 thì ẩn chấm đỏ
+    if (chatCount === 0 && premiumCount === 0 && otpCount === 0 && historyCount === 0) {
         globalDot.classList.add('hidden');
     } else {
         globalDot.classList.remove('hidden');
@@ -1567,18 +1572,39 @@ function syncDataFromServer() {
             localStorage.setItem(getPrefix() + 'quiz_folders', JSON.stringify(foldersDB));
         }
 
-        // --- ĐOẠN THÊM MỚI: LẤY LỊCH SỬ LÀM BÀI ---
+        // --- ĐOẠN ĐÃ CẬP NHẬT: LẤY LỊCH SỬ LÀM BÀI & BÁO TIN NHẮN MỚI ---
         rdb.ref('users_data/' + safeUser + '/quiz_history').on('value', (historySnap) => {
             const historyData = historySnap.val() || {};
-            // Chuyển Object từ Firebase thành Mảng và gắn kèm Key để xóa/xem chi tiết
-            quizHistory = Object.entries(historyData).map(([key, val]) => ({
+            const historyArray = Object.entries(historyData).map(([key, val]) => ({
                 ...val,
                 fbKey: key
             }));
+
+            // Logic tính toán thông báo mới
+            const oldHistoryCount = JSON.parse(localStorage.getItem('last_history_count_' + currentUser.user) || "0");
+            const currentCount = historyArray.length;
+            const isViewingHistory = !document.getElementById('page-storage').classList.contains('hidden');
+
+            if (currentCount > oldHistoryCount && !isViewingHistory) {
+                const newSubmissions = currentCount - oldHistoryCount;
+                const hBadge = document.getElementById('sidebar-history-badge');
+                if (hBadge) {
+                    hBadge.innerText = newSubmissions;
+                    hBadge.classList.remove('hidden');
+                    updateGlobalMenuDot();
+                }
+                
+                // Phát âm thanh và hiện Toast nếu không phải lần đầu load web
+                if (!isialLoad) {
+                    NOTI_SOUND.play().catch(() => {});
+                    showModernToast("Kết quả mới", `Có ${newSubmissions} thí sinh vừa nộp bài thi!`, "success");
+                }
+            }
+
+            quizHistory = historyArray;
             localStorage.setItem(getPrefix() + 'quiz_history', JSON.stringify(quizHistory));
             
-            // Cập nhật bảng ngay lập tức nếu đang mở trang lịch sử
-            if (!document.getElementById('page-storage').classList.contains('hidden')) {
+            if (isViewingHistory) {
                 if (typeof renderHistoryTable === "function") renderHistoryTable();
             }
         });
@@ -1784,20 +1810,28 @@ function showPage(id) {
     
     toggleMenu(true); 
     
-    // BỔ SUNG CÁC TRƯỜNG HỢP SAU:
+    // XỬ LÝ KHI VÀO TRANG LỊCH SỬ
+    if (id === 'page-storage') {
+        renderHistoryTable();
+        // Lưu số lượng hiện tại làm mốc "đã xem"
+        localStorage.setItem('last_history_count_' + currentUser.user, JSON.stringify(quizHistory.length));
+        
+        // Ẩn badge
+        const hBadge = document.getElementById('sidebar-history-badge');
+        if (hBadge) {
+            hBadge.innerText = "0";
+            hBadge.classList.add('hidden');
+        }
+        updateGlobalMenuDot();
+    }
+
     if(id === 'page-folders-manager') renderFolders();
     if(id === 'page-otp-manager') renderOTPRequests(); 
-    
-    // Khi vào trang Premium Manager
     if(id === 'page-premium-manager') {
-        renderPremiumRequests();   // Vẽ bảng yêu cầu (Bill)
-        if(currentUser.isRoot) {
-            renderMasterPremiumList(); // Vẽ bảng hội viên chính thức
-        }
+        renderPremiumRequests();
+        if(currentUser.isRoot) renderMasterPremiumList();
     }
-   if(id === 'page-chat-admin') {
-        loadChatUserList();
-    }
+    if(id === 'page-chat-admin') loadChatUserList();
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -2057,7 +2091,6 @@ async function clearAllHistory() {
 
         try {
             // 1. Thu thập danh sách các "khóa chặn" cần xóa trên Firebase
-            // Chúng ta duyệt qua mảng quizHistory hiện tại để lấy cặp (Mã đề + ID Thí sinh)
             const tasks = [];
             quizHistory.forEach(h => {
                 if (h.examCode && h.user) {
@@ -2078,6 +2111,21 @@ async function clearAllHistory() {
             quizHistory = [];
             localStorage.setItem(getPrefix() + 'quiz_history', JSON.stringify(quizHistory));
             
+            // --- ĐOẠN BỔ SUNG: RESET THÔNG BÁO ---
+            // Đặt mốc đã xem về 0 để tránh bị lệch thông báo sau này
+            localStorage.setItem('last_history_count_' + currentUser.user, "0");
+            
+            // Ẩn badge số lượng trên Sidebar
+            const hBadge = document.getElementById('sidebar-history-badge');
+            if (hBadge) {
+                hBadge.innerText = "0";
+                hBadge.classList.add('hidden');
+            }
+            
+            // Cập nhật lại chấm đỏ ngoài nút Menu chính
+            if (typeof updateGlobalMenuDot === "function") updateGlobalMenuDot();
+            // -------------------------------------
+
             sysNotify("Thành công", "Đã xóa sạch lịch sử. Tất cả thí sinh hiện có thể vào thi lại!", "success");
             renderHistoryTable(); // Cập nhật lại bảng (sẽ trống)
 

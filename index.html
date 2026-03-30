@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>S-TICK Quiz • Hệ thống Trắc nghiệm v4.0 - Professional Admin Multi-User</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -13,6 +13,28 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+
+/* Chỉ chặn zoom, cho phép cuộn dọc mượt mà */
+html, body {
+    touch-action: pan-y; /* Chỉ cho phép cuộn theo trục Y (lên xuống), chặn các hành vi khác như zoom */
+    -webkit-text-size-adjust: 100%;
+    width: 100%;
+    min-height: 100%;
+    overflow-x: hidden; /* Chặn cuộn ngang */
+    overflow-y: auto;   /* Cho phép cuộn dọc */
+    position: relative; /* Thay vì fixed */
+}
+
+/* Đảm bảo vùng nội dung không bị giới hạn chiều cao */
+#app-content {
+    overflow: visible;
+}
+
+/* Cho phép vùng nội dung chính được cuộn nhưng không được zoom */
+#app-content, .page, .overflow-y-auto {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
 
 @keyframes pulse-yellow {
     0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4); }
@@ -4619,6 +4641,44 @@ function showPremiumSuccessAlert() {
     // Hiển thị Popup
     ntBox.classList.add('active');
 }
+
+// Khóa cử chỉ zoom bằng 2 ngón tay (Pinch to Zoom)
+document.addEventListener('touchstart', function (event) {
+    if (event.touches.length > 1) {
+        event.preventDefault();
+    }
+}, { passive: false });
+
+// 1. Chặn Zoom bằng 2 ngón tay (Pinch to zoom) nhưng KHÔNG chặn cuộn 1 ngón
+document.addEventListener('touchstart', function (event) {
+    if (event.touches.length > 1) {
+        event.preventDefault(); // Chặn khi có ngón tay thứ 2 chạm vào
+    }
+}, { passive: false });
+
+// 2. Chặn Zoom khi gõ nhanh 2 lần (Double tap to zoom)
+let lastTouchEnd = 0;
+document.addEventListener('touchend', function (event) {
+    let now = (new Date()).getTime();
+    if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+    }
+    lastTouchEnd = now;
+}, false);
+
+// 3. Chặn Zoom bằng phím tắt Ctrl + cuộn chuột trên máy tính
+document.addEventListener('wheel', function (event) {
+    if (event.ctrlKey) {
+        event.preventDefault();
+    }
+}, { passive: false });
+
+// 4. Chặn Zoom bằng phím tắt Ctrl + dấu cộng/trừ
+document.addEventListener('keydown', function (event) {
+    if (event.ctrlKey && (event.keyCode === 187 || event.keyCode === 189 || event.keyCode === 107 || event.keyCode === 109)) {
+        event.preventDefault();
+    }
+});
 
 </script>
 <!-- GIAO DIỆN CHAT CHO ADMIN CON -->

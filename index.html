@@ -765,28 +765,6 @@ body.scrolling::-webkit-scrollbar-thumb {
     <div id="page-home" class="page">
         <!-- Vùng Admin này sẽ hiển thị cho TẤT CẢ mọi người -->
          <!-- TRUNG TÂM ĐIỀU HÀNH AI CHO ADMIN (BẢN CHUẨN) -->
-        <div class="card premium-border shadow-[0_0_30px_rgba(99,102,241,0.2)] mb-6">
-            <h3 class="text-lg font-black mb-4 flex items-center gap-2 text-premium uppercase">
-                <span class="p-2 bg-amber-500/20 rounded-lg text-sm">🤖</span> Siêu trợ lý AI S-TICK
-            </h3>
-            <div class="flex flex-col gap-3">
-                <div id="ai-response-box" class="hidden p-4 bg-black/40 border border-indigo-500/30 rounded-2xl text-[11px] text-slate-200 max-h-[250px] overflow-y-auto italic"></div>
-                <div class="flex gap-2 items-end">
-                    <div class="flex-1">
-                        <textarea id="ai-command-input" class="input-control !m-0 min-h-[60px] py-2 text-[11px] leading-normal" placeholder="Gõ yêu cầu: 'Tạo 5 câu trắc nghiệm Sử 12', 'Giải thích lỗi file word'..."></textarea>
-                    </div>
-                    <button id="btn-ask-ai" onclick="handleAICommand()" class="bg-gradient-to-br from-indigo-600 to-purple-600 px-5 py-3 h-[60px] rounded-xl font-bold shadow-lg text-xs whitespace-nowrap active:scale-95 transition-all">RA LỆNH</button>
-                </div>
-                <!-- Tìm đoạn này trong file HTML của bạn và thay thế các nút cũ -->
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="quickAIAction('Tạo 5 câu trắc nghiệm Lịch sử 12 chương 1')" class="text-[10px] py-1.5 px-3 bg-white/5 border border-white/10 rounded-full hover:bg-indigo-500/20 transition-all font-bold text-indigo-300 tracking-tighter">✨ TẠO ĐỀ MẪU</button>
-                    
-                    <button onclick="quickAIAction('Giải thích ngắn gọn ý nghĩa chiến thắng Điện Biên Phủ')" class="text-[10px] py-1.5 px-3 bg-white/5 border border-white/10 rounded-full hover:bg-indigo-500/20 transition-all font-bold text-indigo-300 tracking-tighter">🔍 GIẢI THÍCH NHANH</button>
-                    
-                    <button onclick="quickAIAction('Hướng dẫn tôi cách soạn file Word chuẩn để nộp đề vào S-TICK')" class="text-[10px] py-1.5 px-3 bg-white/5 border border-white/10 rounded-full hover:bg-indigo-500/20 transition-all font-bold text-indigo-300 tracking-tighter">📖 HƯỚNG DẪN</button>
-                </div>
-            </div>
-        </div>
         <div id="admin-zone" class="hidden space-y-6">
             <div class="card glass">
                 <h3 class="text-xl font-bold mb-6 flex items-center gap-2"><span class="p-2 bg-indigo-500/20 rounded-lg">🛠️</span> QUẢN LÝ ĐỀ THI</h3>
@@ -1555,9 +1533,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const rdb = firebase.database();
 
-// --- LỚP BẢO VỆ 1: CHẶN CHUỘT PHẢI & PHÍM TẮT F12 ---
-document.addEventListener('contextmenu', e => e.preventDefault());
+// --- LỚP BẢO VỆ 1: CHẶN CHUỘT PHẢI & PHÍM TẮT F12 (BỎ QUA CHO ROOT) ---
+document.addEventListener('contextmenu', e => {
+    if (currentUser?.isRoot) return; // Nếu là Root thì cho dùng chuột phải
+    e.preventDefault();
+});
+
 document.onkeydown = function(e) {
+    if (currentUser?.isRoot) return true; // Nếu là Root thì cho dùng phím tắt
+
     if (e.keyCode == 123 || 
        (e.ctrlKey && e.shiftKey && (e.keyCode == 'I'.charCodeAt(0) || e.keyCode == 'J'.charCodeAt(0) || e.keyCode == 'C'.charCodeAt(0))) || 
        (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0))) {
@@ -2309,54 +2293,60 @@ function handleRegister() {
 }
 
 function loginSuccess() {
+    // 1. Hiển thị khung ứng dụng chính và ẩn màn hình đăng nhập
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app-content').classList.remove('hidden');
     document.getElementById('header').classList.remove('hidden');
     
-    const chatContainer = document.getElementById('chat-container');
+    // Lấy các vùng nội dung cần điều khiển
+    const adminZone = document.getElementById('admin-zone');         // Vùng nộp đề/quản lý
+    const studentZone = document.getElementById('student-zone');     // Vùng chuẩn bị thi
+    const chatContainer = document.getElementById('chat-container'); // Nút chat hỗ trợ
 
-    // TRƯỜNG HỢP 1: ADMIN GỐC (Root Admin)
-    if (currentUser.isRoot) {
-        document.getElementById('admin-zone').classList.remove('hidden');
-        document.getElementById('admin-menu-folders').classList.remove('hidden');
-        document.getElementById('admin-menu-storage').classList.remove('hidden');
-        document.getElementById('admin-menu-users').classList.remove('hidden');
-        document.getElementById('admin-menu-otp').classList.remove('hidden');
-        document.getElementById('admin-menu-premium').classList.remove('hidden');
-        document.getElementById('student-zone').classList.add('hidden');
-        
-        if(chatContainer) chatContainer.classList.add('hidden'); // Admin gốc không cần icon chat hỗ trợ
-        renderUsersManager();
-    } 
-    // TRƯỜNG HỢP 2: ADMIN CON (Người đăng ký tài khoản)
-    else if (currentUser.isAdmin) {
-        document.getElementById('admin-zone').classList.remove('hidden');
+    // TRƯỜNG HỢP 1 & 2: NGƯỜI DÙNG LÀ ADMIN (ADMIN GỐC HOẶC ADMIN CON)
+    if (currentUser.isAdmin) {
+        // HIỆN các công cụ dành cho Admin
+        if (adminZone) adminZone.classList.remove('hidden');
         document.getElementById('admin-menu-folders').classList.remove('hidden');
         document.getElementById('admin-menu-storage').classList.remove('hidden');
         
-        // Ẩn các mục quản lý hệ thống của Admin Gốc
-        document.getElementById('admin-menu-users').classList.add('hidden');
-        document.getElementById('admin-menu-otp').classList.add('hidden');
-        document.getElementById('admin-menu-premium').classList.add('hidden');
-        document.getElementById('student-zone').classList.add('hidden');
+        // ẨN vùng chuẩn bị thi của thí sinh
+        if (studentZone) studentZone.classList.add('hidden');
 
-        if(chatContainer) chatContainer.classList.remove('hidden'); // HIỆN ICON CHAT CHO ADMIN CON
+        // Phân quyền sâu hơn cho ADMIN GỐC (ROOT)
+        if (currentUser.isRoot) {
+            document.getElementById('admin-menu-users').classList.remove('hidden');
+            document.getElementById('admin-menu-otp').classList.remove('hidden');
+            document.getElementById('admin-menu-premium').classList.remove('hidden');
+            if(chatContainer) chatContainer.classList.add('hidden'); // Admin gốc không cần nút chat
+        } else {
+            // Admin con thì hiện nút chat hỗ trợ
+            if(chatContainer) chatContainer.classList.remove('hidden');
+        }
     } 
-    // TRƯỜNG HỢP 3: THÍ SINH (Vào thi bằng mã, không đăng nhập)
+    
+    // TRƯỜNG HỢP 3: NGƯỜI DÙNG LÀ THÍ SINH (VÀO THI BẰNG MÃ ĐỀ)
     else {
-        document.getElementById('admin-zone').classList.add('hidden');
+        // ẨN TUYỆT ĐỐI các công cụ Admin
+        if (adminZone) adminZone.classList.add('hidden');
         document.getElementById('admin-menu-folders').classList.add('hidden');
         document.getElementById('admin-menu-storage').classList.add('hidden');
-        document.getElementById('student-zone').classList.remove('hidden');
-
-        if(chatContainer) chatContainer.classList.add('hidden'); // ẨN ICON CHAT VỚI THÍ SINH
+        
+        // CHỈ HIỆN vùng chuẩn bị thi
+        if (studentZone) studentZone.classList.remove('hidden');
+        if (chatContainer) chatContainer.classList.add('hidden'); // Thí sinh không cần nút chat
     }
 
-    // Các thiết lập chung
+    // Cập nhật thông tin cá nhân trên giao diện
     document.getElementById('inf-email').innerText = currentUser.user;
     document.getElementById('inf-fullname').innerText = currentUser.name;
     document.getElementById('side-username').innerText = currentUser.name;
-    document.getElementById('role-badge').innerText = currentUser.isRoot ? "ADMIN GỐC" : (currentUser.isAdmin ? "ADMIN" : "THÍ SINH");
+    
+    // Hiển thị huy hiệu (Role)
+    const roleBadge = document.getElementById('role-badge');
+    if (roleBadge) {
+        roleBadge.innerText = currentUser.isRoot ? "ADMIN GỐC" : (currentUser.isAdmin ? "ADMIN" : "THÍ SINH");
+    }
     
     updateAvatarUI(); 
     renderAdminPreview(); 
@@ -2364,17 +2354,13 @@ function loginSuccess() {
     checkPremiumUI(); 
     updateFolderDropdowns();
 
-        // Tìm hàm loginSuccess() và dán đoạn này vào cuối hàm
+    // Hiển thị bảng Premium Master nếu là Admin Gốc
+    const masterPanel = document.getElementById('root-master-premium-panel');
     if (currentUser.isRoot) {
-        // Cho phép khối Master hiển thị bên trong trang quản lý (khi trang đó được mở)
-        const masterPanel = document.getElementById('root-master-premium-panel');
         if (masterPanel) masterPanel.classList.remove('hidden');
-        
-        renderMasterPremiumList(); // Tải dữ liệu ngầm
-        renderUsersManager();      // Tải dữ liệu quản lý user
+        renderMasterPremiumList();
+        renderUsersManager();
     } else {
-        // Nếu không phải Root Admin thì ẩn hẳn khối này đi
-        const masterPanel = document.getElementById('root-master-premium-panel');
         if (masterPanel) masterPanel.classList.add('hidden');
     }
 }
@@ -4882,7 +4868,7 @@ async function handleUpdatePassword() {
 // 13. TỰ ĐỘNG ĐĂNG XUẤT KHI KHÔNG TƯƠNG TÁC (5 PHÚT)
 // ==========================================
 let idleLogoutTimer;
-const IDLE_TIME_LIMIT = 5 * 60 * 1000; // 5 phút (tính bằng miligiây)
+const IDLE_TIME_LIMIT = 15 * 60 * 1000; // 15 phút (khuyên dùng cho thi cử)
 
 function resetIdleTimer() {
     // Nếu chưa đăng nhập (đang ở màn hình login) thì không chạy đếm ngược
@@ -5222,26 +5208,28 @@ document.addEventListener('keydown', function (event) {
 
 // --- LỚP BẢO VỆ 2: BẪY DEBUGGER & PHÁT HIỆN MỞ F12 ---
     setInterval(function() {
-        // Kiểm tra nếu cửa sổ DevTools đang mở (dựa trên chênh lệch kích thước)
+        // Nếu là Admin gốc thì KHÔNG chặn gì cả
+        if (currentUser?.isRoot) return;
+
         const threshold = 160;
-        if ((window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) && !currentUser?.isAdmin) {
+        if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
             document.body.innerHTML = `
                 <div style="background:#0f172a; color:white; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; text-align:center; padding:20px;">
-                    <h1 style="color:#ef4444; font-size:40px;">⚠️ PHÁT HIỆN GIAN LẬN</h1>
-                    <p style="font-size:18px; color:#94a3b8;">Vui lòng đóng trình quản lý mã nguồn (F12) để tiếp tục bài thi.</p>
+                    <h1 style="color:#ef4444; font-size:40px;">⚠️ CẢNH BÁO TRUY CẬP</h1>
+                    <p style="font-size:18px; color:#94a3b8;">Hành động mở Console/Inspect chỉ dành cho Quản trị viên hệ thống.</p>
                     <button onclick="location.reload()" style="margin-top:20px; background:#6366f1; color:white; border:none; padding:15px 30px; border-radius:12px; cursor:pointer; font-weight:bold; font-size:16px;">TẢI LẠI TRANG</button>
                 </div>
             `;
         }
     }, 1000);
 
-    // Xóa sạch console liên tục
+    // Xóa console liên tục (Trừ Admin gốc)
     setInterval(() => { if(!currentUser?.isRoot) console.clear(); }, 500);
 
-    // Kích hoạt debugger loop để làm đơ tab Inspect (Chỉ chạy cho thí sinh)
+    // Bẫy Debugger (Chỉ chạy khi KHÔNG phải Admin gốc)
     (function protect() {
         try {
-            if(!currentUser?.isAdmin) {
+            if(!currentUser?.isRoot) { // <--- QUAN TRỌNG: Chỉ chạy nếu không phải Root
                 (function check(i) {
                     if (('' + (i / i)).length !== 1 || i % 20 === 0) {
                         (function() {}.constructor('debugger')());
@@ -5253,7 +5241,7 @@ document.addEventListener('keydown', function (event) {
             }
         } catch (e) { setTimeout(protect, 100); }
     })();
-// --- HẾT MÃ BẢO MẬT ---
+// --- HẾT MÃ BẢO MẬT DÀNH RIÊNG CHO ROOT ADMIN ---
 
 </script>
 <!-- GIAO DIỆN CHAT CHO ADMIN CON -->

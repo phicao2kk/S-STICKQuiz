@@ -494,6 +494,50 @@ html, body {
 /* Nhãn hiệu Bot AI */
 .bot-badge { background: #f59e0b; color: #000; font-size: 8px; padding: 1px 4px; border-radius: 4px; font-weight: 800; margin-left: 5px; vertical-align: middle; }
 
+/* --- TÙY CHỈNH THANH CUỘN (SCROLLBAR) --- */
+
+/* Chiều rộng của thanh cuộn */
+::-webkit-scrollbar {
+    width: 6px; /* Thanh cuộn dọc */
+    height: 6px; /* Thanh cuộn ngang */
+}
+
+/* Phần nền của thanh cuộn */
+::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.5); /* Màu tối mờ trùng với background */
+}
+
+/* Phần tay kéo (thanh chạy) */
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #6366f1, #a855f7); /* Màu tím Indigo sang Tím đậm */
+    border-radius: 10px;
+}
+
+/* Khi di chuột vào thanh cuộn */
+::-webkit-scrollbar-thumb:hover {
+    background: #818cf8; /* Sáng hơn một chút khi hover */
+}
+
+/* --- HIỆU ỨNG CUỘN MƯỢT MÀ --- */
+html {
+    scroll-behavior: smooth; /* Cuộn trang mượt mà khi chuyển page */
+}
+
+/* Áp dụng riêng cho Sidebar để cuộn êm trên điện thoại */
+#sidebar-menu-content {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin; /* Cho trình duyệt Firefox */
+    scrollbar-color: #6366f1 rgba(15, 23, 42, 0.5); /* Cho Firefox */
+    -webkit-overflow-scrolling: touch; /* Hiệu ứng cuộn động lượng (momentum) trên iOS */
+    padding-bottom: 100px;
+}
+
+/* Hiệu ứng ẩn thanh cuộn khi không dùng (tùy chọn) */
+#sidebar-menu-content::-webkit-scrollbar {
+    width: 4px;
+}
+
     </style>
 </head>
 <body>
@@ -593,13 +637,13 @@ html, body {
 <div id="overlay" onclick="toggleMenu(true)"></div>
 
 <div id="sidebar">
-    <!-- Phần Avatar giữ cố định ở trên -->
-    <div style="padding: 35px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
+    <!-- Phần Avatar giữ cố định, không cuộn -->
+    <div style="padding: 35px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
         <div id="side-avatar-box" class="avatar-circle">?</div>
         <b id="side-username" class="text-shine" style="font-size: 18px;">Khách</b>
     </div>
 
-    <!-- BẮT ĐẦU VÙNG CUỘN -->
+    <!-- Vùng Menu được phép cuộn và có thanh cuộn màu tím -->
     <div id="sidebar-menu-content">
         <div class="menu-item" onclick="showPage('page-home')">🏠 Trang chủ</div>
         <div id="admin-menu-folders" class="menu-item hidden" onclick="showPage('page-folders-manager')">📂 Quản lý Bộ đề</div>

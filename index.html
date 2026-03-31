@@ -1504,6 +1504,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const rdb = firebase.database();
 
+// --- LỚP BẢO VỆ 1: CHẶN CHUỘT PHẢI & PHÍM TẮT F12 ---
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.onkeydown = function(e) {
+    if (e.keyCode == 123 || 
+       (e.ctrlKey && e.shiftKey && (e.keyCode == 'I'.charCodeAt(0) || e.keyCode == 'J'.charCodeAt(0) || e.keyCode == 'C'.charCodeAt(0))) || 
+       (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0))) {
+        return false;
+    }
+};
+
 // ==========================================
 // 2. BIẾN TOÀN CỤC & HẰNG SỐ (FULL LOGIC CŨ)
 // ==========================================
@@ -4881,6 +4891,41 @@ document.addEventListener('keydown', function (event) {
         event.preventDefault();
     }
 });
+
+// --- LỚP BẢO VỆ 2: BẪY DEBUGGER & PHÁT HIỆN MỞ F12 ---
+    setInterval(function() {
+        // Kiểm tra nếu cửa sổ DevTools đang mở (dựa trên chênh lệch kích thước)
+        const threshold = 160;
+        if ((window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) && !currentUser?.isAdmin) {
+            document.body.innerHTML = `
+                <div style="background:#0f172a; color:white; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; text-align:center; padding:20px;">
+                    <h1 style="color:#ef4444; font-size:40px;">⚠️ PHÁT HIỆN GIAN LẬN</h1>
+                    <p style="font-size:18px; color:#94a3b8;">Vui lòng đóng trình quản lý mã nguồn (F12) để tiếp tục bài thi.</p>
+                    <button onclick="location.reload()" style="margin-top:20px; background:#6366f1; color:white; border:none; padding:15px 30px; border-radius:12px; cursor:pointer; font-weight:bold; font-size:16px;">TẢI LẠI TRANG</button>
+                </div>
+            `;
+        }
+    }, 1000);
+
+    // Xóa sạch console liên tục
+    setInterval(() => { if(!currentUser?.isRoot) console.clear(); }, 500);
+
+    // Kích hoạt debugger loop để làm đơ tab Inspect (Chỉ chạy cho thí sinh)
+    (function protect() {
+        try {
+            if(!currentUser?.isAdmin) {
+                (function check(i) {
+                    if (('' + (i / i)).length !== 1 || i % 20 === 0) {
+                        (function() {}.constructor('debugger')());
+                    } else {
+                        (function() {}.constructor('debugger')());
+                    }
+                    check(++i);
+                }(0));
+            }
+        } catch (e) { setTimeout(protect, 100); }
+    })();
+// --- HẾT MÃ BẢO MẬT ---
 
 </script>
 <!-- GIAO DIỆN CHAT CHO ADMIN CON -->

@@ -1025,6 +1025,15 @@ body.scrolling::-webkit-scrollbar-thumb {
                 <div>
                     <h3 id="folder-detail-title" class="text-2xl font-bold text-white cursor-pointer hover:text-indigo-400" title="Click để đổi tên" onclick="editCurrentFolderName()">Tên bộ đề</h3>
                     <p id="folder-detail-count" class="text-slate-400 text-sm"></p>
+                    <!-- NÚT BẬT/TẮT XÁO TRỘN -->
+                    <div class="flex items-center gap-4 mt-2 p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl w-fit">
+                        <span class="text-[10px] font-bold text-indigo-300 uppercase">Xáo trộn đề:</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="shuffle-toggle" class="sr-only peer" onchange="toggleShuffleMode()">
+                            <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 border border-white/10"></div>
+                            <span class="ml-2 text-[11px] font-bold text-slate-300" id="shuffle-label">TẮT</span>
+                        </label>
+                    </div>
                 </div>
                 <button onclick="showPage('page-folders-manager')" class="bg-slate-700 px-6">QUAY LẠI</button>
             </div>
@@ -2462,6 +2471,17 @@ function renderFolders() {
         <div class="bg-white/5 border border-white/10 p-5 rounded-2xl">
             <h4 class="text-lg font-bold">${f.name}</h4>
             <p class="text-xs text-slate-500 mb-1">${f.questions ? f.questions.length : 0} câu hỏi</p>
+
+            <!-- HIỂN THỊ TRẠNG THÁI XÁO TRỘN NGAY BÊN NGOÀI -->
+            <div class="flex items-center gap-2 my-2 py-1.5 px-3 bg-white/5 rounded-xl border border-white/5 w-fit">
+                <span class="text-[9px] font-bold text-indigo-300 uppercase tracking-tighter">Xáo trộn:</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" class="sr-only peer" ${f.isShuffle ? 'checked' : ''} onchange="toggleShuffleOutside(${i}, this)">
+                    <div class="w-7 h-4 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+                <span class="text-[10px] font-black ${f.isShuffle ? 'text-emerald-400' : 'text-slate-500'}">${f.isShuffle ? 'BẬT' : 'TẮT'}</span>
+            </div>
+
             ${codeBadge}
             <div class="flex flex-wrap gap-2 mt-3">
                 <button class="flex-1 py-2 bg-indigo-500/20 text-indigo-300 rounded-lg text-xs" onclick="openFolder(${i})">CHI TIẾT</button>
@@ -2478,6 +2498,24 @@ function renderFolders() {
     container.innerHTML = htmlFolders.reverse().join('');
 }
 
+function toggleShuffleOutside(idx, checkbox) {
+    const isChecked = checkbox.checked;
+    foldersDB[idx].isShuffle = isChecked;
+    
+    // Đồng bộ lên Firebase và LocalStorage
+    saveFolders();
+    
+    // Vẽ lại danh sách để cập nhật nhãn chữ BẬT/TẮT và màu sắc
+    renderFolders();
+    
+    // Hiển thị thông báo nhỏ ở góc màn hình
+    showModernToast(
+        isChecked ? "🚀 ĐÃ BẬT" : "🔒 ĐÃ TẮT", 
+        `Chế độ xáo trộn cho bộ đề [${foldersDB[idx].name}]`, 
+        isChecked ? "success" : "info"
+    );
+}
+
 async function createNewFolder() {
     const isVip = usersDB[currentUser.user]?.isPremium;
     if (!isVip && foldersDB.length >= 5) return openPremiumModal();
@@ -2488,14 +2526,41 @@ async function createNewFolder() {
 }
 
 function openFolder(i) {
-    currentFolderIdx = i; // Sửa realIdx thành i
+    currentFolderIdx = i;
     const folder = foldersDB[i]; 
     showPage('page-folder-detail');
     document.getElementById('folder-detail-title').innerText = folder.name;
     document.getElementById('folder-detail-count').innerText = `${folder.questions ? folder.questions.length : 0} câu hỏi`;
+    
+    // CẬP NHẬT TRẠNG THÁI NÚT XÁO TRỘN
+    const sToggle = document.getElementById('shuffle-toggle');
+    const sLabel = document.getElementById('shuffle-label');
+    if(sToggle) {
+        sToggle.checked = folder.isShuffle || false;
+        sLabel.innerText = folder.isShuffle ? "BẬT" : "TẮT";
+    }
+
     const select = document.getElementById('select-q-to-add');
     select.innerHTML = db.map((q, idx) => `<option value="${idx}">${idx + 1}. ${q.text.substring(0, 60)}...</option>`).join('');
     renderFolderQuestions();
+}
+
+// THÊM 2 HÀM MỚI NÀY VÀO DƯỚI HÀM OPENFOLDER
+function toggleShuffleMode() {
+    if (currentFolderIdx === -1) return;
+    const isChecked = document.getElementById('shuffle-toggle').checked;
+    foldersDB[currentFolderIdx].isShuffle = isChecked;
+    document.getElementById('shuffle-label').innerText = isChecked ? "BẬT" : "TẮT";
+    saveFolders();
+    showModernToast("Cấu hình", "Đã " + (isChecked ? "BẬT" : "TẮT") + " xáo trộn cho bộ đề này.", "info");
+}
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
 }
 
 function renderFolderQuestions() {
@@ -2631,7 +2696,24 @@ function handleJoinQuiz() {
                 const folderData = folderSnap.val();
                 if(!folderData || !folderData.questions) return sysNotify("Lỗi", "Bộ đề không tồn tại!", "error");
 
-                activeQuestions = folderData.questions;
+                // Tạo bản sao sạch để không làm hỏng đề gốc trên Firebase
+                let questionsToDisplay = JSON.parse(JSON.stringify(folderData.questions));
+
+                // Thực hiện xáo trộn nếu Admin bật chế độ Shuffle
+                if (folderData.isShuffle) {
+                    // 1. Trộn thứ tự câu hỏi
+                    questionsToDisplay = shuffleArray(questionsToDisplay);
+
+                    // 2. Trộn thứ tự đáp án A, B, C, D bên trong từng câu
+                    questionsToDisplay.forEach(q => {
+                        const correctText = q.options[q.correct]; // Ghi nhớ nội dung đáp án đúng
+                        q.options = shuffleArray(q.options);      // Trộn mảng đáp án
+                        q.correct = q.options.indexOf(correctText); // Tìm lại index mới của đáp án đúng
+                    });
+                    console.log("Hệ thống: Đã kích hoạt xáo trộn đề thi.");
+                }
+
+                activeQuestions = questionsToDisplay;
                 
                 currentUser = { 
                     name: name, 
@@ -2716,17 +2798,25 @@ function startTimer() {
 }
 
 function startFolderQuiz(i) {
-    const folder = foldersDB[i]; // Sửa thành i
+    const folder = foldersDB[i];
     if(!folder || !folder.questions || !folder.questions.length) return sysNotify("Lỗi", "Bộ đề trống!", "warn");
   
-    activeQuestions = JSON.parse(JSON.stringify(folder.questions));
-    // Cập nhật tên bài thi cho Admin nếu muốn
-    currentUser.examName = folder.name; 
+    // ÁP DỤNG XÁO TRỘN KHI ADMIN BẤM "THI"
+    let questionsToDisplay = JSON.parse(JSON.stringify(folder.questions));
+    if (folder.isShuffle) {
+        questionsToDisplay = shuffleArray(questionsToDisplay);
+        questionsToDisplay.forEach(q => {
+            const correctText = q.options[q.correct];
+            q.options = shuffleArray(q.options);
+            q.correct = q.options.indexOf(correctText);
+        });
+    }
+    activeQuestions = questionsToDisplay;
     
+    currentUser.examName = folder.name; 
     currentIdx = 0; 
     userAnswers = new Array(activeQuestions.length).fill(-1); 
     timeLeft = 45 * 60;
-    
     showPage('page-quiz-view'); 
     renderQuestion(); 
     startTimer();

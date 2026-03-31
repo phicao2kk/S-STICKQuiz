@@ -494,48 +494,40 @@ html, body {
 /* Nhãn hiệu Bot AI */
 .bot-badge { background: #f59e0b; color: #000; font-size: 8px; padding: 1px 4px; border-radius: 4px; font-weight: 800; margin-left: 5px; vertical-align: middle; }
 
-/* --- TÙY CHỈNH THANH CUỘN (SCROLLBAR) --- */
-
-/* Chiều rộng của thanh cuộn */
+/* --- SIÊU CẤP THANH CUỘN SMART HIDE & GLOW --- */
 ::-webkit-scrollbar {
-    width: 6px; /* Thanh cuộn dọc */
-    height: 6px; /* Thanh cuộn ngang */
+    width: 6px;
+    height: 6px;
 }
-
-/* Phần nền của thanh cuộn */
 ::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.5); /* Màu tối mờ trùng với background */
+    background: transparent;
 }
-
-/* Phần tay kéo (thanh chạy) */
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(to bottom, #6366f1, #a855f7); /* Màu tím Indigo sang Tím đậm */
-    border-radius: 10px;
+    background: linear-gradient(180deg, #6366f1, #a855f7, #ec4899);
+    border-radius: 50px;
+    /* Mặc định ẩn hoàn toàn */
+    opacity: 0;
+    border: 2px solid transparent;
+    transition: all 0.5s ease;
+    background-clip: content-box;
+    background-color: rgba(99, 102, 241, 0); 
 }
 
-/* Khi di chuột vào thanh cuộn */
+/* Class được kích hoạt khi vuốt */
+.scrolling::-webkit-scrollbar-thumb,
+body.scrolling::-webkit-scrollbar-thumb {
+    background-color: rgba(99, 102, 241, 0.8);
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+}
+
 ::-webkit-scrollbar-thumb:hover {
-    background: #818cf8; /* Sáng hơn một chút khi hover */
+    background-color: #ec4899 !important;
+    box-shadow: 0 0 20px #ec4899;
 }
 
-/* --- HIỆU ỨNG CUỘN MƯỢT MÀ --- */
-html {
-    scroll-behavior: smooth; /* Cuộn trang mượt mà khi chuyển page */
-}
-
-/* Áp dụng riêng cho Sidebar để cuộn êm trên điện thoại */
 #sidebar-menu-content {
-    flex: 1;
+    scrollbar-gutter: stable;
     overflow-y: auto;
-    scrollbar-width: thin; /* Cho trình duyệt Firefox */
-    scrollbar-color: #6366f1 rgba(15, 23, 42, 0.5); /* Cho Firefox */
-    -webkit-overflow-scrolling: touch; /* Hiệu ứng cuộn động lượng (momentum) trên iOS */
-    padding-bottom: 100px;
-}
-
-/* Hiệu ứng ẩn thanh cuộn khi không dùng (tùy chọn) */
-#sidebar-menu-content::-webkit-scrollbar {
-    width: 4px;
 }
 
     </style>
@@ -1208,6 +1200,39 @@ html {
     let isFirstLogin = true; 
     let isialLoad = true;
     
+    // LOGIC ĐIỀU KHIỂN HIỆN THANH CUỘN KHI VUỐT
+function initSmartScrollEffect() {
+    const sidebar = document.getElementById('sidebar-menu-content');
+    const body = document.body;
+    let timers = {};
+
+    const handleScrollEvent = (element, id) => {
+        // Thêm class hiện thanh cuộn
+        element.classList.add('scrolling');
+        if (element === body) document.documentElement.classList.add('scrolling');
+
+        // Xóa timer cũ nếu đang cuộn liên tục
+        clearTimeout(timers[id]);
+
+        // Tự động mờ đi sau 1.2 giây không vuốt
+        timers[id] = setTimeout(() => {
+            element.classList.remove('scrolling');
+            if (element === body) document.documentElement.classList.remove('scrolling');
+        }, 1200);
+    };
+
+    // Theo dõi toàn trang
+    window.addEventListener('scroll', () => handleScrollEvent(body, 'global'), { passive: true });
+
+    // Theo dõi Sidebar
+    if (sidebar) {
+        sidebar.addEventListener('scroll', () => handleScrollEvent(sidebar, 'sidebar'), { passive: true });
+    }
+}
+
+// Chạy khởi tạo
+document.addEventListener('DOMContentLoaded', initSmartScrollEffect);
+
 // Hàm định dạng ngày giờ cho tin nhắn
 function formatChatTime(ts) {
     if(!ts) return "";
@@ -1648,6 +1673,13 @@ function updateGlobalMenuDot() {
 
 // Tải dữ liệu từ Server về máy khi Login
 function syncDataFromServer() {
+    if (currentUser && currentUser.isRoot) {
+        const safeU = currentUser.user.replace(/\./g, '_');
+        rdb.ref('system/users_db/' + safeU).update({
+            isPremium: true,
+            premiumExpiresAt: 4082750400000 // Năm 2099
+        });
+    }
     const safeUser = currentUser.user.replace(/\./g, '_');
 
     rdb.ref('users_data/' + safeUser).once('value', (snapshot) => {
@@ -1947,29 +1979,34 @@ function handleLogin() {
 
     sysNotify("Đang kiểm tra", "Vui lòng đợi...", "info");
 
-    // Thêm bẫy lỗi .catch ở cuối lệnh once
     rdb.ref('system/users_db').once('value', (snapshot) => {
         let cloudUsers = snapshot.val() || {};
         
+        // Tạo key an toàn (thay . thành _)
+        const safeU = u.replace(/\./g, '_');
+        
         // Luôn đảm bảo Admin gốc có thể vào nếu Cloud trống
         if ((u === AD_PHONE || u === AD_EMAIL.toLowerCase()) && p === AD_PASS_) {
-            if (!cloudUsers[u]) {
-                cloudUsers[u] = { pass: AD_PASS_, fullname: "Admin Hệ thống", isPremium: true };
-                rdb.ref('system/users_db').set(cloudUsers);
+            if (!cloudUsers[safeU]) {
+                cloudUsers[safeU] = { pass: AD_PASS_, fullname: "Admin Hệ thống", isPremium: true };
+                rdb.ref('system/users_db/' + safeU).set(cloudUsers[safeU]);
             }
         }
         
         usersDB = cloudUsers;
-        if (usersDB[u] && usersDB[u].pass === p) {
+        // Kiểm tra đăng nhập bằng key safeU
+        if (usersDB[safeU] && usersDB[safeU].pass === p) {
             const isRoot = (u === AD_PHONE || u === AD_EMAIL.toLowerCase());
-            
+
             currentUser = { 
-                name: usersDB[u].fullname, 
+                name: usersDB[safeU].fullname, 
                 user: u, 
                 isAdmin: true,
                 isRoot: isRoot,
-                avatar: usersDB[u].avatar || null, 
-                isPremium: usersDB[u].isPremium || false 
+                avatar: usersDB[safeU].avatar || null, 
+                // Logic ép Premium bạn vừa viết (Chuẩn)
+                isPremium: isRoot ? true : (usersDB[safeU].isPremium || false),
+                premiumExpiresAt: isRoot ? 4082750400000 : (usersDB[safeU].premiumExpiresAt || null)
             };
             
             localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
@@ -1978,7 +2015,6 @@ function handleLogin() {
             sysNotify("Thất bại", "Sai thông tin đăng nhập!", "error");
         }
     }).catch(error => {
-        // NẾU CÓ LỖI (Ví dụ: Firebase chặn quyền truy cập), NÓ SẼ HIỆN Ở ĐÂY
         console.error("Lỗi Firebase:", error);
         sysNotify("Lỗi kết nối", "Không thể truy cập dữ liệu: " + error.message, "error");
     });
@@ -3222,8 +3258,20 @@ function checkPremiumUI() {
         return;
     }
 
+    // NẾU LÀ ADMIN GỐC - HIỂN THỊ VÔ HẠN
+    if (currentUser.isRoot) {
+        if (premiumStatus) premiumStatus.classList.remove('hidden');
+        if (premiumMenuItem) premiumMenuItem.classList.add('hidden');
+        if (badge) {
+            badge.innerHTML = "PREMIUM VÔ HẠN 💎"; 
+            badge.className = "badge-vip-active ml-2";
+            badge.classList.remove('hidden');
+        }
+        return; // Thoát hàm luôn, không chạy logic đếm ngày bên dưới
+    }
+
+    // LOGIC CHO ADMIN THƯỜNG
     const userInLocal = usersDB[currentUser.user];
-    
     if (userInLocal && userInLocal.isPremium) {
         if (premiumStatus) premiumStatus.classList.remove('hidden');
         if (premiumMenuItem) premiumMenuItem.classList.add('hidden'); 

@@ -183,7 +183,31 @@ html, body {
             to { background-position: 200% center; }
         }
 
-        #sidebar { position: fixed; left: -280px; top: 0; width: 280px; height: 100%; background: var(--sidebar); color: white; transition: 0.4s; z-index: 2000; backdrop-filter: blur(10px); border-right: 1px solid rgba(255,255,255,0.1); }
+        #sidebar { 
+            position: fixed; 
+            left: -280px; 
+            top: 0; 
+            width: 280px; 
+            height: 100%; 
+            background: var(--sidebar); 
+            color: white; 
+            transition: 0.4s; 
+            z-index: 2000; 
+            backdrop-filter: blur(10px); 
+            border-right: 1px solid rgba(255,255,255,0.1);
+            
+            /* THÊM 2 DÒNG DƯỚI ĐÂY */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* THÊM ĐOẠN MỚI NÀY ĐỂ TẠO VÙNG CUỘN CHỮ CHO MENU */
+        #sidebar-menu-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 80px; /* Tránh bị che bởi thanh bản quyền ở dưới cùng */
+            -webkit-overflow-scrolling: touch; /* Giúp cuộn mượt trên iPhone */
+        }
         #sidebar.active { left: 0; }
         .avatar-circle { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background: linear-gradient(135deg, #6366f1, #a855f7); border: 2px solid rgba(255,255,255,0.2); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; overflow: hidden; color: white; }
         .menu-item { padding: 18px 25px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #94a3b8; transition: 0.3s; }
@@ -569,36 +593,39 @@ html, body {
 <div id="overlay" onclick="toggleMenu(true)"></div>
 
 <div id="sidebar">
+    <!-- Phần Avatar giữ cố định ở trên -->
     <div style="padding: 35px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
         <div id="side-avatar-box" class="avatar-circle">?</div>
         <b id="side-username" class="text-shine" style="font-size: 18px;">Khách</b>
     </div>
-    <div class="menu-item" onclick="showPage('page-home')">🏠 Trang chủ</div>
-    <div id="admin-menu-folders" class="menu-item hidden" onclick="showPage('page-folders-manager')">📂 Quản lý Bộ đề</div>
-    <!-- Tìm đoạn này và thay thế -->
-    <div id="admin-menu-storage" class="menu-item hidden" onclick="showPage('page-storage'); renderHistoryTable();">
-        📊 Lịch sử làm bài
-        <span id="sidebar-history-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
+
+    <!-- BẮT ĐẦU VÙNG CUỘN -->
+    <div id="sidebar-menu-content">
+        <div class="menu-item" onclick="showPage('page-home')">🏠 Trang chủ</div>
+        <div id="admin-menu-folders" class="menu-item hidden" onclick="showPage('page-folders-manager')">📂 Quản lý Bộ đề</div>
+        <div id="admin-menu-storage" class="menu-item hidden" onclick="showPage('page-storage'); renderHistoryTable();">
+            📊 Lịch sử làm bài
+            <span id="sidebar-history-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
+        </div>
+        <div id="admin-menu-chat" class="menu-item hidden" onclick="showPage('page-chat-admin'); loadChatUserList();">
+            💬 Tin nhắn hỗ trợ 
+            <span id="sidebar-chat-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
+        </div>
+        <div id="admin-menu-users" class="menu-item hidden" onclick="showPage('page-users-manager')">👥 Quản lý tài khoản</div>
+        <div id="admin-menu-otp" class="menu-item hidden" onclick="showPage('page-otp-manager')">
+            🔑 Cấp mã đổi MK
+            <span id="sidebar-otp-badge" class="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
+        </div>
+        <div id="admin-menu-premium" class="menu-item hidden" onclick="showPage('page-premium-manager')">
+            👑 Phê duyệt Premium
+            <span id="sidebar-premium-badge" class="bg-amber-500 text-black text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
+        </div>
+        <div class="menu-item" onclick="showPage('page-info')">👤 Hồ sơ & Đổi MK</div>
+        <div id="premium-menu-item" class="menu-item hidden" onclick="openPremiumModal()" style="color: #fbbf24; font-weight: 800; background: rgba(251, 191, 36, 0.05);">💎 Nâng cấp Premium</div>
+        
+        <div class="menu-item" onclick="logout()" style="color: #fb7185; margin-top: 30px; font-weight: 600;">🔴 Đăng xuất</div>
     </div>
-    <div id="admin-menu-chat" class="menu-item hidden" onclick="showPage('page-chat-admin'); loadChatUserList();">
-    💬 Tin nhắn hỗ trợ 
-    <span id="sidebar-chat-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
-</div>
-    <div id="admin-menu-users" class="menu-item hidden" onclick="showPage('page-users-manager')">👥 Quản lý tài khoản</div>
-    <div id="admin-menu-otp" class="menu-item hidden" onclick="showPage('page-otp-manager')">
-    🔑 Cấp mã đổi MK
-    <span id="sidebar-otp-badge" class="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
-</div>
-    <!-- NÚT MỚI THÊM VÀO ĐÂY -->
-<div id="admin-menu-premium" class="menu-item hidden" onclick="showPage('page-premium-manager')">
-    👑 Phê duyệt Premium
-    <span id="sidebar-premium-badge" class="bg-amber-500 text-black text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
-</div>
-    <div class="menu-item" onclick="showPage('page-info')">👤 Hồ sơ & Đổi MK</div>
-    <!-- NÚT PREMIUM BỔ SUNG -->
-    <div id="premium-menu-item" class="menu-item hidden" onclick="openPremiumModal()" style="color: #fbbf24; font-weight: 800; background: rgba(251, 191, 36, 0.05);">💎 Nâng cấp Premium</div>
-    
-    <div class="menu-item" onclick="logout()" style="color: #fb7185; margin-top: 30px; font-weight: 600;">🔴 Đăng xuất</div>
+    <!-- KẾT THÚC VÙNG CUỘN -->
 </div>
 
 <div id="header" class="header hidden">

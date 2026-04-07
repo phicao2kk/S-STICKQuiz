@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -3003,47 +3004,52 @@ function renderFolders() {
     if (!container) return;
     const now = Date.now();
     
-    // Tạo mảng các thẻ HTML trước
     const htmlFolders = foldersDB.map((f, i) => {
         let codeBadge = "";
+        
+        // Kiểm tra nếu có mã và mã chưa hết hạn
         if(f.accessCode && f.expiresAt > now) {
-            // CẬP NHẬT ĐOẠN NÀY: Thêm biểu tượng sao chép 📋
+            const diff = f.expiresAt - now;
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+
             codeBadge = `
-                <div class="mt-2 text-[13px] text-emerald-400 font-bold flex items-center gap-2">
-                    <span>🔑 Mã: <b class="font-mono tracking-widest">${f.accessCode}</b></span>
-                    <button onclick="copyToClipboard('${f.accessCode}')" class="hover:scale-125 transition-transform p-1" title="Sao chép mã">
-                        📋
-                    </button>
+                <div class="mt-2 p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[12px] text-emerald-400 font-bold">🔑 Mã: <b class="font-mono tracking-widest text-white">${f.accessCode}</b></span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-amber-400 font-black animate-pulse">⏳ ${timeStr}</span>
+                            <button onclick="copyToClipboard('${f.accessCode}')" class="hover:scale-125 transition-transform" title="Sao chép">📋</button>
+                        </div>
+                    </div>
+                    <div class="w-full bg-white/5 h-1 mt-1 rounded-full overflow-hidden">
+                        <div class="bg-emerald-500 h-full" style="width: ${(diff / (120 * 60 * 1000)) * 100}%"></div>
+                    </div>
                 </div>`;
+        } else if (f.accessCode && f.expiresAt <= now) {
+            // Tự động dọn dẹp mã cũ nếu đã hết hạn
+            delete f.accessCode;
+            delete f.expiresAt;
+            saveFolders();
         }
+
         return `
-        <div class="bg-white/5 border border-white/10 p-5 rounded-2xl">
-            <h4 class="text-lg font-bold">${f.name}</h4>
-            <p class="text-xs text-slate-500 mb-1">${f.questions ? f.questions.length : 0} câu hỏi</p>
-
-            <!-- HIỂN THỊ TRẠNG THÁI XÁO TRỘN NGAY BÊN NGOÀI -->
-            <div class="flex items-center gap-2 my-2 py-1.5 px-3 bg-white/5 rounded-xl border border-white/5 w-fit">
-                <span class="text-[9px] font-bold text-indigo-300 uppercase tracking-tighter">Xáo trộn:</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" class="sr-only peer" ${f.isShuffle ? 'checked' : ''} onchange="toggleShuffleOutside(${i}, this)">
-                    <div class="w-7 h-4 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
-                <span class="text-[10px] font-black ${f.isShuffle ? 'text-emerald-400' : 'text-slate-500'}">${f.isShuffle ? 'BẬT' : 'TẮT'}</span>
-            </div>
-
+        <div class="bg-white/5 border border-white/10 p-5 rounded-2xl relative overflow-hidden">
+            <h4 class="text-lg font-bold truncate">${f.name}</h4>
+            <p class="text-xs text-slate-500">${f.questions ? f.questions.length : 0} câu hỏi</p>
             ${codeBadge}
             <div class="flex flex-wrap gap-2 mt-3">
                 <button class="flex-1 py-2 bg-indigo-500/20 text-indigo-300 rounded-lg text-xs" onclick="openFolder(${i})">CHI TIẾT</button>
                 <button class="px-3 bg-red-500/20 text-red-400 rounded-lg" onclick="deleteFolder(${i})">🗑️</button>
                 <div class="flex w-full gap-2">
-                    <button class="flex-1 py-2 bg-emerald-500/20 text-emerald-300 rounded-lg text-xs" onclick="shareFolder(${i})">🔗 CẤP MÃ</button>
+                    <button class="flex-1 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold" onclick="shareFolder(${i})">🔗 CẤP MÃ MỚI</button>
                     <button class="flex-1 py-2 bg-orange-500/20 text-orange-300 rounded-lg text-xs" onclick="startFolderQuiz(${i})">🎯 THI</button>
                 </div>
             </div>
         </div>`;
     });
 
-    // Đảo ngược mảng HTML để đề mới nhất hiện lên đầu, nhưng Index i vẫn giữ nguyên giá trị gốc
     container.innerHTML = htmlFolders.reverse().join('');
 }
 
@@ -3183,38 +3189,28 @@ function removeQFromFolder(i) {
 }
 
 function shareFolder(i) {
-    // SỬA TẠI ĐÂY: Dùng trực tiếp i, không cần tính realIdx
     const folder = foldersDB[i]; 
     if (!folder) return;
 
-    // 1. Tạo mã mới
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiry = Date.now() + (24 * 60 * 60 * 1000); // Hạn 24h
+    // THAY ĐỔI: Đặt hạn 120 phút (120 * 60 * 1000 mili giây)
+    const expiry = Date.now() + (120 * 60 * 1000); 
     
-    // 2. Cập nhật dữ liệu
     folder.accessCode = code;
     folder.expiresAt = expiry;
     saveFolders();
     
-    // 3. Đồng bộ lên Firebase
     rdb.ref('system/global_share_map/' + code).set({ 
         admin: currentUser.user, 
-        folderIdx: i, // Lưu đúng index i vào server
+        folderIdx: i,
         expiresAt: expiry 
     });
     
-    // 4. TỰ ĐỘNG SAO CHÉP
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(code).then(() => {
-            showModernToast(
-                "📋 ĐÃ SAO CHÉP MÃ", 
-                `Mã đề <b class="text-white text-lg">${code}</b> của bộ đề [${folder.name.toUpperCase()}] đã được sao chép.`,
-                "success"
-            );
+            showModernToast("📋 ĐÃ SAO CHÉP MÃ", `Mã <b class="text-white">${code}</b> (Hạn 120p) đã được copy.`, "success");
         });
     }
-
-    // 5. Vẽ lại giao diện để cập nhật chữ "🔑 Mã: ..."
     renderFolders();
 }
 
@@ -5649,6 +5645,15 @@ window.addEventListener('touchstart', function(e) {
         // Nếu đang ở đỉnh trang, có thể thêm logic xử lý tại đây nếu cần
     }
 }, {passive: false});
+
+// Cứ mỗi 1 giây sẽ vẽ lại danh sách bộ đề để cập nhật đồng hồ đếm ngược
+setInterval(() => {
+    const foldersPage = document.getElementById('page-folders-manager');
+    // Chỉ cập nhật khi Admin đang mở trang "Quản lý bộ đề"
+    if (foldersPage && !foldersPage.classList.contains('hidden')) {
+        renderFolders();
+    }
+}, 1000);
 
 </script>
 <!-- GIAO DIỆN CHAT CHO ADMIN CON -->

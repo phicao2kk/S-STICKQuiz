@@ -667,6 +667,7 @@ body.scrolling::-webkit-scrollbar-thumb {
 
     <!-- Vùng Menu được phép cuộn và có thanh cuộn màu tím -->
     <div id="sidebar-menu-content">
+        <div class="menu-item" onclick="location.reload()" style="color: #818cf8;">🔄 Tải lại hệ thống</div>
         <div class="menu-item" onclick="showPage('page-home')">🏠 Trang chủ</div>
         <div id="admin-menu-folders" class="menu-item hidden" onclick="showPage('page-folders-manager')">📂 Quản lý Bộ đề</div>
         <div id="admin-menu-storage" class="menu-item hidden" onclick="showPage('page-storage'); renderHistoryTable();">
@@ -696,13 +697,25 @@ body.scrolling::-webkit-scrollbar-thumb {
 
 <div id="header" class="header hidden">
     <div class="flex items-center">
+        <!-- Nút Menu -->
         <div onclick="toggleMenu()" class="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 cursor-pointer transition">
-    ☰
-    <span id="global-menu-dot" class="menu-dot hidden"></span>
-</div>
-        <div class="font-bold text-lg ml-3 tracking-wide text-shine">
-            S-TICK Quiz
-            <span id="role-badge" class="text-white text-[10px] px-2 py-0.5 rounded-full ml-2 uppercase font-extrabold shadow-[0_0_15px_rgba(255,255,255,0.3)]"></span>
+            ☰
+            <span id="global-menu-dot" class="menu-dot hidden"></span>
+        </div>
+
+        <!-- Cụm Tiêu đề và Nút F5 -->
+        <div class="flex items-center ml-3">
+            <span class="font-bold text-lg tracking-wide text-shine">S-TICK Quiz</span>
+            
+            <!-- NÚT F5 NHỎ -->
+            <button onclick="location.reload()" class="ml-2 p-1 hover:bg-indigo-500/20 rounded-full transition-all text-indigo-400/70 hover:text-indigo-400 group" title="Tải lại trang">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-active:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+
+            <!-- Huy hiệu vai trò -->
+            <span id="role-badge" class="text-white text-[10px] px-2 py-0.5 rounded-full ml-1 uppercase font-extrabold shadow-[0_0_15px_rgba(255,255,255,0.3)]"></span>
         </div>
     </div>
     <div id="head-avatar-box" class="avatar-circle" style="width: 38px; height: 38px; margin:0; font-size: 14px;">?</div>
@@ -712,7 +725,15 @@ body.scrolling::-webkit-scrollbar-thumb {
     <div class="card glass shadow-2xl">
         <div class="text-center pb-6">
             <img src="https://i.ibb.co/nNCs81Dp/LOGO-S-STICK.png" class="w-24 h-24 mx-auto rounded-3xl mb-6 shadow-2xl p-1 bg-white/10"> 
-            <h1 class="text-3xl font-extrabold mt-4 text-shine">S-TICK Quiz</h1>
+            <!-- Tiêu đề có nút F5 -->
+            <div class="flex items-center justify-center gap-3 mt-4">
+                <h1 class="text-3xl font-extrabold text-shine">S-TICK Quiz</h1>
+                <button onclick="location.reload()" class="p-1.5 bg-white/5 hover:bg-indigo-500/20 rounded-full transition-all text-slate-500 hover:text-indigo-400" title="Tải lại trang">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+            </div>
             <p class="text-slate-400 text-sm mt-1">Hệ thống thi trắc nghiệm trực truyến</p>
         </div>
         

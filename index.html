@@ -51,12 +51,23 @@ html, body {
     position: absolute;
     top: 8px;
     right: 8px;
-    width: 8px;
-    height: 8px;
-    background-color: #ef4444; /* Màu đỏ */
+    width: 10px;
+    height: 10px;
+    background-color: #ef4444; /* Màu đỏ rực */
     border-radius: 50%;
-    border: 1.5px solid #1e293b;
+    border: 2px solid #1e293b; /* Viền để tách biệt với nền */
     z-index: 10;
+    pointer-events: none; /* Không cản trở việc nhấn nút */
+}
+
+/* Hiệu ứng nhấp nháy cho chấm đỏ (tùy chọn) */
+.menu-dot {
+    animation: blink-red 1.5s infinite;
+}
+@keyframes blink-red {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.8); }
+    100% { opacity: 1; transform: scale(1); }
 }
 
 .badge-normal {
@@ -1698,17 +1709,18 @@ function updateGlobalMenuDot() {
     const chatBadge = document.getElementById('sidebar-chat-badge');
     const premiumBadge = document.getElementById('sidebar-premium-badge');
     const otpBadge = document.getElementById('sidebar-otp-badge');
-    const historyBadge = document.getElementById('sidebar-history-badge'); // Thêm dòng này
+    const historyBadge = document.getElementById('sidebar-history-badge');
     const globalDot = document.getElementById('global-menu-dot');
 
     if (!globalDot) return;
 
+    // Kiểm tra xem có bất kỳ badge nào đang hiển thị và có giá trị > 0 không
     const chatCount = (chatBadge && !chatBadge.classList.contains('hidden')) ? parseInt(chatBadge.innerText) || 0 : 0;
     const premiumCount = (premiumBadge && !premiumBadge.classList.contains('hidden')) ? parseInt(premiumBadge.innerText) || 0 : 0;
     const otpCount = (otpBadge && !otpBadge.classList.contains('hidden')) ? parseInt(otpBadge.innerText) || 0 : 0;
-    const historyCount = (historyBadge && !historyBadge.classList.contains('hidden')) ? parseInt(historyBadge.innerText) || 0 : 0; // Thêm dòng này
+    const historyCount = (historyBadge && !historyBadge.classList.contains('hidden')) ? parseInt(historyBadge.innerText) || 0 : 0;
 
-    // Nếu tất cả các mục đều bằng 0 thì ẩn chấm đỏ
+    // Nếu tổng tất cả thông báo = 0 thì ẩn chấm đỏ ở nút Menu chính
     if (chatCount === 0 && premiumCount === 0 && otpCount === 0 && historyCount === 0) {
         globalDot.classList.add('hidden');
     } else {
@@ -1739,40 +1751,43 @@ function syncDataFromServer() {
 
         // --- ĐOẠN ĐÃ CẬP NHẬT: LẤY LỊCH SỬ LÀM BÀI & BÁO TIN NHẮN MỚI ---
         rdb.ref('users_data/' + safeUser + '/quiz_history').on('value', (historySnap) => {
-            const historyData = historySnap.val() || {};
-            const historyArray = Object.entries(historyData).map(([key, val]) => ({
-                ...val,
-                fbKey: key
-            }));
+        const historyData = historySnap.val() || {};
+        const historyArray = Object.entries(historyData).map(([key, val]) => ({
+            ...val,
+            fbKey: key
+        }));
 
-            // Logic tính toán thông báo mới
-            const oldHistoryCount = JSON.parse(localStorage.getItem('last_history_count_' + currentUser.user) || "0");
-            const currentCount = historyArray.length;
-            const isViewingHistory = !document.getElementById('page-storage').classList.contains('hidden');
+        // --- LOGIC TÍNH TOÁN THÔNG BÁO MỚI ---
+        const oldHistoryCount = JSON.parse(localStorage.getItem('last_history_count_' + currentUser.user) || "0");
+        const currentCount = historyArray.length;
+        
+        // Kiểm tra nếu người dùng không đang ở trang lịch sử thì mới hiện thông báo
+        const isViewingHistory = !document.getElementById('page-storage').classList.contains('hidden');
 
-            if (currentCount > oldHistoryCount && !isViewingHistory) {
-                const newSubmissions = currentCount - oldHistoryCount;
-                const hBadge = document.getElementById('sidebar-history-badge');
-                if (hBadge) {
-                    hBadge.innerText = newSubmissions;
-                    hBadge.classList.remove('hidden');
-                    updateGlobalMenuDot();
-                }
-                
-                // Phát âm thanh và hiện Toast nếu không phải lần đầu load web
-                if (!isialLoad) {
-                    NOTI_SOUND.play().catch(() => {});
-                    showModernToast("Kết quả mới", `Có ${newSubmissions} thí sinh vừa nộp bài thi!`, "success");
-                }
+        if (currentCount > oldHistoryCount && !isViewingHistory) {
+            const newSubmissions = currentCount - oldHistoryCount;
+            const hBadge = document.getElementById('sidebar-history-badge');
+            if (hBadge) {
+                hBadge.innerText = newSubmissions;
+                hBadge.classList.remove('hidden');
+                // Cập nhật chấm đỏ ở nút Menu tổng
+                updateGlobalMenuDot();
             }
-
-            quizHistory = historyArray;
-            localStorage.setItem(getPrefix() + 'quiz_history', JSON.stringify(quizHistory));
             
-            if (isViewingHistory) {
-                if (typeof renderHistoryTable === "function") renderHistoryTable();
+            // Phát âm thanh và hiện Toast nếu không phải lần đầu load web
+            if (!isialLoad) {
+                NOTI_SOUND.play().catch(() => {});
+                showModernToast("Kết quả mới", `Có ${newSubmissions} thí sinh vừa nộp bài thi!`, "success");
             }
-        });
+        }
+
+        quizHistory = historyArray;
+        localStorage.setItem(getPrefix() + 'quiz_history', JSON.stringify(quizHistory));
+        
+        if (isViewingHistory) {
+            if (typeof renderHistoryTable === "function") renderHistoryTable();
+        }
+    });
         // --- HẾT ĐOẠN THÊM MỚI ---
 
         // KÍCH HOẠT THÔNG BÁO TIN NHẮN NGAY TẠI ĐÂY
@@ -1968,25 +1983,26 @@ function closeNotify(result = true) {
     if (notifyResolver) { notifyResolver(result); notifyResolver = null; }
 }
 
-function showPage(id) { 
+function showPage(id) {
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); 
     const target = document.getElementById(id); 
     if(target) target.classList.remove('hidden'); 
     
     toggleMenu(true); 
     
-    // XỬ LÝ KHI VÀO TRANG LỊCH SỬ
+    // --- THÊM LOGIC RESET THÔNG BÁO LỊCH SỬ TẠI ĐÂY ---
     if (id === 'page-storage') {
         renderHistoryTable();
-        // Lưu số lượng hiện tại làm mốc "đã xem"
+        // Lưu số lượng hiện tại vào máy để đánh dấu là "đã xem hết"
         localStorage.setItem('last_history_count_' + currentUser.user, JSON.stringify(quizHistory.length));
         
-        // Ẩn badge
+        // Ẩn badge số lượng
         const hBadge = document.getElementById('sidebar-history-badge');
         if (hBadge) {
             hBadge.innerText = "0";
             hBadge.classList.add('hidden');
         }
+        // Cập nhật lại chấm đỏ menu
         updateGlobalMenuDot();
     }
 

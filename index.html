@@ -14,15 +14,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
 
-/* Chỉ chặn zoom, cho phép cuộn dọc mượt mà */
+/* Chỉ chặn zoom, cho phép cuộn dọc mượt mà, CHẶN PULL-TO-REFRESH */
 html, body {
-    touch-action: pan-y; /* Chỉ cho phép cuộn theo trục Y (lên xuống), chặn các hành vi khác như zoom */
+    touch-action: pan-y; 
+    overscroll-behavior-y: contain; /* DÒNG QUAN TRỌNG: Chặn vuốt từ trên xuống để load lại trang */
     -webkit-text-size-adjust: 100%;
     width: 100%;
     min-height: 100%;
-    overflow-x: hidden; /* Chặn cuộn ngang */
-    overflow-y: auto;   /* Cho phép cuộn dọc */
-    position: relative; /* Thay vì fixed */
+    overflow-x: hidden; 
+    overflow-y: auto;   
+    position: relative; 
 }
 
 /* Đảm bảo vùng nội dung không bị giới hạn chiều cao */

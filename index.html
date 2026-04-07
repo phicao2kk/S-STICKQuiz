@@ -10,6 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -3068,10 +3069,10 @@ function renderFolders() {
                 ${codeBadge}
             </div>
 
-            <!-- CỤM NÚT BẤM DẠNG LƯỚI TỐI ƯU -->
+            <!-- CỤM NÚT BẤM TỐI ƯU GỌN GÀNG -->
             <div class="grid grid-cols-2 gap-2 mt-4">
                 <button class="col-span-2 py-2.5 bg-indigo-500/40 hover:bg-indigo-500 text-white rounded-xl text-[11px] font-black border-2 border-indigo-400 shadow-lg backdrop-blur-md transition-all" onclick="openFolder(${i})">
-                    🔍 CHI TIẾT & CHỈNH SỬA
+                    🔍 CHI TIẾT & SỬA
                 </button>
                 
                 <button class="py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-bold shadow-lg" onclick="shareFolder(${i})">
@@ -3082,12 +3083,18 @@ function renderFolders() {
                     🎯 VÀO THI
                 </button>
 
-                <button class="py-2 bg-slate-800 text-slate-300 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1" onclick="showQuizAnalytics(${i})">
+                <button class="py-2 bg-slate-800 text-slate-300 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-slate-700 transition-all" onclick="showQuizAnalytics(${i})">
                     📊 THỐNG KÊ
                 </button>
 
-                <button class="py-2 bg-red-500/10 text-red-400 rounded-xl text-[10px] font-bold" onclick="deleteFolder(${i})">
-                    🗑️ XÓA ĐỀ
+                <!-- NÚT XUẤT FILE ĐÃ THU NHỎ (NẰM CẠNH THỐNG KÊ) -->
+                <button class="py-2 bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 transition-all" 
+                        onclick="exportFolderToWord(${i}); event.stopPropagation();">
+                    🖨️ XUẤT WORD
+                </button>
+
+                <button class="col-span-2 py-1.5 bg-red-500/5 hover:bg-red-500/20 text-red-400/60 hover:text-red-400 text-[9px] font-medium rounded-lg transition-all" onclick="deleteFolder(${i})">
+                    🗑️ XÓA BỘ ĐỀ
                 </button>
             </div>
         </div>`;
@@ -5816,6 +5823,118 @@ function analyzeQuestionDifficulty(submissions) {
             <p class="text-[9px] text-slate-500 mt-1">Ghi nhận ${q.wrongCount} lần trả lời sai trên tổng ${q.total} lượt thi.</p>
         </div>
     `).join('');
+}
+
+function exportFolderToWord(idx) {
+    const folder = foldersDB[idx];
+    if (!folder || !folder.questions || folder.questions.length === 0) {
+        return sysNotify("Lỗi", "Bộ đề chưa có câu hỏi!", "error");
+    }
+
+    showModernToast("Đang xử lý", "Đang ép định dạng bảng chuẩn Word...", "info");
+
+    const examName = folder.name.toUpperCase();
+    const questions = folder.questions;
+    const examCode = Math.floor(100 + Math.random() * 899);
+
+    // SỬ DỤNG XML/HTML ĐẶC BIỆT CHO MICROSOFT WORD
+    let htmlString = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            /* ÉP FONT TIMES NEW ROMAN TOÀN BỘ FILE */
+            @font-face { font-family: "Times New Roman"; }
+            body, table, td, p, div, b, span { 
+                font-family: "Times New Roman", serif !important; 
+                font-size: 13pt; 
+                line-height: 1.2;
+                color: black;
+            }
+            @page { 
+                size: A4; 
+                margin: 0.7in 0.5in 0.7in 1in; /* Lề trái rộng để đóng ghim */
+            }
+            .header-table, .options-table, .footer-table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                border: none; 
+            }
+            .q-item { margin-top: 12pt; margin-bottom: 2pt; }
+        </style>
+    </head>
+    <body>
+        <!-- HEADER: CHIA 2 CỘT BẰNG TABLE -->
+        <table class="header-table">
+            <tr>
+                <td style="width: 40%; text-align: center; vertical-align: top;">
+                    SỞ GIÁO DỤC VÀ ĐÀO TẠO<br>
+                    <b>TRƯỜNG ...........................</b><br>
+                    <div style="border-top: 1pt solid black; width: 100px; margin: 2pt auto;"></div>
+                    <i style="font-size: 10pt;">(Đề thi có ${questions.length} câu)</i>
+                </td>
+                <td style="width: 60%; text-align: center; vertical-align: top;">
+                    <b>KIỂM TRA ĐỊNH KỲ NĂM HỌC 2025-2026</b><br>
+                    <b>Môn: ${examName}</b><br>
+                    <i>Thời gian làm bài: 45 phút</i><br>
+                    <b>Mã đề thi: ${examCode}</b>
+                </td>
+            </tr>
+        </table>
+
+        <p style="margin-top: 15pt; border-bottom: 1pt solid black; padding-bottom: 5pt;">
+            <b>Họ, tên thí sinh:</b> ........................................................................ <b>SBD:</b> ......................
+        </p>
+
+        <!-- NỘI DUNG CÂU HỎI -->
+        ${questions.map((q, i) => `
+            <div style="margin-top: 15pt;">
+                <p style="margin: 0; text-align: justify;"><b>Câu ${i + 1}:</b> ${q.text}</p>
+                
+                <table class="options-table" style="margin-top: 3pt; table-layout: fixed;">
+                    <tr>
+                        <td style="width: 25%; padding: 2pt 0;"><b>A.</b> ${q.options[0]}</td>
+                        <td style="width: 25%; padding: 2pt 0;"><b>B.</b> ${q.options[1]}</td>
+                        <td style="width: 25%; padding: 2pt 0;"><b>C.</b> ${q.options[2]}</td>
+                        <td style="width: 25%; padding: 2pt 0;"><b>D.</b> ${q.options[3]}</td>
+                    </tr>
+                </table>
+            </div>
+        `).join('')}
+
+        <!-- TRANG ĐÁP ÁN -->
+        <br clear="all" style="page-break-before:always">
+        
+        <div style="text-align: center; margin-top: 20pt;">
+            <b style="font-size: 16pt;">ĐÁP ÁN MÃ ĐỀ: ${examCode}</b>
+            <br><br>
+            <table border="1" cellspacing="0" cellpadding="5" style="width: 100%; border-collapse: collapse; text-align: center;">
+                <tr style="background-color: #f2f2f2;">
+                    ${questions.map((_, i) => `<td style="font-weight: bold;">${i + 1}</td>`).join('')}
+                </tr>
+                <tr>
+                    ${questions.map(q => `<td>${String.fromCharCode(65 + q.correct)}</td>`).join('')}
+                </tr>
+            </table>
+        </div>
+    </body>
+    </html>`;
+
+    try {
+        // Chuyển đổi và tải file
+        const converted = htmlDocx.asBlob(htmlString);
+        const fileName = `DE_THI_${examName.replace(/\s+/g, '_')}.docx`;
+        const url = URL.createObjectURL(converted);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showModernToast("Thành công", "Đã xuất file chuẩn Microsoft Word!", "success");
+    } catch (e) {
+        sysNotify("Lỗi", "Không thể tạo file Word", "error");
+    }
 }
 
 </script>

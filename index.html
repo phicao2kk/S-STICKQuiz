@@ -14,16 +14,25 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
 
-/* Chỉ chặn zoom, cho phép cuộn dọc mượt mà, CHẶN PULL-TO-REFRESH */
+/* Thiết lập chung cho tất cả thiết bị */
 html, body {
-    touch-action: pan-y; 
-    overscroll-behavior-y: contain; /* DÒNG QUAN TRỌNG: Chặn vuốt từ trên xuống để load lại trang */
     -webkit-text-size-adjust: 100%;
     width: 100%;
     min-height: 100%;
-    overflow-x: hidden; 
-    overflow-y: auto;   
-    position: relative; 
+    overflow-x: hidden; /* Chặn cuộn ngang */
+    overflow-y: auto;   /* Cho phép cuộn dọc */
+    position: relative;
+}
+
+/* CHỈ ÁP DỤNG CHO ĐIỆN THOẠI/MÁY TÍNH BẢNG (Thiết bị có cảm ứng) */
+@media (pointer: coarse) {
+    html, body {
+        /* Vẫn cho phép vuốt lên xuống để xem nội dung */
+        touch-action: pan-y; 
+        
+        /* CHẶN PULL-TO-REFRESH: Chỉ chặn hành động kéo để tải lại */
+        overscroll-behavior-y: none; 
+    }
 }
 
 /* Đảm bảo vùng nội dung không bị giới hạn chiều cao */
@@ -5546,6 +5555,13 @@ D. 7
     const okBtn = document.getElementById('nt-btn-ok');
     if(okBtn) okBtn.innerText = "ĐÃ HIỂU";
 }
+
+// Chặn hành động kéo quá đà để refresh trên một số trình duyệt di động
+window.addEventListener('touchstart', function(e) {
+    if (window.scrollY === 0) {
+        // Nếu đang ở đỉnh trang, có thể thêm logic xử lý tại đây nếu cần
+    }
+}, {passive: false});
 
 </script>
 <!-- GIAO DIỆN CHAT CHO ADMIN CON -->

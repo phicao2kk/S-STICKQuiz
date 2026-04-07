@@ -560,6 +560,69 @@ body.scrolling::-webkit-scrollbar-thumb {
     overflow: hidden; /* Không cho nội dung thoát ra ngoài bo góc */
 }
 
+/* --- KHUNG HEADER CỐ ĐỊNH CHỐNG DẠT --- */
+.header {
+    height: 60px !important;
+    padding: 0 10px !important;
+    display: flex !important; /* Thêm dấu ; và giữ !important để chống dạt */
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+/* Thêm dòng này để class hidden của Tailwind vẫn có tác dụng xóa thanh bar khi chưa đăng nhập */
+.header.hidden {
+    display: none !important;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 5px; /* Khoảng cách giữa Menu - Chữ - F5 */
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Khoảng cách giữa Badge và Avatar */
+    flex-shrink: 0;
+}
+
+/* Chỉnh logo chữ nhỏ lại để nhường chỗ cho Badge */
+.text-shine-head {
+    font-size: 15px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+/* Badge Premium kiểu ảnh bạn gửi (Vàng bo tròn) */
+.badge-vip-active {
+    background: linear-gradient(135deg, #FFC107, #FF9800) !important;
+    color: #000 !important;
+    font-weight: 800 !important;
+    padding: 4px 10px !important;
+    border-radius: 50px !important;
+    font-size: 10px !important;
+    text-transform: uppercase !important;
+    border: 1.5px solid #fff !important;
+    display: inline-flex !important;
+    align-items: center;
+    white-space: nowrap;
+    box-shadow: 0 0 15px rgba(255, 193, 7, 0.4) !important;
+}
+
+/* Nút F5 nhỏ như trong ảnh */
+.btn-f5-head {
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+    padding: 6px;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
     </style>
 </head>
 <body>
@@ -694,30 +757,29 @@ body.scrolling::-webkit-scrollbar-thumb {
     <!-- KẾT THÚC VÙNG CUỘN -->
 </div>
 
-<div id="header" class="header hidden">
-    <div class="flex items-center">
-        <!-- Nút Menu -->
-        <div onclick="toggleMenu()" class="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 cursor-pointer transition">
+<div id="header" class="header hidden glass">
+    <!-- Cụm Trái: Menu + Tên + F5 -->
+    <div class="header-left">
+        <div onclick="toggleMenu()" class="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/10 cursor-pointer transition shrink-0">
             ☰
             <span id="global-menu-dot" class="menu-dot hidden"></span>
         </div>
-
-        <!-- Cụm Tiêu đề và Nút F5 -->
-        <div class="flex items-center ml-3">
-            <span class="font-bold text-lg tracking-wide text-shine">S-TICK Quiz</span>
-            
-            <!-- NÚT F5 NHỎ -->
-            <button onclick="location.reload()" class="ml-2 p-1 hover:bg-indigo-500/20 rounded-full transition-all text-indigo-400/70 hover:text-indigo-400 group" title="Tải lại trang">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-active:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        
+        <div class="flex items-center gap-2">
+            <span class="text-shine-head">S-TICK Quiz</span>
+            <button onclick="location.reload()" class="btn-f5-head">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
             </button>
-
-            <!-- Huy hiệu vai trò -->
-            <span id="role-badge" class="text-white text-[10px] px-2 py-0.5 rounded-full ml-1 uppercase font-extrabold shadow-[0_0_15px_rgba(255,255,255,0.3)]"></span>
         </div>
     </div>
-    <div id="head-avatar-box" class="avatar-circle" style="width: 38px; height: 38px; margin:0; font-size: 14px;">?</div>
+
+    <!-- Cụm Phải: Huy hiệu + Avatar -->
+    <div class="header-right">
+        <div id="role-badge" class="badge-normal">HỘI VIÊN</div>
+        <div id="head-avatar-box" class="avatar-circle" style="width: 36px; height: 36px; margin:0; font-size: 14px; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.2);">?</div>
+    </div>
 </div>
 
 <div id="login-screen" class="container mx-auto px-4" style="max-width: 450px; margin-top: 80px;">
@@ -2390,82 +2452,65 @@ function handleRegister() {
 }
 
 function loginSuccess() {
-    // 1. Hiển thị khung ứng dụng chính và ẩn màn hình đăng nhập
+    // 1. Ẩn màn hình đăng nhập và hiện khung ứng dụng
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app-content').classList.remove('hidden');
-    document.getElementById('header').classList.remove('hidden');
+    
+    // 2. HIỆN HEADER (Chỉ hiện sau khi đăng nhập thành công)
+    const header = document.getElementById('header');
+    header.classList.remove('hidden');
     
     // Lấy các vùng nội dung cần điều khiển
-    const adminZone = document.getElementById('admin-zone');         // Vùng nộp đề/quản lý
-    const studentZone = document.getElementById('student-zone');     // Vùng chuẩn bị thi
-    const chatContainer = document.getElementById('chat-container'); // Nút chat hỗ trợ
+    const adminZone = document.getElementById('admin-zone');
+    const studentZone = document.getElementById('student-zone');
+    const chatContainer = document.getElementById('chat-container');
 
-    // TRƯỜNG HỢP 1 & 2: NGƯỜI DÙNG LÀ ADMIN (ADMIN GỐC HOẶC ADMIN CON)
     if (currentUser.isAdmin) {
-        // HIỆN các công cụ dành cho Admin
         if (adminZone) adminZone.classList.remove('hidden');
         document.getElementById('admin-menu-folders').classList.remove('hidden');
         document.getElementById('admin-menu-storage').classList.remove('hidden');
-        
-        // ẨN vùng chuẩn bị thi của thí sinh
         if (studentZone) studentZone.classList.add('hidden');
 
-        // Phân quyền sâu hơn cho ADMIN GỐC (ROOT)
         if (currentUser.isRoot) {
             document.getElementById('admin-menu-users').classList.remove('hidden');
             document.getElementById('admin-menu-otp').classList.remove('hidden');
             document.getElementById('admin-menu-premium').classList.remove('hidden');
-            if(chatContainer) chatContainer.classList.add('hidden'); // Admin gốc không cần nút chat
+            if(chatContainer) chatContainer.classList.add('hidden');
         } else {
-            // Admin con thì hiện nút chat hỗ trợ
             if(chatContainer) chatContainer.classList.remove('hidden');
         }
-    } 
-    
-    // TRƯỜNG HỢP 3: NGƯỜI DÙNG LÀ THÍ SINH (VÀO THI BẰNG MÃ ĐỀ)
-    else {
-        // ẨN TUYỆT ĐỐI các công cụ Admin
+    } else {
         if (adminZone) adminZone.classList.add('hidden');
         document.getElementById('admin-menu-folders').classList.add('hidden');
         document.getElementById('admin-menu-storage').classList.add('hidden');
-        
-        // CHỈ HIỆN vùng chuẩn bị thi
         if (studentZone) studentZone.classList.remove('hidden');
-        if (chatContainer) chatContainer.classList.add('hidden'); // Thí sinh không cần nút chat
+        if (chatContainer) chatContainer.classList.add('hidden');
     }
 
-    // Cập nhật thông tin cá nhân trên giao diện
+    // Cập nhật thông tin hiển thị
     document.getElementById('inf-email').innerText = currentUser.user;
     document.getElementById('inf-fullname').innerText = currentUser.name;
     document.getElementById('side-username').innerText = currentUser.name;
     
-    // Hiển thị huy hiệu (Role)
-    const roleBadge = document.getElementById('role-badge');
-    if (roleBadge) {
-        roleBadge.innerText = currentUser.isRoot ? "ADMIN GỐC" : (currentUser.isAdmin ? "ADMIN" : "THÍ SINH");
-    }
-    
     updateAvatarUI(); 
     renderAdminPreview(); 
     renderFolders(); 
-    checkPremiumUI(); 
+    checkPremiumUI(); // Hàm này sẽ điều khiển Badge Vàng/Xám bên trong Header
     updateFolderDropdowns();
 
-    // Hiển thị bảng Premium Master nếu là Admin Gốc
-    const masterPanel = document.getElementById('root-master-premium-panel');
     if (currentUser.isRoot) {
+        const masterPanel = document.getElementById('root-master-premium-panel');
         if (masterPanel) masterPanel.classList.remove('hidden');
         renderMasterPremiumList();
         renderUsersManager();
-    } else {
-        if (masterPanel) masterPanel.classList.add('hidden');
     }
 }
 
 
 function logout() { 
     notifiedMessages.clear(); // Xóa sạch danh sách ID đã báo
-    localStorage.removeItem('sys_logged_user'); 
+    localStorage.removeItem('sys_logged_user');
+    document.getElementById('header').classList.add('hidden');
     location.reload(); 
 }
 
@@ -3758,48 +3803,56 @@ function checkPremiumUI() {
     const premiumMenuItem = document.getElementById('premium-menu-item');
     const badge = document.getElementById('role-badge');
 
+    if (!badge) return; // Bảo vệ nếu không tìm thấy phần tử
+
+    // 1. TRƯỜNG HỢP: THÍ SINH (Ẩn sạch các thứ liên quan đến Premium)
     if (!currentUser.isAdmin) {
         if (premiumStatus) premiumStatus.classList.add('hidden');
         if (premiumMenuItem) premiumMenuItem.classList.add('hidden');
-        if (badge) badge.classList.add('hidden');
+        badge.classList.add('hidden');
         return;
     }
 
-    // NẾU LÀ ADMIN GỐC - HIỂN THỊ VÔ HẠN
+    // 2. TRƯỜNG HỢP: ADMIN GỐC (ROOT)
     if (currentUser.isRoot) {
         if (premiumStatus) premiumStatus.classList.remove('hidden');
         if (premiumMenuItem) premiumMenuItem.classList.add('hidden');
-        if (badge) {
-            badge.innerHTML = "PREMIUM VÔ HẠN 💎"; 
-            badge.className = "badge-vip-active ml-2";
-            badge.classList.remove('hidden');
-        }
-        return; // Thoát hàm luôn, không chạy logic đếm ngày bên dưới
+        
+        // Hiển thị nội dung chuẩn như ảnh
+        badge.innerHTML = "PREMIUM VÔ HẠN 💎"; 
+        badge.className = "badge-vip-active"; // Class màu vàng
+        badge.classList.remove('hidden');
+        return; 
     }
 
-    // LOGIC CHO ADMIN THƯỜNG
+    // 3. TRƯỜNG HỢP: ADMIN CON
     const userInLocal = usersDB[currentUser.user];
     if (userInLocal && userInLocal.isPremium) {
+        // ADMIN CON CÓ PREMIUM
         if (premiumStatus) premiumStatus.classList.remove('hidden');
         if (premiumMenuItem) premiumMenuItem.classList.add('hidden'); 
 
-        let daysDisplay = "";
+        let daysLeft = 0;
         if (userInLocal.premiumExpiresAt) {
             const timeLeft = userInLocal.premiumExpiresAt - Date.now();
-            const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
-            daysDisplay = daysLeft > 0 ? `(${daysLeft} ngày)` : "(Hết hạn)";
+            daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
         }
         
-        if (badge) {
-            badge.innerHTML = `PREMIUM ${daysDisplay} 💎`; 
-            badge.className = "badge-vip-active ml-2";
-            badge.classList.remove('hidden');
-        }
+        // CẬP NHẬT QUAN TRỌNG: 
+        // - Dùng format ngắn gọn: PREMIUM (23N) 💎 thay vì "23 ngày" để không bị dạt hàng.
+        // - Dùng class badge-vip-active để có màu vàng y hệt Root.
+        badge.innerHTML = `PREMIUM (${daysLeft > 0 ? daysLeft : 0}N) 💎`; 
+        badge.className = "badge-vip-active"; 
+        badge.classList.remove('hidden');
     } else {
+        // ADMIN CON BẢN THƯỜNG
         if (badge) {
             badge.innerHTML = "BẢN THƯỜNG";
-            badge.className = "badge-normal";
-            badge.classList.remove('hidden');
+            badge.className = "badge-normal"; // Class màu xám
+            
+            // TỰ ĐỘNG ẨN Badge "Bản thường" nếu là mobile để nhường chỗ cho logo
+            if (window.innerWidth < 450) badge.classList.add('hidden');
+            else badge.classList.remove('hidden');
         }
         if (premiumStatus) premiumStatus.classList.add('hidden');
         if (premiumMenuItem) premiumMenuItem.classList.remove('hidden');

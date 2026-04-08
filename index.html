@@ -30,6 +30,59 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
 
+/* 1. ĐỊNH DẠNG Ô ĐÁP ÁN: Kích thước cân đối, đều nhau */
+.quiz-opt {
+    display: flex;
+    align-items: center;
+    min-height: 60px; /* Giúp các ô luôn có chiều cao bằng nhau */
+    padding: 12px 20px !important;
+    margin-bottom: 10px;
+    border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 14px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    cursor: pointer;
+    transition: all 0.25s ease !important;
+    position: relative;
+    width: 100%;
+}
+
+/* 2. HIỆU ỨNG KHI CHỌN: Màu Indigo dịu nhẹ, không bị chói */
+.quiz-opt.active-selected {
+    background: rgba(99, 102, 241, 0.15) !important; /* Màu xanh tím nhạt */
+    border-color: #6366f1 !important; /* Viền màu Primary */
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2) !important;
+    transform: translateY(-2px) !important; /* Nhấc nhẹ lên thay vì phóng to */
+}
+
+/* Đổi màu chữ khi chọn cho dịu */
+.quiz-opt.active-selected span {
+    color: #a5b4fc !important; 
+    font-weight: 600 !important;
+}
+
+/* Vòng tròn A, B, C, D mặc định */
+.opt-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+/* Vòng tròn khi được chọn */
+.quiz-opt.active-selected .opt-circle {
+    background: #6366f1 !important;
+    color: white !important;
+    border-color: #6366f1 !important;
+}
+
 .header {
     /* env(safe-area-inset-top) là khoảng trống của tai thỏ/nốt ruồi trên iPhone */
     padding-top: env(safe-area-inset-top) !important;
@@ -1592,7 +1645,7 @@ function removeProofImage() {
 }
 
 function editQ(i) {
-    const q = db[i]; // Lấy trực tiếp theo index i được truyền vào
+    const q = db[i]; 
     if (!q) return;
 
     document.getElementById('manual-q').value = q.text;
@@ -1601,11 +1654,14 @@ function editQ(i) {
     document.getElementById('manual-c').value = q.options[2];
     document.getElementById('manual-d').value = q.options[3];
     document.getElementById('manual-correct').value = q.correct;
+    
+    // --- DÒNG THÊM MỚI ĐỂ HIỆN LINK ẢNH CŨ ---
+    document.getElementById('manual-img').value = q.image || ""; 
+    document.getElementById('manual-audio').value = q.audio || ""; 
 
-    document.getElementById('edit-index').value = i; // Lưu index gốc i
+    document.getElementById('edit-index').value = i;
     document.getElementById('edit-folder-q-index').value = "-1";
 
-    // Đổi màu nhãn sang Cam
     document.querySelectorAll('.manual-label').forEach(label => {
         label.classList.remove('bg-indigo-600');
         label.classList.add('bg-orange-500');
@@ -1631,6 +1687,8 @@ function cancelEdit() {
     document.getElementById('manual-b').value = "";
     document.getElementById('manual-c').value = "";
     document.getElementById('manual-d').value = "";
+    document.getElementById('manual-img').value = "";
+    document.getElementById('manual-audio').value = "";
 
     // 3. Đưa màu các nhãn A, B, C, D từ Cam quay về Tím (Indigo)
     document.querySelectorAll('.manual-label').forEach(label => {
@@ -1744,11 +1802,30 @@ function viewHistoryDetailByKey(fbKey) {
 }
 
 function saveQuestion() {
-    // --- 1. LẤY DỮ LIỆU TỪ GIAO DIỆN (MULTIMEDIA & TYPE) ---
     const qText = document.getElementById('manual-q').value.trim();
     const qType = document.getElementById('manual-type').value;
-    const qImg = document.getElementById('manual-img').value.trim();
+    let qImg = document.getElementById('manual-img').value.trim(); 
     const qAudio = document.getElementById('manual-audio').value.trim();
+
+    // --- CẢI TIẾN: TỰ ĐỘNG CHUYỂN ĐỔI LINK GOOGLE DRIVE SIÊU CẤP ---
+    if (qImg.includes("drive.google.com")) {
+        let driveId = "";
+        try {
+            if (qImg.includes("id=")) {
+                driveId = qImg.split("id=")[1].split("&")[0];
+            } else if (qImg.includes("/d/")) {
+                driveId = qImg.split("/d/")[1].split("/")[0];
+            }
+            
+            if (driveId) {
+                // Sử dụng server lh3 - Server này chuyên dùng để hiển thị ảnh của Google, cực nhanh và ít bị lỗi
+                qImg = `https://lh3.googleusercontent.com/d/${driveId}`;
+                console.log("Đã chuyển đổi sang link CDN Google:", qImg);
+            }
+        } catch (e) {
+            console.error("Lỗi trích xuất ID Drive:", e);
+        }
+    }
 
     const optValues = [
         document.getElementById('manual-a').value.trim(),
@@ -1757,72 +1834,31 @@ function saveQuestion() {
         document.getElementById('manual-d').value.trim()
     ];
 
-    // Xử lý đáp án đúng: Nếu là điền từ thì lấy nội dung chữ, còn lại lấy số index 0,1,2,3
     let correct;
     if (qType === 'blank') {
-        correct = optValues[0]; // Đáp án đúng nằm ở ô A
+        correct = optValues[0];
         if (!correct) return sysNotify("Lỗi", "Vui lòng nhập đáp án đúng vào ô A!", "warn");
     } else {
         correct = parseInt(document.getElementById('manual-correct').value);
     }
 
-    // --- 2. CHẾ ĐỘ SỬA CÂU TẠM THỜI (VÙNG MÀU CAM) ---
     if (currentEditingTempIdx !== -1) {
-        tempQuestions[currentEditingTempIdx] = {
-            text: qText,
-            options: optValues,
-            correct: correct,
-            type: qType,
-            image: qImg,
-            audio: qAudio
-        };
+        tempQuestions[currentEditingTempIdx] = { text: qText, options: optValues, correct: correct, type: qType, image: qImg, audio: qAudio };
         currentEditingTempIdx = -1;
-        showPreviewZone();
-        cancelEdit();
+        showPreviewZone(); cancelEdit();
         showModernToast("Đã sửa", "Nội dung câu hỏi tạm thời đã được cập nhật!", "success");
         return;
     }
 
-    // --- 3. KIỂM TRA NHẬP LIỆU TRỐNG ---
     if (!qText || (qType !== 'blank' && optValues.some(o => !o))) {
-        return sysNotify("Lỗi", "Vui lòng nhập đầy đủ nội dung câu hỏi và các đáp án!", "warn");
+        return sysNotify("Lỗi", "Vui lòng nhập đầy đủ nội dung!", "warn");
     }
 
-    // --- 4. KIỂM TRA TRÙNG ĐÁP ÁN (Dành cho Trắc nghiệm) ---
-    if (qType === 'choice') {
-        let duplicatePairs = [];
-        const labels = ['A', 'B', 'C', 'D'];
-        for (let i = 0; i < optValues.length; i++) {
-            for (let j = i + 1; j < optValues.length; j++) {
-                if (optValues[i].toLowerCase() === optValues[j].toLowerCase()) {
-                    duplicatePairs.push(`${labels[i]} & ${labels[j]}`);
-                }
-            }
-        }
-        if (duplicatePairs.length > 0) {
-            let sourceName = "Ngân hàng chung";
-            if (parseInt(document.getElementById('edit-folder-q-index').value) !== -1) {
-                sourceName = `Bộ đề <b>[${foldersDB[currentFolderIdx].name.toUpperCase()}]</b>`;
-            }
-            return showModernToast("TRÙNG ĐÁP ÁN", `Tại ${sourceName}: Đáp án [${duplicatePairs.join(', ')}] đang bị giống nhau!`, "warn");
-        }
-    }
-
-    // --- 5. TIẾN HÀNH LƯU (NGÂN HÀNG HOẶC BỘ ĐỀ) ---
-    const newQ = { 
-        text: qText, 
-        options: optValues, 
-        correct: correct,
-        type: qType,
-        image: qImg,
-        audio: qAudio
-    };
-
+    const newQ = { text: qText, options: optValues, correct: correct, type: qType, image: qImg, audio: qAudio };
     const editIdx = parseInt(document.getElementById('edit-index').value);
     const folderQIdx = parseInt(document.getElementById('edit-folder-q-index').value);
 
     if (folderQIdx !== -1) {
-        // CHẾ ĐỘ 1: Cập nhật vào BỘ ĐỀ cụ thể
         if (currentFolderIdx !== -1 && foldersDB[currentFolderIdx]) {
             foldersDB[currentFolderIdx].questions[folderQIdx] = newQ;
             saveFolders(); 
@@ -1831,20 +1867,17 @@ function saveQuestion() {
         }
     } 
     else if (editIdx !== -1) {
-        // CHẾ ĐỘ 2: Cập nhật vào NGÂN HÀNG CHUNG
         db[editIdx] = newQ;
         saveDB();
         renderAdminPreview();
         sysNotify("Thành công", "Đã cập nhật câu hỏi ngân hàng!", "success");
     } 
     else {
-        // CHẾ ĐỘ 3: THÊM MỚI HOÀN TOÀN
         db.push(newQ);
         saveDB();
         renderAdminPreview();
         sysNotify("Thành công", "Đã thêm câu hỏi mới vào ngân hàng!", "success");
     }
-
     cancelEdit(); 
 }
 
@@ -2875,7 +2908,23 @@ async function clearAllHistory() {
         return sysNotify("Thông báo", "Không có dữ liệu lịch sử để xóa.", "info");
     }
 
-    const confirmMsg = "CẢNH BÁO: Bạn có chắc chắn muốn XÓA SẠCH toàn bộ lịch sử làm bài?\n\nHành động này sẽ:\n1. Xóa vĩnh viễn mọi kết quả của thí sinh.\n2. MỞ KHÓA cho tất cả thí sinh đã từng thi để họ có thể vào làm lại bài.";
+    // NỘI DUNG ĐÃ ĐƯỢC ĐỊNH DẠNG LẠI CHO THÔNG THOÁNG
+    const confirmMsg = `
+        <div class="text-left space-y-3">
+            <b class="text-red-500 uppercase text-lg">⚠️ Cảnh báo quan trọng!</b><br>
+            <span class="text-slate-200">Bạn có chắc chắn muốn <b class="text-white">XÓA SẠCH</b> toàn bộ lịch sử làm bài không?</span>
+            
+            <div class="bg-black/20 p-3 rounded-xl border border-white/5 mt-2">
+                <p class="text-indigo-400 font-bold mb-2">Hành động này sẽ thực hiện:</p>
+                <div class="space-y-2 text-[13px] leading-relaxed">
+                    <p>1. <b class="text-white">Xóa vĩnh viễn</b> mọi kết quả của thí sinh.</p>
+                    <p>2. <b class="text-emerald-400 uppercase">Mở khóa</b> cho tất cả thí sinh đã từng thi để họ có thể vào làm lại bài.</p>
+                </div>
+            </div>
+            
+            <p class="text-[11px] text-slate-500 italic mt-2">* Lưu ý: Thao tác này không thể hoàn tác.</p>
+        </div>
+    `;
 
     if (await sysConfirm(confirmMsg)) {
         sysNotify("Đang xử lý...", "Đang xóa lịch sử và mở khóa thí sinh...", "info");
@@ -2885,7 +2934,6 @@ async function clearAllHistory() {
             const tasks = [];
             quizHistory.forEach(h => {
                 if (h.examCode && h.user) {
-                    // Tạo một task xóa lệnh chặn nộp bài cho từng thí sinh
                     const cleanSubmission = rdb.ref(`system/submissions/${h.examCode}/${h.user}`).remove();
                     tasks.push(cleanSubmission);
                 }
@@ -2902,23 +2950,19 @@ async function clearAllHistory() {
             quizHistory = [];
             localStorage.setItem(getPrefix() + 'quiz_history', JSON.stringify(quizHistory));
             
-            // --- ĐOẠN BỔ SUNG: RESET THÔNG BÁO ---
-            // Đặt mốc đã xem về 0 để tránh bị lệch thông báo sau này
+            // --- RESET THÔNG BÁO ---
             localStorage.setItem('last_history_count_' + currentUser.user, "0");
             
-            // Ẩn badge số lượng trên Sidebar
             const hBadge = document.getElementById('sidebar-history-badge');
             if (hBadge) {
                 hBadge.innerText = "0";
                 hBadge.classList.add('hidden');
             }
             
-            // Cập nhật lại chấm đỏ ngoài nút Menu chính
             if (typeof updateGlobalMenuDot === "function") updateGlobalMenuDot();
-            // -------------------------------------
 
             sysNotify("Thành công", "Đã xóa sạch lịch sử. Tất cả thí sinh hiện có thể vào thi lại!", "success");
-            renderHistoryTable(); // Cập nhật lại bảng (sẽ trống)
+            renderHistoryTable(); 
 
         } catch (error) {
             console.error("Lỗi khi xóa lịch sử:", error);
@@ -3031,6 +3075,7 @@ function editTempQ(idx) {
     document.getElementById('manual-c').value = q.options[2];
     document.getElementById('manual-d').value = q.options[3];
     document.getElementById('manual-correct').value = q.correct;
+    document.getElementById('manual-img').value = q.image || "";
 
     // Cập nhật giao diện nút
     const btnSave = document.getElementById('btn-save-q');
@@ -3514,6 +3559,10 @@ function editFolderQ(i) {
     document.getElementById('manual-d').value = q.options[3];
     document.getElementById('manual-correct').value = q.correct;
 
+    // --- DÒNG THÊM MỚI ĐỂ HIỆN LINK ẢNH CŨ ---
+    document.getElementById('manual-img').value = q.image || "";
+    document.getElementById('manual-audio').value = q.audio || "";
+
     document.getElementById('edit-folder-q-index').value = i;
     document.getElementById('edit-index').value = "-1";
 
@@ -3720,9 +3769,12 @@ function saveCurrentProgress() {
 
 // Cập nhật hàm selectOption để tự động lưu
 function selectOption(val) {
-    userAnswers[currentIdx] = val;
-    renderNav();
-    saveCurrentProgress(); // Lưu tiến độ ngay lập tức
+    userAnswers[currentIdx] = val; // Lưu đáp án
+    renderNav(); // Cập nhật bảng số câu bên phải
+    saveCurrentProgress(); // Lưu tiến độ chống F5
+    
+    // THÊM DÒNG NÀY ĐỂ HIỆN MÀU NGAY KHI BẤM:
+    renderQuestion(); 
 }
 
 // Cập nhật startTimer để lưu thời gian mỗi giây (hoặc mỗi 5s để tránh lag)
@@ -3775,59 +3827,61 @@ function renderQuestion() {
     const q = activeQuestions[currentIdx];
     let contentHtml = "";
 
-    // 1. HIỂN THỊ MULTIMEDIA (Ảnh hoặc Âm thanh)
+    // 1. Multimedia
     let mediaHtml = "";
-    if (q.image) {
-        mediaHtml = `<img src="${q.image}" class="max-h-60 rounded-xl mb-4 mx-auto border border-white/10 shadow-lg">`;
+    if (q.image && q.image.trim() !== "") {
+        mediaHtml = `<img src="${q.image}" onerror="this.style.display='none'" class="max-h-60 rounded-xl mb-6 mx-auto border border-white/10 shadow-lg object-contain">`;
     }
     if (q.audio) {
-        mediaHtml += `<audio controls class="w-full mb-4"><source src="${q.audio}" type="audio/mpeg"></audio>`;
+        mediaHtml += `<audio controls class="w-full mb-6"><source src="${q.audio}" type="audio/mpeg"></audio>`;
     }
 
-    // 2. HIỂN THỊ THEO LOẠI CÂU HỎI
+    // 2. Tạo danh sách đáp án
     if (q.type === 'blank') {
-        // Loại: ĐIỀN VÀO CHỖ TRỐNG
         contentHtml = `
-            <div class="mt-6">
-                <p class="text-sm text-indigo-300 mb-2 italic">Nhập câu trả lời của bạn:</p>
+            <div class="mt-4">
                 <input type="text" id="blank-input" 
-                    class="input-control text-xl font-bold py-4 text-center border-b-2 border-indigo-500 bg-indigo-500/5" 
-                    placeholder=".........." 
+                    class="input-control text-lg font-bold py-4 text-center border-2 border-indigo-500 bg-indigo-500/5 rounded-2xl" 
+                    placeholder="Nhập câu trả lời..." 
                     value="${userAnswers[currentIdx] === -1 ? '' : userAnswers[currentIdx]}"
                     oninput="userAnswers[currentIdx] = this.value.trim(); renderNav(); saveCurrentProgress();">
-            </div>
-        `;
-    } else if (q.type === 'tf') {
-        // Loại: ĐÚNG / SAI
-        const options = ["ĐÚNG", "SAI"];
-        contentHtml = options.map((opt, i) => `
-            <label class="quiz-opt flex items-center p-6 border-2 border-white/5 rounded-2xl hover:bg-white/5 transition mb-3 ${userAnswers[currentIdx] === i ? 'border-indigo-500 bg-indigo-500/10' : ''}">
-                <input type="radio" name="ans" class="hidden" onchange="selectOption(${i})" ${userAnswers[currentIdx] === i ? 'checked' : ''}>
-                <span class="text-2xl font-black mr-4 ${i === 0 ? 'text-emerald-400' : 'text-red-400'}">${i === 0 ? '✔' : '✖'}</span>
-                <span class="text-xl font-bold text-white">${opt}</span>
-            </label>
-        `).join('');
+            </div>`;
     } else {
-        // Loại: TRẮC NGHIỆM 4 LỰA CHỌN (Mặc định)
-        contentHtml = q.options.map((opt, i) => `
-            <label class="quiz-opt flex items-center p-4 border border-white/10 rounded-2xl hover:bg-white/5 transition mb-3 ${userAnswers[currentIdx] === i ? 'border-indigo-500 bg-indigo-500/10' : ''}">
-                <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center font-bold text-indigo-400 mr-4 border border-white/10">${String.fromCharCode(65+i)}</div>
-                <input type="radio" name="ans" class="hidden" onchange="selectOption(${i})" ${userAnswers[currentIdx] === i ? 'checked' : ''}>
-                <span class="text-lg text-slate-200">${opt}</span>
-            </label>
-        `).join('');
+        const options = q.type === 'tf' ? ["ĐÚNG", "SAI"] : q.options;
+        contentHtml = `<div class="grid grid-cols-1 gap-3">`; // Sử dụng grid để các ô thẳng hàng
+        
+        options.forEach((opt, i) => {
+            const isSelected = (userAnswers[currentIdx] === i);
+            const activeClass = isSelected ? 'active-selected' : '';
+
+            contentHtml += `
+                <div class="quiz-opt ${activeClass}" onclick="selectOption(${i})">
+                    <div class="opt-circle">
+                        ${q.type === 'tf' ? (i === 0 ? '✔' : '✖') : String.fromCharCode(65+i)}
+                    </div>
+                    <span class="text-md leading-snug">${opt}</span>
+                </div>
+            `;
+        });
+        contentHtml += `</div>`;
     }
 
     document.getElementById('current-q-box').innerHTML = `
-        <div class="mb-4 text-indigo-400 font-bold uppercase text-[10px] flex justify-between">
-            <span>Câu ${currentIdx + 1} / ${activeQuestions.length}</span>
-            <span class="bg-indigo-500/20 px-2 py-0.5 rounded text-[8px]">${q.type === 'blank' ? 'Điền từ' : (q.type === 'tf' ? 'Đúng/Sai' : 'Trắc nghiệm')}</span>
+        <div class="mb-4 flex justify-between items-center">
+            <span class="bg-indigo-600/20 px-3 py-1 rounded-full text-indigo-400 text-[10px] font-bold uppercase tracking-wider">Câu ${currentIdx + 1} / ${activeQuestions.length}</span>
         </div>
         ${mediaHtml}
-        <p class="text-2xl font-bold mb-10 text-white leading-relaxed break-words">${q.text}</p>
-        <div class="space-y-2">${contentHtml}</div>
+        <p class="text-xl font-bold mb-6 text-white leading-relaxed">${q.text}</p>
+        <div class="w-full">${contentHtml}</div>
     `;
     renderNav();
+}
+
+// HÀM CHỌN ĐÁP ÁN (Dùng duy nhất hàm này, xóa các hàm trùng tên khác)
+function selectOption(val) {
+    userAnswers[currentIdx] = val; 
+    saveCurrentProgress();         
+    renderQuestion();              
 }
 
 function renderNav() {
@@ -3836,7 +3890,6 @@ function renderNav() {
     `).join('');
 }
 
-function selectOption(val) { userAnswers[currentIdx] = val; renderNav(); }
 function jumpTo(idx) { currentIdx = idx; renderQuestion(); }
 function moveQ(step) { let next = currentIdx + step; if(next >= 0 && next < activeQuestions.length) { currentIdx = next; renderQuestion(); } }
 

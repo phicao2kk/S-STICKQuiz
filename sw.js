@@ -1,3 +1,7 @@
-self.addEventListener('fetch', (event) => {
-    // Để trống cũng được nhưng phải có file này
+self.addEventListener('install', (e) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('fetch', (e) => {
+  // Giữ cho app hoạt động trực tuyến
 });

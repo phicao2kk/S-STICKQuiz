@@ -913,33 +913,39 @@ body.scrolling::-webkit-scrollbar-thumb {
                         </button>
                     </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- FILE WORD -->
-                        <div class="p-4 bg-white/5 rounded-xl border border-white/10 flex flex-col justify-between">
-                            <div>
-                                <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">FILE WORD (.DOCX)</span>
-                                <div class="flex items-center gap-2 mt-2">
-                                    <!-- flex-1 giúp ô chọn tệp co dãn, shrink-0 giữ nút bấm không bị méo -->
-                                    <input type="file" id="wordFile" accept=".docx" class="input-control text-xs flex-1" onchange="validateWordContent(this)">
-                                    <button id="btn-check-word" onclick="showPreviewZone()" class="bg-indigo-600 text-[10px] font-bold px-3 py-2 rounded-lg transition-all duration-300 whitespace-nowrap shrink-0">KIỂM TRA</button>
-                                </div>
-                            </div>
-                            <p class="mt-2 text-[9px] text-yellow-300 font-bold italic">* Hệ thống sẽ quét text và tìm dòng "Đáp án: ..."</p>
-                        </div>
+                        <!-- MỤC 1: NHẬP TỪ FILE & HÌNH ẢNH (GIỮ LẠI NÚT X) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <!-- FILE WORD -->
+    <div class="p-4 bg-white/5 rounded-xl border border-white/10 flex flex-col justify-between">
+        <div>
+            <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">FILE WORD (.DOCX)</span>
+            <div class="flex items-center gap-2 mt-2">
+                <input type="file" id="wordFile" accept=".docx" class="input-control text-xs flex-1" onchange="validateWordContent(this)">
+                <div class="flex gap-1 shrink-0">
+                    <button id="btn-check-word" onclick="showPreviewZone()" class="bg-indigo-600 text-[10px] font-bold px-3 py-2 rounded-lg transition-all duration-300 whitespace-nowrap">KIỂM TRA</button>
+                    <button onclick="resetImportUI()" class="bg-red-500/20 text-red-400 text-[10px] font-bold px-2 py-2 rounded-lg hover:bg-red-600 hover:text-white transition-all" title="Hủy file">✕</button>
+                </div>
+            </div>
+        </div>
+        <p class="mt-2 text-[9px] text-yellow-300 font-bold italic">* Hệ thống sẽ quét text và tìm dòng "Đáp án: ..."</p>
+    </div>
 
-                        <!-- HÌNH ẢNH -->
-                        <div class="p-4 bg-white/5 rounded-xl border border-white/10 flex flex-col justify-between">
-                            <div>
-                                <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">HÌNH ẢNH (OCR)</span>
-                                <div class="flex items-center gap-2 mt-2">
-                                    <input type="file" id="imageFile" accept="image/*" class="input-control text-xs flex-1" onchange="validateImageContent(this)">
-                                    <button id="btn-scan-image" onclick="showPreviewZone()" class="bg-indigo-600 text-[10px] font-bold px-3 py-2 rounded-lg transition-all duration-300 whitespace-nowrap shrink-0">QUÉT ẢNH</button>
-                                </div>
-                            </div>
-                            <p class="mt-2 text-[9px] text-yellow-300 font-bold italic">* Ảnh cần rõ nét, có dòng "Đáp án: A/B/C/D"</p>
-                            <div id="ocr-loading" class="hidden mt-1 text-[9px] text-indigo-400 animate-pulse">🚀 Đang nhận diện chữ...</div>
-                        </div>
-                    </div>
+    <!-- HÌNH ẢNH -->
+    <div class="p-4 bg-white/5 rounded-xl border border-white/10 flex flex-col justify-between">
+        <div>
+            <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">HÌNH ẢNH (OCR)</span>
+            <div class="flex items-center gap-2 mt-2">
+                <input type="file" id="imageFile" accept="image/*" class="input-control text-xs flex-1" onchange="validateImageContent(this)">
+                <div class="flex gap-1 shrink-0">
+                    <button id="btn-scan-image" onclick="showPreviewZone()" class="bg-indigo-600 text-[10px] font-bold px-3 py-2 rounded-lg transition-all duration-300 whitespace-nowrap">QUÉT ẢNH</button>
+                    <button onclick="resetImportUI()" class="bg-red-500/20 text-red-400 text-[10px] font-bold px-2 py-2 rounded-lg hover:bg-red-600 hover:text-white transition-all" title="Hủy ảnh">✕</button>
+                </div>
+            </div>
+        </div>
+        <p class="mt-2 text-[9px] text-yellow-300 font-bold italic">* Ảnh cần rõ nét, có dòng "Đáp án: A/B/C/D"</p>
+        <div id="ocr-loading" class="hidden mt-1 text-[9px] text-indigo-400 animate-pulse">🚀 Đang nhận diện chữ...</div>
+    </div>
+</div>
 
                     <div id="confirm-upload-zone" class="hidden p-5 bg-orange-500/10 border border-orange-500/20 rounded-2xl">
                         <p class="text-orange-400 font-bold mb-2">⚠️ Phát hiện <span id="temp-count">0</span> câu hỏi:</p>
@@ -1842,28 +1848,56 @@ function validateWordContent(input) {
 async function validateImageContent(input) {
     const file = input.files[0];
     const btn = document.getElementById('btn-scan-image');
+    const loadingText = document.getElementById('ocr-loading');
     if (!file) return;
 
-    btn.innerHTML = `🚀 ĐANG QUÉT...`;
-    btn.className = "bg-yellow-600 text-[10px] font-bold px-3 py-2 rounded-lg animate-pulse whitespace-nowrap shrink-0";
+    const isVip = currentUser.isRoot || currentUser.isPremium;
+
+    btn.innerHTML = `⏳ CHUẨN BỊ...`;
+    btn.className = "bg-slate-600 text-[10px] font-bold px-3 py-2 rounded-lg whitespace-nowrap shrink-0";
+    loadingText.style.display = 'block';
 
     try {
+        if (!isVip) {
+            // Chỉ hiển thị thông tin về hàng đợi, không nhắc chữ "Nâng cấp" ở đây
+            loadingText.innerHTML = "⏳ Đang xếp hàng xử lý (Bản tiêu chuẩn)...";
+            loadingText.style.color = "#94a3b8"; // Màu xám trung tính, không gây chú ý
+            
+            await new Promise(resolve => setTimeout(resolve, 3500));
+            
+            loadingText.innerHTML = "🚀 Đang trích xuất văn bản...";
+        } else {
+            loadingText.innerHTML = "⚡ Chế độ Premium: Đang quét siêu tốc...";
+            loadingText.style.color = "#10b981"; // Màu xanh lá tạo cảm giác "đặc quyền"
+            await new Promise(resolve => setTimeout(resolve, 300));
+        }
+
+        btn.innerHTML = `🚀 ĐANG QUÉT...`;
+        btn.className = "bg-yellow-600 text-[10px] font-bold px-3 py-2 rounded-lg animate-pulse";
+
         const result = await Tesseract.recognize(file, 'vie');
         tempQuestions = parseContentToQuestions(result.data.text);
 
         if (tempQuestions.length > 0) {
-            btn.className = "bg-emerald-600 text-[10px] font-bold px-3 py-2 rounded-lg shadow-xl whitespace-nowrap shrink-0";
-            btn.innerHTML = `✅ THÀNH CÔNG (${tempQuestions.length} CÂU)`;
-            
-            // GỌI HIỂN THỊ DANH SÁCH NGAY
+            btn.className = "bg-emerald-600 text-[10px] font-bold px-3 py-2 rounded-lg shadow-xl";
+            btn.innerHTML = `✅ HOÀN TẤT (${tempQuestions.length} CÂU)`;
             showPreviewZone();
+            
+            // CHỈ GỢI Ý NHẸ Ở ĐÂY (Thông báo tự biến mất sau 3s)
+            if(!isVip) {
+                // Thay vì bảo "Nâng cấp đi", hãy dùng câu: "Bản Premium sẽ xử lý nhanh hơn 5 lần."
+                // Điều này cung cấp GIÁ TRỊ thông tin thay vì LỜI MỜI.
+                showModernToast("Thông tin", "Xử lý hoàn tất ở chế độ Tiêu chuẩn.", "info");
+            }
         } else {
-            btn.className = "bg-red-600 text-[10px] font-bold px-3 py-2 rounded-lg whitespace-nowrap shrink-0";
-            btn.innerHTML = `❌ KHÔNG CÓ CHỮ`;
-            sysNotify("LỖI QUÉT ẢNH", "Hệ thống không nhận diện được câu hỏi từ ảnh này.");
+            btn.className = "bg-red-600 text-[10px] font-bold px-3 py-2 rounded-lg";
+            btn.innerHTML = `❌ LỖI ĐỌC`;
+            sysNotify("LỖI QUÉT ẢNH", "Hệ thống không nhận diện được chữ. Hãy thử chụp ảnh rõ nét hơn.");
         }
     } catch (err) {
         btn.innerText = "❌ LỖI";
+    } finally {
+        setTimeout(() => { loadingText.style.display = 'none'; }, 1000);
     }
 }
 
@@ -3577,7 +3611,6 @@ function startFolderQuiz(i) {
     const folder = foldersDB[i];
     if(!folder || !folder.questions || !folder.questions.length) return sysNotify("Lỗi", "Bộ đề trống!", "warn");
   
-    // ÁP DỤNG XÁO TRỘN KHI ADMIN BẤM "THI"
     let questionsToDisplay = JSON.parse(JSON.stringify(folder.questions));
     if (folder.isShuffle) {
         questionsToDisplay = shuffleArray(questionsToDisplay);
@@ -3589,7 +3622,12 @@ function startFolderQuiz(i) {
     }
     activeQuestions = questionsToDisplay;
     
+    // CẬP NHẬT QUAN TRỌNG: Gán adminSource là chính mình
+    currentUser.adminSource = currentUser.user; 
     currentUser.examName = folder.name; 
+    currentUser.examCode = folder.accessCode || "ADMIN_TEST";
+    currentUser.startTimeMs = Date.now(); // Ghi nhận thời gian bắt đầu
+
     currentIdx = 0; 
     userAnswers = new Array(activeQuestions.length).fill(-1); 
     timeLeft = 45 * 60;
@@ -3660,39 +3698,29 @@ function submitQuiz() {
     const point = ((score / activeQuestions.length) * 10).toFixed(1);
     const pointNum = parseFloat(point);
 
-    // --- LOGIC MÀU SẮC MỚI TẠI ĐÂY ---
-    let resultColor = "#ef4444"; // Mặc định Đỏ (Dưới 4)
+    // --- CẬP NHẬT GIAO DIỆN KẾT QUẢ ---
+    let resultColor = "#ef4444"; 
     let gradeText = "CẦN CỐ GẮNG";
-
-    if (pointNum >= 8) {
-        resultColor = "#10b981"; // Xanh lá (Từ 8 trở lên)
-        gradeText = "GIỎI";
-    } else if (pointNum >= 4) {
-        resultColor = "#f97316"; // Cam (Từ 4 đến dưới 8)
-        gradeText = "TRUNG BÌNH - KHÁ";
-    }
-
-    // Hiển thị kết quả lên giao diện
-    const rsCircle = document.getElementById('rs-circle');
-    const rsGrade = document.getElementById('rs-grade');
-    const rsPoint = document.getElementById('rs-point');
+    if (pointNum >= 8) { resultColor = "#10b981"; gradeText = "GIỎI"; } 
+    else if (pointNum >= 4) { resultColor = "#f97316"; gradeText = "TRUNG BÌNH - KHÁ"; }
 
     document.getElementById('rs-percent').innerText = percent + "%";
+    const rsCircle = document.getElementById('rs-circle');
     rsCircle.style.setProperty('--deg', (percent * 3.6) + 'deg');
-    rsCircle.style.setProperty('--primary', resultColor); // Đổi màu vòng tròn
+    rsCircle.style.setProperty('--primary', resultColor);
     
+    const rsGrade = document.getElementById('rs-grade');
     rsGrade.innerText = "XẾP LOẠI: " + gradeText;
-    rsGrade.style.color = resultColor; // Đổi màu chữ xếp loại
+    rsGrade.style.color = resultColor;
     
     document.getElementById('rs-correct').innerText = score + "/" + activeQuestions.length;
+    const rsPoint = document.getElementById('rs-point');
     rsPoint.innerText = point;
-    rsPoint.style.color = resultColor; // Đổi màu con số điểm
-    
+    rsPoint.style.color = resultColor;
     document.getElementById('rs-time').innerText = timeTakenStr;
 
     showPage('page-result');
 
-    // Hiệu ứng pháo hoa nếu điểm giỏi
     if (pointNum >= 8) {
         setTimeout(() => {
             launchFireworks();
@@ -3700,29 +3728,43 @@ function submitQuiz() {
         }, 500);
     }
 
-    // Lưu vào Firebase
+    // --- LOGIC LƯU FIREBASE (PHẦN SỬA LỖI QUAN TRỌNG) ---
     const hi = { 
         user: currentUser.user,
         fullname: currentUser.name, 
         score, 
         total: activeQuestions.length, 
         percent, 
-        point: pointNum, // Lưu dạng số để dễ so sánh
-        examName: currentUser.examName, 
-        examCode: currentUser.examCode,
+        point: pointNum, 
+        examName: currentUser.examName || "Bài thi không tên", 
+        examCode: currentUser.examCode || "ADMIN_TEST",
         duration: timeTakenStr,
         time: new Date().toLocaleString(), 
         details 
     };
     
-    const examCode = currentUser.examCode;
-    const adminPath = currentUser.adminSource.replace(/\./g, '_');
+    // Tìm tài khoản Admin mục tiêu để lưu dữ liệu
+    // Nếu là thí sinh thi: dùng adminSource. Nếu là Admin tự thi: dùng chính tài khoản của mình.
+    const targetAdminAccount = currentUser.adminSource || (currentUser.isAdmin ? currentUser.user : null);
 
-    rdb.ref('users_data/' + adminPath + '/quiz_history').push(hi);
-    rdb.ref('system/submissions/' + examCode + '/' + currentUser.user).set({
-        submittedAt: Date.now(),
-        score: point
-    });
+    if (targetAdminAccount) {
+        const adminPath = targetAdminAccount.replace(/\./g, '_');
+        
+        // Lưu lịch sử làm bài vào node của Admin
+        rdb.ref('users_data/' + adminPath + '/quiz_history').push(hi)
+        .then(() => console.log("Hệ thống: Đã lưu lịch sử thi thành công."))
+        .catch(err => console.error("Lỗi lưu Firebase:", err));
+
+        // Khóa bài thi: Đánh dấu đã nộp (chỉ dành cho Thí sinh thi theo mã đề)
+        if (currentUser.examCode && currentUser.examCode !== "ADMIN_TEST") {
+            rdb.ref('system/submissions/' + currentUser.examCode + '/' + currentUser.user).set({
+                submittedAt: Date.now(),
+                score: point
+            });
+        }
+    } else {
+        console.error("Lỗi: Không tìm thấy nguồn (Admin) để lưu kết quả bài thi.");
+    }
 
     document.getElementById('rs-exam-name-display').innerText = currentUser.examName || "KẾT QUẢ BÀI THI";
 }
@@ -5919,40 +5961,74 @@ setInterval(() => {
 
 let myChart = null; // Biến toàn cục để quản lý biểu đồ
 
-function showQuizAnalytics(folderIdx) {
+// 1. Hàm khởi chạy thống kê
+// 1. Hàm khởi chạy thống kê (Bản tối ưu Realtime)
+async function showQuizAnalytics(folderIdx) {
     const folder = foldersDB[folderIdx];
     if (!folder) return;
 
-    // 1. Lấy tất cả lịch sử thuộc về bộ đề này
-    const submissions = quizHistory.filter(h => h.examName === folder.name);
+    // Hiển thị trạng thái đang xử lý
+    sysNotify("📊 ĐANG PHÂN TÍCH", `Hệ thống đang trích xuất dữ liệu mới nhất cho bộ đề: <br><b>${folder.name}</b>`, "info");
 
-    if (submissions.length === 0) {
-        return sysNotify("Chưa có dữ liệu", "Bộ đề này chưa có thí sinh nào thực hiện thi để phân tích.", "info");
-    }
+    try {
+        const safeAdminPath = currentUser.user.replace(/\./g, '_');
+        
+        // Lấy dữ liệu "nóng" trực tiếp từ Firebase ngay lúc nhấn nút
+        const snapshot = await rdb.ref(`users_data/${safeAdminPath}/quiz_history`).once('value');
+        const rawData = snapshot.val() || {};
+        const allHistory = Object.values(rawData);
 
-    showPage('page-analytics');
-    document.getElementById('ana-exam-name').innerText = "PHÂN TÍCH: " + folder.name;
-    document.getElementById('ana-total-sub').innerText = `Tổng cộng: ${submissions.length} lượt nộp bài`;
+        // Lọc bài thi (khớp tên đề gốc hoặc mã đề con)
+        const folderNameLower = folder.name.trim().toLowerCase();
+        const submissions = allHistory.filter(h => {
+            if (!h.examName) return false;
+            const hName = h.examName.trim().toLowerCase();
+            return hName === folderNameLower || hName.startsWith(folderNameLower + " (mã");
+        });
 
-    // --- PHẦN 1: XỬ LÝ PHỔ ĐIỂM ---
-    const scoreBuckets = new Array(11).fill(0); // Từ 0 đến 10
-    submissions.forEach(h => {
-        const roundedScore = Math.round(parseFloat(h.point));
-        if (roundedScore >= 0 && roundedScore <= 10) {
-            scoreBuckets[roundedScore]++;
+        if (submissions.length === 0) {
+            closeNotify();
+            return sysNotify("Trống", `Bộ đề [${folder.name}] chưa có lượt nộp bài nào để thống kê.`, "info");
         }
-    });
 
-    renderScoreChart(scoreBuckets);
+        // Chuyển sang trang thống kê và điền thông tin
+        showPage('page-analytics');
+        document.getElementById('ana-exam-name').innerText = "PHÂN TÍCH: " + folder.name.toUpperCase();
+        document.getElementById('ana-total-sub').innerHTML = `
+            <span class="bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-[10px] font-black">
+                TỔNG CỘNG: ${submissions.length} LƯỢT NỘP BÀI
+            </span>
+        `;
 
-    // --- PHẦN 2: PHÂN TÍCH CÂU HỎI KHÓ ---
-    analyzeQuestionDifficulty(submissions);
+        // Xử lý phổ điểm
+        const scoreBuckets = new Array(11).fill(0); 
+        submissions.forEach(h => {
+            const p = Math.round(parseFloat(h.point || 0));
+            if (p >= 0 && p <= 10) scoreBuckets[p]++;
+        });
+
+        // Đóng thông báo chờ
+        closeNotify();
+
+        // Fix lỗi Chart.js: Đợi trang hiện ra hẳn mới vẽ biểu đồ
+        setTimeout(() => {
+            renderScoreChart(scoreBuckets);
+            analyzeQuestionDifficulty(submissions);
+        }, 300);
+
+    } catch (error) {
+        console.error("Lỗi Analytics:", error);
+        sysNotify("Lỗi", "Không thể lấy dữ liệu thống kê từ server.", "error");
+    }
 }
 
+// 2. Hàm vẽ biểu đồ (Bản sửa lỗi hiển thị)
 function renderScoreChart(data) {
-    const ctx = document.getElementById('scoreChart').getContext('2d');
+    const canvas = document.getElementById('scoreChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     
-    // Nếu biểu đồ đã tồn tại thì hủy để vẽ lại
+    // Nếu đã có biểu đồ trước đó thì hủy đi để vẽ mới (quan trọng)
     if (myChart) myChart.destroy();
 
     myChart = new Chart(ctx, {
@@ -5960,79 +6036,79 @@ function renderScoreChart(data) {
         data: {
             labels: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
             datasets: [{
-                label: 'Số lượng thí sinh',
+                label: 'Số thí sinh',
                 data: data,
-                backgroundColor: 'rgba(99, 102, 241, 0.5)',
+                backgroundColor: 'rgba(99, 102, 241, 0.6)',
                 borderColor: '#6366f1',
                 borderWidth: 2,
                 borderRadius: 8,
-                hoverBackgroundColor: '#818cf8'
+                barPercentage: 0.7
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
             scales: {
-                y: {
-                    beginAtZero: true,
+                y: { 
+                    beginAtZero: true, 
                     ticks: { color: '#94a3b8', stepSize: 1 },
                     grid: { color: 'rgba(255,255,255,0.05)' }
                 },
-                x: {
-                    ticks: { color: '#94a3b8' },
+                x: { 
+                    ticks: { color: '#94a3b8', font: { weight: 'bold' } },
                     grid: { display: false }
                 }
-            }
+            },
+            plugins: { legend: { display: false } }
         }
     });
 }
 
+// 3. Hàm phân tích câu hỏi khó (Bản giao diện đẹp)
 function analyzeQuestionDifficulty(submissions) {
-    const qStats = {}; // { "Nội dung câu hỏi": { wrong: 0, total: 0 } }
+    const qStats = {}; 
 
     submissions.forEach(sub => {
-        sub.details.forEach(q => {
-            if (!qStats[q.text]) {
-                qStats[q.text] = { wrong: 0, total: 0 };
-            }
-            qStats[q.text].total++;
-            if (q.selected !== q.correct) {
-                qStats[q.text].wrong++;
-            }
-        });
+        if (sub.details && Array.isArray(sub.details)) {
+            sub.details.forEach(q => {
+                const qText = q.text.trim();
+                if (!qStats[qText]) qStats[qText] = { wrong: 0, total: 0 };
+                qStats[qText].total++;
+                if (q.selected !== q.correct) qStats[qText].wrong++;
+            });
+        }
     });
 
-    // Chuyển sang mảng và tính tỷ lệ %
     const sortedHardQ = Object.keys(qStats).map(text => {
+        const item = qStats[text];
         return {
             text: text,
-            wrongRate: Math.round((qStats[text].wrong / qStats[text].total) * 100),
-            wrongCount: qStats[text].wrong,
-            total: qStats[text].total
+            wrongRate: Math.round((item.wrong / item.total) * 100),
+            wrongCount: item.wrong
         };
-    }).sort((a, b) => b.wrongRate - a.wrongRate).slice(0, 5); // Lấy Top 5
+    })
+    .filter(q => q.wrongCount > 0)
+    .sort((a, b) => b.wrongRate - a.wrongRate)
+    .slice(0, 5);
 
-    // Hiển thị ra giao diện
     const container = document.getElementById('hard-questions-list');
+    if (!container) return;
+
     if (sortedHardQ.length === 0) {
-        container.innerHTML = `<p class="text-center text-slate-500 text-xs">Không có dữ liệu sai sót.</p>`;
+        container.innerHTML = `<div class="py-10 text-center text-slate-500 text-xs italic">Dữ liệu sạch: Chưa có câu hỏi nào bị làm sai.</div>`;
         return;
     }
 
     container.innerHTML = sortedHardQ.map((q, i) => `
-        <div class="p-3 bg-white/5 rounded-xl border-l-4 border-red-500">
+        <div class="p-3 bg-white/5 rounded-xl border-l-4 border-red-500 mb-3 hover:bg-white/10 transition-all">
             <div class="flex justify-between items-start mb-1">
-                <span class="text-[10px] text-slate-500 font-bold">TOP ${i+1}</span>
+                <span class="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Top ${i+1} hay sai</span>
                 <span class="text-[10px] text-red-400 font-black">${q.wrongRate}% SAI</span>
             </div>
-            <p class="text-[11px] text-slate-200 line-clamp-2 mb-2">${q.text}</p>
-            <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden">
-                <div class="bg-red-500 h-full" style="width: ${q.wrongRate}%"></div>
+            <p class="text-[11px] text-slate-200 leading-relaxed mb-2 line-clamp-2">${q.text}</p>
+            <div class="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                <div class="bg-red-500 h-full transition-all duration-1000" style="width: ${q.wrongRate}%"></div>
             </div>
-            <p class="text-[9px] text-slate-500 mt-1">Ghi nhận ${q.wrongCount} lần trả lời sai trên tổng ${q.total} lượt thi.</p>
         </div>
     `).join('');
 }

@@ -757,6 +757,43 @@ body.scrolling::-webkit-scrollbar-thumb {
     justify-content: center;
 }
 
+/* Nút bấm nghe âm thanh xịn xò */
+.btn-listen {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(135deg, #6366f1, #a855f7) !important;
+    color: white !important;
+    padding: 14px 28px !important;
+    border-radius: 50px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    font-size: 13px;
+    letter-spacing: 1px;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3) !important;
+    border: 2px solid rgba(255, 255, 255, 0.2) !important;
+    cursor: pointer;
+}
+
+.btn-listen:hover {
+    transform: scale(1.05) translateY(-3px) !important;
+    box-shadow: 0 15px 25px rgba(99, 102, 241, 0.5) !important;
+}
+
+.btn-listen:active {
+    transform: scale(0.95) !important;
+}
+
+.btn-listen i {
+    font-size: 20px;
+}
+
+/* Hiệu ứng sóng nhạc nhỏ khi đang phát (tùy chọn) */
+.playing-pulse {
+    animation: pulse-indigo 1s infinite;
+}
+
     </style>
 </head>
 <body>
@@ -1075,10 +1112,20 @@ body.scrolling::-webkit-scrollbar-thumb {
                                 <option value="blank">📝 ĐIỀN VÀO CHỖ TRỐNG</option>
                             </select>
                             <!-- Nhập Link Multimedia -->
-                            <input type="text" id="manual-img" class="input-control text-[10px] py-2" placeholder="🔗 Link Hình ảnh (nếu có)">
-                            <input type="text" id="manual-audio" class="input-control text-[10px] py-2" placeholder="🔗 Link Âm thanh (nếu có)">
+                            <div class="space-y-1">
+                                <input type="text" id="manual-img" class="input-control text-[10px] py-2" placeholder="🔗 Link Hình ảnh (Khuyên dùng ImgBB)">
+                                <p class="text-[9px] text-indigo-400">
+                                    * Ưu tiên dùng <a href="https://vi.imgbb.com/" target="_blank" class="underline text-emerald-400 font-bold">ImgBB.com</a> (chọn 'Link trực tiếp') để ảnh hiện 100%.
+                                </p>
+                            </div>
+                            <div>
+                                <input type="text" id="manual-audio" class="input-control text-[10px] py-2" placeholder="🔗 Link Âm thanh (Khuyên dùng Catbox.moe)">
+                                <p class="text-[9px] text-indigo-400 mt-1">
+                                    * Thầy cô dùng <a href="https://catbox.moe" target="_blank" class="underline text-emerald-400 font-bold">Catbox.moe</a> để lấy link nhạc để không bị lỗi Google chặn.
+                                </p>
+                            </div>
                             <div class="flex items-center text-[9px] text-yellow-300 italic px-2 border border-dashed border-white/10 rounded-xl">
-                                *Dùng link Google Drive hoặc imgbb.com
+                                *Dùng imgbb.com (Để lấy link tải ảnh) và dùng catbox.moe (Để lấy link âm thanh)
                             </div>
                         </div>
                         <textarea id="manual-q" class="input-control min-h-[100px]" placeholder="Nội dung câu hỏi..."></textarea>
@@ -1505,57 +1552,44 @@ body.scrolling::-webkit-scrollbar-thumb {
 
 <script>
     function updateManualUI(type) {
-    // 1. Lấy tất cả các khung bao quanh (vỏ) của từng đáp án
-    const wrapA = document.getElementById('manual-a').closest('.flex');
-    const wrapB = document.getElementById('manual-b').closest('.flex');
-    const wrapC = document.getElementById('manual-c').closest('.flex');
-    const wrapD = document.getElementById('manual-d').closest('.flex');
-    const correctSelect = document.getElementById('manual-correct');
-    const correctLabel = correctSelect.previousElementSibling; // Nhãn "Lựa chọn đáp án đúng"
+    const wrapA = document.getElementById('manual-a').closest('.group');
+    const wrapB = document.getElementById('manual-b').closest('.group');
+    const wrapC = document.getElementById('wrap-manual-c');
+    const wrapD = document.getElementById('wrap-manual-d');
+    
+    const labelCorrect = document.getElementById('label-correct-ans');
+    const manualCorrectSelect = document.getElementById('manual-correct');
+    const tfCorrectZone = document.getElementById('tf-correct-zone');
+    const labelA = wrapA.querySelector('.manual-label');
 
-    // 2. Reset: Hiện tất cả về mặc định trước khi xử lý
-    [wrapA, wrapB, wrapC, wrapD, correctSelect, correctLabel].forEach(el => {
-        if(el) el.classList.remove('hidden');
-    });
+    // Reset mặc định
+    [wrapA, wrapB, wrapC, wrapD, labelCorrect, manualCorrectSelect, tfCorrectZone].forEach(el => el?.classList.remove('hidden'));
+    labelA.innerText = "A";
+    labelA.className = "manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5 transition-all";
 
-    // 3. Xử lý logic ẩn/hiện theo loại câu hỏi
     if (type === 'tf') {
-        // --- CHẾ ĐỘ ĐÚNG / SAI ---
-        wrapC.classList.add('hidden'); // Ẩn ô C
-        wrapD.classList.add('hidden'); // Ẩn ô D
-        document.getElementById('manual-a').value = "ĐÚNG";
-        document.getElementById('manual-b').value = "SAI";
-        
-        // Cập nhật lại danh sách chọn đáp án đúng chỉ còn 2 lựa chọn
-        correctSelect.innerHTML = `
-            <option value="0">✅ ĐÚNG (A)</option>
-            <option value="1">❌ SAI (B)</option>
-        `;
-    } 
-    else if (type === 'blank') {
-        // --- CHẾ ĐỘ ĐIỀN TỪ ---
-        wrapB.classList.add('hidden'); // Ẩn ô B
-        wrapC.classList.add('hidden'); // Ẩn ô C
-        wrapD.classList.add('hidden'); // Ẩn ô D
-        correctSelect.classList.add('hidden'); // Ẩn luôn ô chọn đáp án đúng (vì lấy ô A rồi)
-        if(correctLabel) correctLabel.classList.add('hidden');
-
-        document.getElementById('manual-a').value = "";
-        document.getElementById('manual-a').placeholder = "NHẬP ĐÁP ÁN CHÍNH XÁC VÀO ĐÂY...";
-    } 
-    else {
-        // --- CHẾ ĐỘ TRẮC NGHIỆM ---
+        // CHẾ ĐỘ ĐÚNG/SAI: Ẩn ô chọn đáp án chung, hiện 4 ô Đúng/Sai riêng
+        manualCorrectSelect.classList.add('hidden');
+        tfCorrectZone.classList.remove('hidden');
+        document.getElementById('manual-a').placeholder = "Nội dung ý a...";
+        document.getElementById('manual-b').placeholder = "Nội dung ý b...";
+        document.getElementById('manual-c').placeholder = "Nội dung ý c...";
+        document.getElementById('manual-d').placeholder = "Nội dung ý d...";
+    } else if (type === 'blank') {
+        // CHẾ ĐỘ ĐIỀN TỪ
+        wrapB.classList.add('hidden');
+        wrapC.classList.add('hidden');
+        wrapD.classList.add('hidden');
+        manualCorrectSelect.classList.add('hidden');
+        tfCorrectZone.classList.add('hidden');
+        labelA.innerText = "🔑";
+        labelA.className = "manual-label bg-emerald-600 text-white px-4 py-3 rounded-l-2xl font-black transition-all";
+        document.getElementById('manual-a').placeholder = "Nhập đáp án đúng tại đây...";
+    } else {
+        // CHẾ ĐỘ TRẮC NGHIỆM
+        tfCorrectZone.classList.add('hidden');
+        manualCorrectSelect.classList.remove('hidden');
         document.getElementById('manual-a').placeholder = "Nội dung đáp án A...";
-        document.getElementById('manual-a').value = "";
-        document.getElementById('manual-b').value = "";
-        
-        // Khôi phục đầy đủ 4 lựa chọn cho trắc nghiệm
-        correctSelect.innerHTML = `
-            <option value="0">✅ ĐÁP ÁN A ĐÚNG</option>
-            <option value="1">✅ ĐÁP ÁN B ĐÚNG</option>
-            <option value="2">✅ ĐÁP ÁN C ĐÚNG</option>
-            <option value="3">✅ ĐÁP ÁN D ĐÚNG</option>
-        `;
     }
 }
     let isCheckingPremiumFirstTime = true; // Cờ đánh dấu lần đầu load dữ liệu
@@ -1805,7 +1839,42 @@ function saveQuestion() {
     const qText = document.getElementById('manual-q').value.trim();
     const qType = document.getElementById('manual-type').value;
     let qImg = document.getElementById('manual-img').value.trim(); 
-    const qAudio = document.getElementById('manual-audio').value.trim();
+    let qAudio = document.getElementById('manual-audio').value.trim();
+
+// --- BỘ LỌC HÌNH ẢNH SIÊU CẤP CHO GIÁO VIÊN ---
+if (qImg.includes("drive.google.com")) {
+    let driveId = "";
+    try {
+        if (qImg.includes("id=")) {
+            driveId = qImg.split("id=")[1].split("&")[0];
+        } else if (qImg.includes("/d/")) {
+            driveId = qImg.split("/d/")[1].split("/")[0];
+        }
+        
+        if (driveId) {
+            // Sử dụng server lh3 - Server chuyên dùng cho ảnh của Google, cực nhanh và không bị chặn
+            qImg = `https://lh3.googleusercontent.com/d/${driveId}`;
+        }
+    } catch (e) { console.error("Lỗi trích xuất ID Drive ảnh"); }
+}
+
+// Nếu thầy cô dùng ImgBB mà dán nhầm link xem (không phải link trực tiếp)
+if (qImg.includes("ibb.co") && !qImg.includes("i.ibb.co")) {
+    console.warn("Thầy cô lưu ý: Cần chọn 'Link trực tiếp' trên ImgBB để ảnh hiện chuẩn.");
+}
+
+// --- ĐOẠN MÃ THÔNG MINH CHO GIÁO VIÊN ---
+// Tìm đoạn xử lý link nhạc trong saveQuestion và dán đoạn này vào:
+if (qAudio.includes("catbox.moe")) {
+    // Đảm bảo link là trực tiếp (Direct Link)
+    console.log("Đã nhận link nhạc từ Catbox ổn định.");
+}
+
+// Nếu giáo viên dán link Dropbox
+if (qAudio.includes("dropbox.com")) {
+    // Tự động đổi đuôi ?dl=0 thành ?raw=1 để phát được nhạc
+    qAudio = qAudio.replace(/\?dl=0/g, "?raw=1").replace(/\&dl=0/g, "&raw=1");
+}
 
     // --- CẢI TIẾN: TỰ ĐỘNG CHUYỂN ĐỔI LINK GOOGLE DRIVE SIÊU CẤP ---
     if (qImg.includes("drive.google.com")) {
@@ -3827,13 +3896,23 @@ function renderQuestion() {
     const q = activeQuestions[currentIdx];
     let contentHtml = "";
 
-    // 1. Multimedia
+// 1. Multimedia
     let mediaHtml = "";
+    // Hiển thị ảnh (giữ nguyên của bạn)
     if (q.image && q.image.trim() !== "") {
         mediaHtml = `<img src="${q.image}" onerror="this.style.display='none'" class="max-h-60 rounded-xl mb-6 mx-auto border border-white/10 shadow-lg object-contain">`;
     }
-    if (q.audio) {
-        mediaHtml += `<audio controls class="w-full mb-6"><source src="${q.audio}" type="audio/mpeg"></audio>`;
+    
+    // THAY ĐỔI TẠI ĐÂY: Hiển thị Nút bấm thay vì thanh Audio
+    if (q.audio && q.audio.trim() !== "") {
+        mediaHtml += `
+            <div class="text-center mb-8 mt-2">
+                <button onclick="playQuizAudio('${q.audio}', this)" class="btn-listen">
+                    <span>🔊</span>
+                    <span>BẤM ĐỂ NGHE CÂU HỎI</span>
+                </button>
+                <p class="text-[10px] text-slate-500 mt-2 italic font-medium">Click để phát lại âm thanh</p>
+            </div>`;
     }
 
     // 2. Tạo danh sách đáp án
@@ -3891,7 +3970,14 @@ function renderNav() {
 }
 
 function jumpTo(idx) { currentIdx = idx; renderQuestion(); }
-function moveQ(step) { let next = currentIdx + step; if(next >= 0 && next < activeQuestions.length) { currentIdx = next; renderQuestion(); } }
+function moveQ(step) { 
+    stopAllQuizAudio(); // Thêm dòng này
+    let next = currentIdx + step; 
+    if(next >= 0 && next < activeQuestions.length) { 
+        currentIdx = next; 
+        renderQuestion(); 
+    } 
+}
 
 function startTimer() {
     if(quizInterval) clearInterval(quizInterval);
@@ -6608,6 +6694,86 @@ window.addEventListener('online', () => {
         }, 2000);
     }
 });
+
+// Biến toàn cục để quản lý âm thanh
+let currentQuizAudio = null;
+
+async function playQuizAudio(url, btnEl) {
+    if (currentQuizAudio) {
+        currentQuizAudio.pause();
+        currentQuizAudio = null;
+    }
+
+    if (!url) return;
+
+    btnEl.innerHTML = `<span>⏳</span> <span>ĐANG TẢI...</span>`;
+    btnEl.classList.add('playing-pulse');
+    btnEl.disabled = true;
+
+    try {
+        // TRƯỜNG HỢP 1: Nếu là link Google Drive (Thường sẽ bị chặn)
+        if (url.includes("google.com")) {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Google chặn");
+            
+            const blob = await response.blob();
+            const audioUrl = URL.createObjectURL(blob);
+            currentQuizAudio = new Audio(audioUrl);
+        } 
+        // TRƯỜNG HỢP 2: Link Catbox hoặc link trực tiếp khác (Chạy cực mượt)
+        else {
+            currentQuizAudio = new Audio(url);
+        }
+
+        currentQuizAudio.onplaying = () => {
+            btnEl.innerHTML = `<span>🔊</span> <span>ĐANG PHÁT...</span>`;
+        };
+
+        currentQuizAudio.onended = () => {
+            btnEl.classList.remove('playing-pulse');
+            btnEl.innerHTML = `<span>🔊</span> <span>NGHE LẠI</span>`;
+            btnEl.disabled = false;
+        };
+
+        await currentQuizAudio.play();
+    } catch (err) {
+        console.error("Lỗi âm thanh:", err);
+        btnEl.classList.remove('playing-pulse');
+        btnEl.innerHTML = `<span>❌</span> <span>LỖI DRIVE</span>`;
+        btnEl.disabled = false;
+        
+        // HIỆN THÔNG BÁO HƯỚNG DẪN CÁCH DÙNG CATBOX CHO GIÁO VIÊN
+        sysNotify("⚠️ GOOGLE DRIVE ĐÃ CHẶN", `
+            <div class="text-left space-y-3">
+                <p class="text-sm text-red-400 font-bold">Google Drive đã chặn tính năng phát nhạc trực tiếp.</p>
+                <div class="p-3 bg-white/5 rounded-xl border border-white/10">
+                    <p class="text-[12px] text-white font-bold mb-2">Cách xử lý cực nhanh cho Thầy/Cô:</p>
+                    <ol class="text-[11px] text-slate-300 space-y-1 ml-4 list-decimal">
+                        <li>Truy cập vào trang: <b class="text-emerald-400">Catbox.moe</b></li>
+                        <li>Nhấn nút <b>Select or drop files</b> để tải file nhạc lên.</li>
+                        <li><b>Copy link</b> màu xanh hiện ra và dán lại vào ô Nhập nhạc.</li>
+                    </ol>
+                </div>
+                <p class="text-[10px] text-slate-500 italic">* Dùng Catbox nhạc sẽ tải nhanh hơn và 100% không bao giờ bị lỗi này.</p>
+            </div>
+        `, "error");
+    }
+}
+
+function showErrorUI(btnEl) {
+    btnEl.classList.remove('playing-pulse');
+    btnEl.innerHTML = `<span>❌</span> <span>LỖI TẢI NHẠC</span>`;
+    btnEl.disabled = false;
+    showModernToast("Lỗi âm thanh", "Không thể phát nhạc từ link này. Hãy kiểm tra quyền chia sẻ của tệp!", "warn");
+}
+
+// BỔ SUNG: Dừng nhạc ngay lập tức khi chuyển câu (chèn vào hàm moveQ hoặc jumpTo)
+function stopAllQuizAudio() {
+    if (currentQuizAudio) {
+        currentQuizAudio.pause();
+        currentQuizAudio = null;
+    }
+}
 
 </script>
 <!-- GIAO DIỆN CHAT CHO ADMIN CON -->

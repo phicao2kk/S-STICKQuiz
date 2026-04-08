@@ -16,8 +16,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="S-TICK">
-    <title>S-TICK Quiz • Hệ thống Trắc nghiệm v4.0 - Professional Admin Multi-User</title>
+    <meta name="apple-mobile-web-app-title" content="S-STICK">
+    <title>S-STICK Quiz • Hệ thống Trắc nghiệm v4.0 - Professional Admin Multi-User</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -847,7 +847,7 @@ body.scrolling::-webkit-scrollbar-thumb {
         </div>
         
         <div class="flex items-center gap-2">
-            <span class="text-shine-head">S-TICK Quiz</span>
+            <span class="text-shine-head">S-STICK Quiz</span>
             <button onclick="location.reload()" class="btn-f5-head">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -869,7 +869,7 @@ body.scrolling::-webkit-scrollbar-thumb {
             <img src="https://i.ibb.co/nNCs81Dp/LOGO-S-STICK.png" class="w-24 h-24 mx-auto rounded-3xl mb-6 shadow-2xl p-1 bg-white/10"> 
             <!-- Tiêu đề có nút F5 -->
             <div class="flex items-center justify-center gap-3 mt-4">
-                <h1 class="text-3xl font-extrabold text-shine">S-TICK Quiz</h1>
+                <h1 class="text-3xl font-extrabold text-shine">S-STICK Quiz</h1>
                 <button onclick="location.reload()" class="p-1.5 bg-white/5 hover:bg-indigo-500/20 rounded-full transition-all text-slate-500 hover:text-indigo-400" title="Tải lại trang">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -2382,7 +2382,7 @@ async function callAI(prompt) {
     const validKeys = GROQ_KEYS.filter(k => k.startsWith("gsk_") && !k.includes("CUA_BAN"));
     const selectedKey = validKeys[Math.floor(Math.random() * validKeys.length)];
     
-    const systemMsg = `Bạn là Siêu trợ lý thông minh của hệ thống S-TICK Quiz.
+    const systemMsg = `Bạn là Siêu trợ lý thông minh của hệ thống S-STICK Quiz.
     1. NẾU TẠO ĐỀ THI/CÂU HỎI:
     - PHẢI trình bày theo cấu trúc CHÍNH XÁC sau (không dùng dấu sao *, không in đậm, không lời dẫn):
         Câu 1: [Nội dung câu hỏi]
@@ -2398,7 +2398,7 @@ async function callAI(prompt) {
     - Sử dụng các dấu gạch đầu dòng để rõ ràng.
     - Luôn ưu tiên dùng tiếng Việt.
 
-    3. NẾU HƯỚNG DẪN SỬ DỤNG S-TICK:
+    3. NẾU HƯỚNG DẪN SỬ DỤNG S-STICK:
     - Hãy giải thích các tính năng như: Tạo bộ đề, Quét ảnh OCR, Nâng cấp Premium hoặc Chat hỗ trợ.`;
 
     const response = await fetch(url, {
@@ -2477,7 +2477,7 @@ async function handleAICommand() {
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
               <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
             </span>
-            S-TICK AI ĐANG SUY NGHĨ...
+            S-STICK AI ĐANG SUY NGHĨ...
         </div>`;
     input.value = "";
 
@@ -2538,7 +2538,7 @@ function quickAIAction(text) {
 async function fixContentWithAI(badText) {
     sysNotify("🤖 AI Đang làm việc", "Đang tái cấu trúc nội dung file lỗi...", "info");
     
-    const prompt = `Định dạng lại văn bản sau thành đề thi trắc nghiệm chuẩn S-TICK (Câu 1: ... A. B. C. D. Đáp án: A):\n\n${badText}`;
+    const prompt = `Định dạng lại văn bản sau thành đề thi trắc nghiệm chuẩn S-STICK (Câu 1: ... A. B. C. D. Đáp án: A):\n\n${badText}`;
     
     try {
         const fixedText = await callAI(prompt);
@@ -4750,7 +4750,7 @@ function getSmartAIResponse(userText) {
         return "Nếu gặp lỗi file, bạn lưu ý file Word phải đúng định dạng: *Câu 1: ... A. B. C. D. Đáp án: A*. Với hình ảnh, hãy đảm bảo ảnh rõ nét và không bị nghiêng nhé! 📸";
     }
     if (text.includes("chào") || text.includes("hi") || text.includes("admin ơi") || text.includes("hello")) {
-        return "S-TICK Quiz xin chào! Tôi là AI hỗ trợ tự động. Bạn cần giúp đỡ về Premium, OTP hay cách soạn đề thi ạ? 😊";
+        return "S-STICK Quiz xin chào! Tôi là AI hỗ trợ tự động. Bạn cần giúp đỡ về Premium, OTP hay cách soạn đề thi ạ? 😊";
     }
     
     return "Cảm ơn bạn đã nhắn tin! Tôi đã ghi nhận yêu cầu. Quản trị viên sẽ sớm phản hồi bạn trực tiếp nếu câu trả lời tự động này chưa giải quyết được vấn đề. ❤️";

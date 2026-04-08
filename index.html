@@ -1014,6 +1014,20 @@ body.scrolling::-webkit-scrollbar-thumb {
 
                     <div class="pt-6">
                         <label class="block text-sm font-semibold text-slate-300 uppercase tracking-wider mb-2" id="label-edit-mode">2. Nhập câu hỏi thủ công</label>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                            <!-- Chọn loại câu hỏi -->
+                            <select id="manual-type" class="input-control text-[10px] font-bold py-2 bg-indigo-900/20" onchange="updateManualUI(this.value)">
+                                <option value="choice">🔘 TRẮC NGHIỆM 4 CÂU</option>
+                                <option value="tf">⚖️ ĐÚNG / SAI</option>
+                                <option value="blank">📝 ĐIỀN VÀO CHỖ TRỐNG</option>
+                            </select>
+                            <!-- Nhập Link Multimedia -->
+                            <input type="text" id="manual-img" class="input-control text-[10px] py-2" placeholder="🔗 Link Hình ảnh (nếu có)">
+                            <input type="text" id="manual-audio" class="input-control text-[10px] py-2" placeholder="🔗 Link Âm thanh (nếu có)">
+                            <div class="flex items-center text-[9px] text-slate-400 italic px-2 border border-dashed border-white/10 rounded-xl">
+                                *Dùng link Google Drive hoặc Imbb
+                            </div>
+                        </div>
                         <textarea id="manual-q" class="input-control min-h-[100px]" placeholder="Nội dung câu hỏi..."></textarea>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
@@ -1437,6 +1451,60 @@ body.scrolling::-webkit-scrollbar-thumb {
 </div>
 
 <script>
+    function updateManualUI(type) {
+    // 1. Lấy tất cả các khung bao quanh (vỏ) của từng đáp án
+    const wrapA = document.getElementById('manual-a').closest('.flex');
+    const wrapB = document.getElementById('manual-b').closest('.flex');
+    const wrapC = document.getElementById('manual-c').closest('.flex');
+    const wrapD = document.getElementById('manual-d').closest('.flex');
+    const correctSelect = document.getElementById('manual-correct');
+    const correctLabel = correctSelect.previousElementSibling; // Nhãn "Lựa chọn đáp án đúng"
+
+    // 2. Reset: Hiện tất cả về mặc định trước khi xử lý
+    [wrapA, wrapB, wrapC, wrapD, correctSelect, correctLabel].forEach(el => {
+        if(el) el.classList.remove('hidden');
+    });
+
+    // 3. Xử lý logic ẩn/hiện theo loại câu hỏi
+    if (type === 'tf') {
+        // --- CHẾ ĐỘ ĐÚNG / SAI ---
+        wrapC.classList.add('hidden'); // Ẩn ô C
+        wrapD.classList.add('hidden'); // Ẩn ô D
+        document.getElementById('manual-a').value = "ĐÚNG";
+        document.getElementById('manual-b').value = "SAI";
+        
+        // Cập nhật lại danh sách chọn đáp án đúng chỉ còn 2 lựa chọn
+        correctSelect.innerHTML = `
+            <option value="0">✅ ĐÚNG (A)</option>
+            <option value="1">❌ SAI (B)</option>
+        `;
+    } 
+    else if (type === 'blank') {
+        // --- CHẾ ĐỘ ĐIỀN TỪ ---
+        wrapB.classList.add('hidden'); // Ẩn ô B
+        wrapC.classList.add('hidden'); // Ẩn ô C
+        wrapD.classList.add('hidden'); // Ẩn ô D
+        correctSelect.classList.add('hidden'); // Ẩn luôn ô chọn đáp án đúng (vì lấy ô A rồi)
+        if(correctLabel) correctLabel.classList.add('hidden');
+
+        document.getElementById('manual-a').value = "";
+        document.getElementById('manual-a').placeholder = "NHẬP ĐÁP ÁN CHÍNH XÁC VÀO ĐÂY...";
+    } 
+    else {
+        // --- CHẾ ĐỘ TRẮC NGHIỆM ---
+        document.getElementById('manual-a').placeholder = "Nội dung đáp án A...";
+        document.getElementById('manual-a').value = "";
+        document.getElementById('manual-b').value = "";
+        
+        // Khôi phục đầy đủ 4 lựa chọn cho trắc nghiệm
+        correctSelect.innerHTML = `
+            <option value="0">✅ ĐÁP ÁN A ĐÚNG</option>
+            <option value="1">✅ ĐÁP ÁN B ĐÚNG</option>
+            <option value="2">✅ ĐÁP ÁN C ĐÚNG</option>
+            <option value="3">✅ ĐÁP ÁN D ĐÚNG</option>
+        `;
+    }
+}
     let isCheckingPremiumFirstTime = true; // Cờ đánh dấu lần đầu load dữ liệu
     let notifiedMessages = new Set(); // Lưu trữ ID các tin nhắn đã hiện thông báo
     let premiumProofBase64 = ""; // Lưu ảnh bill đã nén
@@ -1551,6 +1619,8 @@ function editQ(i) {
 }
 
 function cancelEdit() {
+    document.getElementById('manual-type').value = 'choice'; 
+    updateManualUI('choice'); 
     // 1. Reset các ID về trạng thái không chỉnh sửa
     document.getElementById('edit-index').value = "-1";
     document.getElementById('edit-folder-q-index').value = "-1"; 
@@ -1674,72 +1744,82 @@ function viewHistoryDetailByKey(fbKey) {
 }
 
 function saveQuestion() {
-    // CHẾ ĐỘ SỬA CÂU TẠM THỜI (VÙNG MÀU CAM)
-    if (currentEditingTempIdx !== -1) {
-        tempQuestions[currentEditingTempIdx] = {
-            text: document.getElementById('manual-q').value.trim(),
-            options: [
-                document.getElementById('manual-a').value.trim(),
-                document.getElementById('manual-b').value.trim(),
-                document.getElementById('manual-c').value.trim(),
-                document.getElementById('manual-d').value.trim()
-            ],
-            correct: parseInt(document.getElementById('manual-correct').value)
-        };
-
-        currentEditingTempIdx = -1; // Reset
-        showPreviewZone(); // Cập nhật lại danh sách màu cam
-        cancelEdit(); // Xóa trắng form nhập
-        showModernToast("Đã sửa", "Nội dung câu hỏi tạm thời đã được cập nhật!", "success");
-        return;
-    }
+    // --- 1. LẤY DỮ LIỆU TỪ GIAO DIỆN (MULTIMEDIA & TYPE) ---
     const qText = document.getElementById('manual-q').value.trim();
-    
-    // 1. Lấy dữ liệu và gắn nhãn để dễ truy vết
+    const qType = document.getElementById('manual-type').value;
+    const qImg = document.getElementById('manual-img').value.trim();
+    const qAudio = document.getElementById('manual-audio').value.trim();
+
     const optValues = [
         document.getElementById('manual-a').value.trim(),
         document.getElementById('manual-b').value.trim(),
         document.getElementById('manual-c').value.trim(),
         document.getElementById('manual-d').value.trim()
     ];
-    const labels = ['A', 'B', 'C', 'D'];
-    const correct = parseInt(document.getElementById('manual-correct').value);
-    
-    const editIdx = parseInt(document.getElementById('edit-index').value);
-    const folderQIdx = parseInt(document.getElementById('edit-folder-q-index').value);
 
-    // 2. Kiểm tra nhập liệu trống
-    if (!qText || optValues.some(o => !o)) {
-        return sysNotify("Lỗi", "Vui lòng nhập đầy đủ nội dung câu hỏi và 4 đáp án!", "warn");
+    // Xử lý đáp án đúng: Nếu là điền từ thì lấy nội dung chữ, còn lại lấy số index 0,1,2,3
+    let correct;
+    if (qType === 'blank') {
+        correct = optValues[0]; // Đáp án đúng nằm ở ô A
+        if (!correct) return sysNotify("Lỗi", "Vui lòng nhập đáp án đúng vào ô A!", "warn");
+    } else {
+        correct = parseInt(document.getElementById('manual-correct').value);
     }
 
-    // 3. LOGIC CHỈ RA CỤ THỂ ĐÁP ÁN TRÙNG VÀ TÊN BỘ ĐỀ (Nâng cấp)
-    let duplicatePairs = [];
-    for (let i = 0; i < optValues.length; i++) {
-        for (let j = i + 1; j < optValues.length; j++) {
-            if (optValues[i].toLowerCase() === optValues[j].toLowerCase()) {
-                duplicatePairs.push(`${labels[i]} & ${labels[j]}`);
+    // --- 2. CHẾ ĐỘ SỬA CÂU TẠM THỜI (VÙNG MÀU CAM) ---
+    if (currentEditingTempIdx !== -1) {
+        tempQuestions[currentEditingTempIdx] = {
+            text: qText,
+            options: optValues,
+            correct: correct,
+            type: qType,
+            image: qImg,
+            audio: qAudio
+        };
+        currentEditingTempIdx = -1;
+        showPreviewZone();
+        cancelEdit();
+        showModernToast("Đã sửa", "Nội dung câu hỏi tạm thời đã được cập nhật!", "success");
+        return;
+    }
+
+    // --- 3. KIỂM TRA NHẬP LIỆU TRỐNG ---
+    if (!qText || (qType !== 'blank' && optValues.some(o => !o))) {
+        return sysNotify("Lỗi", "Vui lòng nhập đầy đủ nội dung câu hỏi và các đáp án!", "warn");
+    }
+
+    // --- 4. KIỂM TRA TRÙNG ĐÁP ÁN (Dành cho Trắc nghiệm) ---
+    if (qType === 'choice') {
+        let duplicatePairs = [];
+        const labels = ['A', 'B', 'C', 'D'];
+        for (let i = 0; i < optValues.length; i++) {
+            for (let j = i + 1; j < optValues.length; j++) {
+                if (optValues[i].toLowerCase() === optValues[j].toLowerCase()) {
+                    duplicatePairs.push(`${labels[i]} & ${labels[j]}`);
+                }
             }
         }
-    }
-
-    if (duplicatePairs.length > 0) {
-        // --- XÁC ĐỊNH TÊN ĐỀ ĐANG THAO TÁC ---
-        let sourceName = "Ngân hàng chung"; // Mặc định
-        if (folderQIdx !== -1 && currentFolderIdx !== -1 && foldersDB[currentFolderIdx]) {
-            sourceName = `Bộ đề <b>[${foldersDB[currentFolderIdx].name.toUpperCase()}]</b>`;
+        if (duplicatePairs.length > 0) {
+            let sourceName = "Ngân hàng chung";
+            if (parseInt(document.getElementById('edit-folder-q-index').value) !== -1) {
+                sourceName = `Bộ đề <b>[${foldersDB[currentFolderIdx].name.toUpperCase()}]</b>`;
+            }
+            return showModernToast("TRÙNG ĐÁP ÁN", `Tại ${sourceName}: Đáp án [${duplicatePairs.join(', ')}] đang bị giống nhau!`, "warn");
         }
-
-        const errorDetail = duplicatePairs.join(', ');
-        return showModernToast(
-            "TRÙNG ĐÁP ÁN", 
-            `Tại ${sourceName}: Đáp án <b>[${errorDetail}]</b> đang bị giống hệt nhau. Vui lòng sửa lại!`, 
-            "warn"
-        );
     }
 
-    // 4. TIẾN HÀNH LƯU NẾU KHÔNG CÓ LỖI
-    const newQ = { text: qText, options: optValues, correct: correct };
+    // --- 5. TIẾN HÀNH LƯU (NGÂN HÀNG HOẶC BỘ ĐỀ) ---
+    const newQ = { 
+        text: qText, 
+        options: optValues, 
+        correct: correct,
+        type: qType,
+        image: qImg,
+        audio: qAudio
+    };
+
+    const editIdx = parseInt(document.getElementById('edit-index').value);
+    const folderQIdx = parseInt(document.getElementById('edit-folder-q-index').value);
 
     if (folderQIdx !== -1) {
         // CHẾ ĐỘ 1: Cập nhật vào BỘ ĐỀ cụ thể
@@ -1747,11 +1827,7 @@ function saveQuestion() {
             foldersDB[currentFolderIdx].questions[folderQIdx] = newQ;
             saveFolders(); 
             sysNotify("Thành công", "Đã cập nhật câu hỏi vào bộ đề!", "success");
-            
-            setTimeout(() => {
-                showPage('page-folder-detail');
-                renderFolderQuestions();
-            }, 1000);
+            setTimeout(() => { showPage('page-folder-detail'); renderFolderQuestions(); }, 1000);
         }
     } 
     else if (editIdx !== -1) {
@@ -3065,72 +3141,84 @@ function importTempToFolder() {
 
 // Hàm lưu câu hỏi nhập tay trực tiếp vào bộ đề
 function saveManualQToFolder() {
+    // 1. LẤY DỮ LIỆU TỪ GIAO DIỆN
     const folderIdx = document.getElementById('manual-to-folder-select').value;
     const qText = document.getElementById('manual-q').value.trim();
+    const qType = document.getElementById('manual-type').value;
+    const qImg = document.getElementById('manual-img').value.trim();
+    const qAudio = document.getElementById('manual-audio').value.trim();
     
-    // 1. Lấy dữ liệu và gắn nhãn
     const optValues = [
         document.getElementById('manual-a').value.trim(),
         document.getElementById('manual-b').value.trim(),
         document.getElementById('manual-c').value.trim(),
         document.getElementById('manual-d').value.trim()
     ];
-    const labels = ['A', 'B', 'C', 'D'];
-    const correct = parseInt(document.getElementById('manual-correct').value);
 
-    // 2. Kiểm tra các trường trống
+    // 2. KIỂM TRA ĐIỀU KIỆN TRỐNG
     if (folderIdx === "" || !foldersDB[folderIdx]) return sysNotify("Lỗi", "Vui lòng chọn một bộ đề!", "warn");
-    if (!qText || optValues.some(o => !o)) return sysNotify("Lỗi nhập liệu", "Vui lòng nhập đầy đủ nội dung câu hỏi và 4 đáp án!", "warn");
+    if (!qText) return sysNotify("Lỗi nhập liệu", "Vui lòng nhập nội dung câu hỏi!", "warn");
 
-    // 3. LOGIC CHỈ RA CỤ THỂ ĐÁP ÁN TRÙNG VÀ TÊN BỘ ĐỀ (Nâng cấp)
-    let duplicatePairs = [];
-    for (let i = 0; i < optValues.length; i++) {
-        for (let j = i + 1; j < optValues.length; j++) {
-            // So sánh không phân biệt hoa thường
-            if (optValues[i].toLowerCase() === optValues[j].toLowerCase()) {
-                duplicatePairs.push(`${labels[i]} & ${labels[j]}`);
-            }
+    // 3. XỬ LÝ ĐÁP ÁN ĐÚNG THEO LOẠI
+    let correct;
+    if (qType === 'blank') {
+        correct = optValues[0]; // Đáp án điền từ là văn bản ở ô A
+        if (!correct) return sysNotify("Lỗi", "Hãy nhập đáp án đúng vào ô A!", "warn");
+    } else {
+        correct = parseInt(document.getElementById('manual-correct').value);
+        // Kiểm tra trắc nghiệm phải nhập đủ phương án (ít nhất A và B cho Đúng/Sai)
+        if (optValues[0] === "" || optValues[1] === "") {
+            return sysNotify("Lỗi", "Vui lòng nhập đầy đủ các phương án đáp án!", "warn");
         }
     }
 
-    if (duplicatePairs.length > 0) {
-        const folderName = foldersDB[folderIdx].name;
-        return showModernToast(
-            "TRÙNG ĐÁP ÁN", 
-            `Tại đề <b>[${folderName.toUpperCase()}]</b>: Đáp án <b>[${duplicatePairs.join(', ')}]</b> đang có nội dung giống hệt nhau!`, 
-            "warn"
-        );
+    // 4. KIỂM TRA TRÙNG ĐÁP ÁN (Dành cho Trắc nghiệm)
+    if (qType === 'choice') {
+        let duplicatePairs = [];
+        const labels = ['A', 'B', 'C', 'D'];
+        for (let i = 0; i < optValues.length; i++) {
+            for (let j = i + 1; j < optValues.length; j++) {
+                if (optValues[i].toLowerCase() === optValues[j].toLowerCase()) {
+                    duplicatePairs.push(`${labels[i]} & ${labels[j]}`);
+                }
+            }
+        }
+        if (duplicatePairs.length > 0) {
+            return showModernToast("TRÙNG ĐÁP ÁN", `Tại đề [${foldersDB[folderIdx].name}]: Đáp án [${duplicatePairs.join(', ')}] đang giống hệt nhau!`, "warn");
+        }
     }
 
-    // 4. Kiểm tra trùng nội dung câu hỏi đã có trong bộ đề đó
+    // 5. KIỂM TRA TRÙNG NỘI DUNG CÂU HỎI TRONG BỘ ĐỀ
     if (!foldersDB[folderIdx].questions) foldersDB[folderIdx].questions = [];
     const isDuplicateQ = foldersDB[folderIdx].questions.some(
         q => q.text.trim().toLowerCase() === qText.toLowerCase()
     );
+    if (isDuplicateQ) return sysNotify("Trùng câu hỏi", `Câu hỏi này đã có trong bộ đề <b>${foldersDB[folderIdx].name}</b>!`, "warn");
 
-    if (isDuplicateQ) {
-        return sysNotify("Trùng câu hỏi", `Câu hỏi này đã tồn tại trong bộ đề <b>${foldersDB[folderIdx].name}</b>!`, "warn");
-    }
-
-    // 5. Tiến hành lưu vào bộ đề cụ thể
+    // 6. TIẾN HÀNH LƯU VÀO BỘ ĐỀ CỤ THỂ
     foldersDB[folderIdx].questions.push({
         text: qText,
         options: optValues,
-        correct: correct
+        correct: correct,
+        type: qType,
+        image: qImg,
+        audio: qAudio
     });
 
     saveFolders(); // Lưu lên Firebase/LocalStorage
     
-    // Thông báo thành công hiện đại
-    showModernToast("THÀNH CÔNG", `Đã nạp thêm câu hỏi vào bộ đề: <b>${foldersDB[folderIdx].name}</b>`, "success");
+    // 7. THÔNG BÁO VÀ RESET GIAO DIỆN NHẬP
+    showModernToast("THÀNH CÔNG", `Đã thêm 01 câu hỏi vào bộ đề: <b>${foldersDB[folderIdx].name}</b>`, "success");
     
-    // 6. Reset form nhập liệu để nhập câu tiếp theo
+    // Reset các ô nhập để nhập câu tiếp theo cho nhanh
     document.getElementById('manual-q').value = "";
     document.getElementById('manual-a').value = "";
     document.getElementById('manual-b').value = "";
     document.getElementById('manual-c').value = "";
     document.getElementById('manual-d').value = "";
-    document.getElementById('manual-q').focus(); // Đưa con trỏ về ô nhập liệu
+    document.getElementById('manual-img').value = "";
+    document.getElementById('manual-audio').value = "";
+    document.getElementById('manual-q').focus(); 
 }
 
 function cancelImport() {
@@ -3684,19 +3772,60 @@ function startFolderQuiz(i) {
 }
 
 function renderQuestion() {
-    const headerTitle = document.querySelector('#page-quiz-view h2'); // Nếu bạn có thẻ h2 tiêu đề
-// Hoặc đơn giản là thông báo qua giao diện.
     const q = activeQuestions[currentIdx];
-    let optsHtml = q.options.map((opt, i) => `
-        <label class="quiz-opt">
-            <input type="radio" name="ans" class="w-5 h-5" onchange="selectOption(${i})" ${userAnswers[currentIdx] === i ? 'checked' : ''}>
-            <span class="ml-4 text-lg text-slate-200">${String.fromCharCode(65+i)}. ${opt}</span>
-        </label>
-    `).join('');
+    let contentHtml = "";
+
+    // 1. HIỂN THỊ MULTIMEDIA (Ảnh hoặc Âm thanh)
+    let mediaHtml = "";
+    if (q.image) {
+        mediaHtml = `<img src="${q.image}" class="max-h-60 rounded-xl mb-4 mx-auto border border-white/10 shadow-lg">`;
+    }
+    if (q.audio) {
+        mediaHtml += `<audio controls class="w-full mb-4"><source src="${q.audio}" type="audio/mpeg"></audio>`;
+    }
+
+    // 2. HIỂN THỊ THEO LOẠI CÂU HỎI
+    if (q.type === 'blank') {
+        // Loại: ĐIỀN VÀO CHỖ TRỐNG
+        contentHtml = `
+            <div class="mt-6">
+                <p class="text-sm text-indigo-300 mb-2 italic">Nhập câu trả lời của bạn:</p>
+                <input type="text" id="blank-input" 
+                    class="input-control text-xl font-bold py-4 text-center border-b-2 border-indigo-500 bg-indigo-500/5" 
+                    placeholder=".........." 
+                    value="${userAnswers[currentIdx] === -1 ? '' : userAnswers[currentIdx]}"
+                    oninput="userAnswers[currentIdx] = this.value.trim(); renderNav(); saveCurrentProgress();">
+            </div>
+        `;
+    } else if (q.type === 'tf') {
+        // Loại: ĐÚNG / SAI
+        const options = ["ĐÚNG", "SAI"];
+        contentHtml = options.map((opt, i) => `
+            <label class="quiz-opt flex items-center p-6 border-2 border-white/5 rounded-2xl hover:bg-white/5 transition mb-3 ${userAnswers[currentIdx] === i ? 'border-indigo-500 bg-indigo-500/10' : ''}">
+                <input type="radio" name="ans" class="hidden" onchange="selectOption(${i})" ${userAnswers[currentIdx] === i ? 'checked' : ''}>
+                <span class="text-2xl font-black mr-4 ${i === 0 ? 'text-emerald-400' : 'text-red-400'}">${i === 0 ? '✔' : '✖'}</span>
+                <span class="text-xl font-bold text-white">${opt}</span>
+            </label>
+        `).join('');
+    } else {
+        // Loại: TRẮC NGHIỆM 4 LỰA CHỌN (Mặc định)
+        contentHtml = q.options.map((opt, i) => `
+            <label class="quiz-opt flex items-center p-4 border border-white/10 rounded-2xl hover:bg-white/5 transition mb-3 ${userAnswers[currentIdx] === i ? 'border-indigo-500 bg-indigo-500/10' : ''}">
+                <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center font-bold text-indigo-400 mr-4 border border-white/10">${String.fromCharCode(65+i)}</div>
+                <input type="radio" name="ans" class="hidden" onchange="selectOption(${i})" ${userAnswers[currentIdx] === i ? 'checked' : ''}>
+                <span class="text-lg text-slate-200">${opt}</span>
+            </label>
+        `).join('');
+    }
+
     document.getElementById('current-q-box').innerHTML = `
-        <div class="mb-4 text-indigo-400 font-bold uppercase text-[10px]">Câu ${currentIdx + 1} / ${activeQuestions.length}</div>
-        <p class="text-2xl font-bold mb-10 text-white">${q.text}</p>
-        <div class="space-y-3">${optsHtml}</div>
+        <div class="mb-4 text-indigo-400 font-bold uppercase text-[10px] flex justify-between">
+            <span>Câu ${currentIdx + 1} / ${activeQuestions.length}</span>
+            <span class="bg-indigo-500/20 px-2 py-0.5 rounded text-[8px]">${q.type === 'blank' ? 'Điền từ' : (q.type === 'tf' ? 'Đúng/Sai' : 'Trắc nghiệm')}</span>
+        </div>
+        ${mediaHtml}
+        <p class="text-2xl font-bold mb-10 text-white leading-relaxed break-words">${q.text}</p>
+        <div class="space-y-2">${contentHtml}</div>
     `;
     renderNav();
 }
@@ -3737,15 +3866,35 @@ function submitQuiz() {
 
     let score = 0, details = [];
     activeQuestions.forEach((q, i) => { 
-        if(userAnswers[i] === q.correct) score++; 
-        details.push({ text: q.text, options: [...q.options], correct: q.correct, selected: userAnswers[i] }); 
+        let isCorrect = false;
+        let userAnswer = userAnswers[i];
+
+        if (q.type === 'blank') {
+            // Chấm điền từ: Không phân biệt hoa thường, bỏ khoảng trắng thừa
+            isCorrect = (userAnswer && userAnswer.toString().toLowerCase().trim() === q.correct.toString().toLowerCase().trim());
+        } else {
+            // Chấm trắc nghiệm & Đúng/Sai (so sánh index 0,1,2,3)
+            isCorrect = (userAnswer === q.correct);
+        }
+        
+        if(isCorrect) score++; 
+        
+        // Lưu đầy đủ thông tin để sau này Admin xem lại bài (Review) thấy được cả ảnh/nhạc
+        details.push({ 
+            text: q.text, 
+            options: [...(q.options || [])], 
+            correct: q.correct, 
+            selected: userAnswer, 
+            type: q.type || 'choice',
+            image: q.image || null,
+            audio: q.audio || null
+        }); 
     });
 
     const percent = Math.round((score / activeQuestions.length) * 100);
-    const point = ((score / activeQuestions.length) * 10).toFixed(1);
-    const pointNum = parseFloat(point);
+    const pointNum = parseFloat(((score / activeQuestions.length) * 10).toFixed(1));
 
-    // --- CẬP NHẬT GIAO DIỆN KẾT QUẢ ---
+    // --- CẬP NHẬT GIAO DIỆN KẾT QUẢ (UI) ---
     let resultColor = "#ef4444"; 
     let gradeText = "CẦN CỐ GẮNG";
     if (pointNum >= 8) { resultColor = "#10b981"; gradeText = "GIỎI"; } 
@@ -3761,21 +3910,21 @@ function submitQuiz() {
     rsGrade.style.color = resultColor;
     
     document.getElementById('rs-correct').innerText = score + "/" + activeQuestions.length;
-    const rsPoint = document.getElementById('rs-point');
-    rsPoint.innerText = point;
-    rsPoint.style.color = resultColor;
+    document.getElementById('rs-point').innerText = pointNum;
+    document.getElementById('rs-point').style.color = resultColor;
     document.getElementById('rs-time').innerText = timeTakenStr;
 
     showPage('page-result');
 
+    // Hiệu ứng ăn mừng
     if (pointNum >= 8) {
         setTimeout(() => {
             launchFireworks();
-            showModernToast("XUẤT SẮC!", "Chúc mừng bạn đã đạt điểm giỏi! 🏆", "success");
+            showModernToast("XUẤT SẮC!", "Chúc mừng bạn đạt điểm giỏi! 🏆", "success");
         }, 500);
     }
 
-    // --- LOGIC LƯU FIREBASE (PHẦN SỬA LỖI QUAN TRỌNG) ---
+    // --- LOGIC LƯU DỮ LIỆU (ONLINE & OFFLINE) ---
     const hi = { 
         user: currentUser.user,
         fullname: currentUser.name, 
@@ -3790,30 +3939,44 @@ function submitQuiz() {
         details 
     };
     
-    // Tìm tài khoản Admin mục tiêu để lưu dữ liệu
-    // Nếu là thí sinh thi: dùng adminSource. Nếu là Admin tự thi: dùng chính tài khoản của mình.
     const targetAdminAccount = currentUser.adminSource || (currentUser.isAdmin ? currentUser.user : null);
 
     if (targetAdminAccount) {
         const adminPath = targetAdminAccount.replace(/\./g, '_');
         
-        // Lưu lịch sử làm bài vào node của Admin
-        rdb.ref('users_data/' + adminPath + '/quiz_history').push(hi)
-        .then(() => console.log("Hệ thống: Đã lưu lịch sử thi thành công."))
-        .catch(err => console.error("Lỗi lưu Firebase:", err));
+        // KIỂM TRA TRẠNG THÁI MẠNG
+        if (navigator.onLine) {
+            // CÓ MẠNG: Đẩy lên Firebase như bình thường
+            rdb.ref('users_data/' + adminPath + '/quiz_history').push(hi)
+            .then(() => console.log("Hệ thống: Đã lưu kết quả Online."))
+            .catch(err => console.error("Lỗi Firebase:", err));
 
-        // Khóa bài thi: Đánh dấu đã nộp (chỉ dành cho Thí sinh thi theo mã đề)
-        if (currentUser.examCode && currentUser.examCode !== "ADMIN_TEST") {
-            rdb.ref('system/submissions/' + currentUser.examCode + '/' + currentUser.user).set({
-                submittedAt: Date.now(),
-                score: point
+            if (currentUser.examCode && currentUser.examCode !== "ADMIN_TEST") {
+                rdb.ref('system/submissions/' + currentUser.examCode + '/' + currentUser.user).set({
+                    submittedAt: Date.now(),
+                    score: pointNum
+                });
+            }
+        } else {
+            // MẤT MẠNG: Lưu vào danh sách chờ trong bộ nhớ máy (Offline Queue)
+            let queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+            queue.push({
+                adminPath: adminPath,
+                examCode: currentUser.examCode,
+                userId: currentUser.user,
+                data: hi
             });
+            localStorage.setItem('offline_queue', JSON.stringify(queue));
+            
+            // Thông báo cho thí sinh yên tâm
+            sysNotify("LƯU TRỮ OFFLINE", "Mạng bị ngắt quãng! Kết quả đã được lưu tạm trên trình duyệt. Đừng lo lắng, bài làm sẽ tự động nộp khi bạn có mạng lại.", "warn");
         }
     } else {
-        console.error("Lỗi: Không tìm thấy nguồn (Admin) để lưu kết quả bài thi.");
+        console.error("Lỗi: Không tìm thấy nguồn (Admin) để lưu.");
     }
 
     document.getElementById('rs-exam-name-display').innerText = currentUser.examName || "KẾT QUẢ BÀI THI";
+
 }
 
 
@@ -4508,27 +4671,64 @@ function renderAdminPreview() {
     const p = document.getElementById('preview-section'); 
     if(!p) return;
 
-    const html = db.map((q, i) => ({...q, realIdx: i}))
+    p.innerHTML = db.map((q, i) => ({...q, realIdx: i}))
                    .reverse()
-                   .map(q => `
-        <div class="card glass flex flex-col md:flex-row justify-between items-start md:items-center gap-4 group p-4 mb-3">
+                   .map(q => {
+        // 1. Xác định Nhãn loại câu hỏi
+        let typeBadge = "";
+        if (q.type === 'blank') {
+            typeBadge = `<span class="bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded text-[8px] font-bold uppercase">📝 Điền từ</span>`;
+        } else if (q.type === 'tf') {
+            typeBadge = `<span class="bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded text-[8px] font-bold uppercase">⚖️ Đúng/Sai</span>`;
+        } else {
+            typeBadge = `<span class="bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded text-[8px] font-bold uppercase">🔘 Trắc nghiệm</span>`;
+        }
+
+        // 2. Xác định icon Multimedia
+        let mediaIcons = "";
+        if (q.image) mediaIcons += "🖼️ ";
+        if (q.audio) mediaIcons += "🔊 ";
+
+        // 3. Xử lý hiển thị đáp án đúng thông minh
+        let correctLabel = "";
+        if (q.type === 'blank') {
+            correctLabel = `<b class="text-emerald-400">${q.correct}</b>`;
+        } else if (q.type === 'tf') {
+            correctLabel = `<b class="text-emerald-400">${q.correct === 0 ? "ĐÚNG" : "SAI"}</b>`;
+        } else {
+            correctLabel = `<b class="text-emerald-400">${String.fromCharCode(65 + q.correct)}</b>`;
+        }
+
+        return `
+        <div class="card glass flex flex-col md:flex-row justify-between items-start md:items-center gap-4 group p-4 mb-3 border-l-4 ${q.type === 'blank' ? 'border-purple-500' : (q.type === 'tf' ? 'border-orange-500' : 'border-indigo-500')}">
             <div class="flex-1 min-w-0 w-full">
-                <span class="text-[10px] text-indigo-400 font-bold uppercase block mb-1">ID: ${q.realIdx + 1}</span>
-                <!-- Bỏ truncate, thêm break-words và leading-relaxed -->
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase">ID: ${q.realIdx + 1}</span>
+                    ${typeBadge}
+                    <span class="text-[12px]">${mediaIcons}</span>
+                </div>
+                
                 <p class="text-slate-200 font-semibold text-sm leading-relaxed break-words whitespace-normal">
                     ${q.text}
                 </p>
-                <div class="mt-2 flex flex-wrap gap-2 opacity-60">
-                    <span class="text-[9px] bg-white/5 px-2 py-0.5 rounded border border-white/10">Đáp án đúng: ${String.fromCharCode(65 + q.correct)}</span>
+
+                <div class="mt-3 flex flex-wrap gap-2 opacity-80">
+                    <span class="text-[10px] bg-white/5 px-3 py-1 rounded-full border border-white/10 text-slate-300">
+                        Đáp án đúng: ${correctLabel}
+                    </span>
                 </div>
             </div>
+            
             <div class="flex gap-2 shrink-0 self-end md:self-center">
-                <button class="bg-white/5 hover:bg-orange-500 p-2 rounded-lg transition-all" onclick="editQ(${q.realIdx})" title="Sửa">✏️</button>
-                <button class="bg-white/5 hover:bg-red-500 p-2 rounded-lg transition-all" onclick="deleteQ(${q.realIdx})" title="Xóa">🗑️</button>
+                <button class="bg-white/5 hover:bg-orange-500 p-2.5 rounded-xl transition-all shadow-lg" onclick="editQ(${q.realIdx})" title="Sửa câu hỏi">
+                    ✏️
+                </button>
+                <button class="bg-white/5 hover:bg-red-500 p-2.5 rounded-xl transition-all shadow-lg" onclick="deleteQ(${q.realIdx})" title="Xóa câu hỏi">
+                    🗑️
+                </button>
             </div>
         </div>
-    `).join('');
-    p.innerHTML = html;
+    `}).join('');
 }
 
 function deleteQ(i) { 
@@ -6284,9 +6484,77 @@ document.getElementById('nt-input').addEventListener('keydown', function(e) {
 // Đăng ký Service Worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => console.log('Lỗi SW:', err));
+        // Tạo file sw.js ở bước 2 rồi mới chạy cái này
+        navigator.serviceWorker.register('sw.js').then(reg => {
+            console.log('S-STICK SW đã sẵn sàng:', reg.scope);
+        }).catch(err => console.log('Lỗi đăng ký SW:', err));
     });
 }
+
+// --- LOGIC PHÍM TẮT BÀN PHÍM ---
+document.addEventListener('keydown', function(e) {
+    // 1. Chỉ hoạt động khi đang ở trang làm bài thi (page-quiz-view)
+    const quizPage = document.getElementById('page-quiz-view');
+    if (!quizPage || quizPage.classList.contains('hidden')) return;
+
+    // 2. Không chạy phím tắt nếu đang gõ vào ô nhập liệu (nếu có)
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    const key = e.key.toUpperCase();
+
+    // Chuyển câu bằng phím mũi tên
+    if (e.key === 'ArrowLeft') {
+        moveQ(-1);
+    } else if (e.key === 'ArrowRight') {
+        moveQ(1);
+    }
+
+    // Chọn đáp án bằng phím số 1-4 hoặc chữ A-D
+    const choiceMap = {
+        '1': 0, '2': 1, '3': 2, '4': 3,
+        'A': 0, 'B': 1, 'C': 2, 'D': 3
+    };
+
+    if (choiceMap[key] !== undefined) {
+        const q = activeQuestions[currentIdx];
+        // Chỉ chọn nếu câu hỏi là loại trắc nghiệm hoặc Đúng/Sai
+        if (q.type === 'choice' || q.type === 'tf' || !q.type) {
+            selectOption(choiceMap[key]);
+            
+            // Hiệu ứng nháy nhẹ nút để người dùng biết đã chọn
+            const btns = document.querySelectorAll('.quiz-opt');
+            if (btns[choiceMap[key]]) {
+                btns[choiceMap[key]].style.backgroundColor = 'rgba(99, 102, 241, 0.3)';
+                setTimeout(() => { btns[choiceMap[key]].style.backgroundColor = ''; }, 200);
+            }
+        }
+    }
+});
+
+window.addEventListener('online', () => {
+    const queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+    if (queue.length > 0) {
+        showModernToast("ĐANG ĐỒNG BỘ", `Đang gửi ${queue.length} bài thi lưu tạm lên máy chủ...`, "info");
+        
+        queue.forEach(async (item, index) => {
+            try {
+                await rdb.ref('users_data/' + item.adminPath + '/quiz_history').push(item.data);
+                if (item.examCode && item.examCode !== "ADMIN_TEST") {
+                    await rdb.ref('system/submissions/' + item.examCode + '/' + item.studentId).set({
+                        submittedAt: Date.now(), score: item.data.point
+                    });
+                }
+                // Xóa câu này khỏi hàng đợi nếu nộp thành công
+                queue.splice(index, 1);
+                localStorage.setItem('offline_queue', JSON.stringify(queue));
+            } catch (e) { console.error("Lỗi đồng bộ câu thứ " + index); }
+        });
+
+        setTimeout(() => {
+            showModernToast("THÀNH CÔNG", "Tất cả bài thi offline đã được nộp!", "success");
+        }, 2000);
+    }
+});
 
 </script>
 <!-- GIAO DIỆN CHAT CHO ADMIN CON -->

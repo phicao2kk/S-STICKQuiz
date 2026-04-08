@@ -2,14 +2,6 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>S-TICK Quiz • Hệ thống Trắc nghiệm v4.0 - Professional Admin Multi-User</title>
-    <!-- Cấu hình PWA Chuẩn v4.0 -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="S-TICK">
-
     <!-- Icon cho iPhone (Tự động bo góc) -->
     <link rel="apple-touch-icon" href="https://i.ibb.co/nNCs81Dp/LOGO-S-STICK.png?v=2">
     
@@ -18,6 +10,14 @@
     
     <!-- File cấu hình Manifest -->
     <link rel="manifest" href="manifest.json?v=2">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+    <!-- Cấu hình PWA Chuẩn v4.0 -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="S-TICK">
+    <title>S-TICK Quiz • Hệ thống Trắc nghiệm v4.0 - Professional Admin Multi-User</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -29,6 +29,39 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+
+.header {
+    /* env(safe-area-inset-top) là khoảng trống của tai thỏ/nốt ruồi trên iPhone */
+    padding-top: env(safe-area-inset-top) !important;
+    height: calc(60px + env(safe-area-inset-top)) !important;
+    display: flex !important;
+    align-items: center !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+/* Đẩy nội dung trang chủ xuống để không bị header đè lên */
+#page-home, #login-screen, #app-content {
+    margin-top: calc(20px + env(safe-area-inset-top)) !important;
+}
+
+/* Tinh chỉnh lại thanh header trên mobile để không bị dạt chữ */
+@media (max-width: 480px) {
+    .header-left {
+        gap: 5px;
+    }
+    .text-shine-head {
+        font-size: 14px; /* Giảm cỡ chữ tiêu đề một chút trên App */
+    }
+    .badge-vip-active {
+        font-size: 9px;
+        padding: 2px 6px;
+    }
+}
 
 /* Thiết lập chung cho tất cả thiết bị */
 html, body {

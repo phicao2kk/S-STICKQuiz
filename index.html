@@ -2145,9 +2145,9 @@ function sysNotify(title, msg, type = 'info') {
 
 function sysConfirm(msg) {
     return new Promise(resolve => {
-        document.getElementById('nt-icon').innerText = '❓';
-        document.getElementById('nt-title').innerText = 'Xác nhận';
-        document.getElementById('nt-msg').innerText = msg;
+        document.getElementById('nt-icon').innerText = '⚠️'; // Đổi icon sang cảnh báo
+        document.getElementById('nt-title').innerText = 'XÁC NHẬN XÓA';
+        document.getElementById('nt-msg').innerHTML = msg; // SỬA: Dùng innerHTML để hiện định dạng đẹp
         document.getElementById('nt-input').classList.add('hidden');
         document.getElementById('nt-btn-cancel').classList.remove('hidden');
         document.getElementById('notify-container').classList.add('active');
@@ -3038,69 +3038,137 @@ function renderFolders() {
     
     const htmlFolders = foldersDB.map((f, i) => {
         let codeBadge = "";
+        let childCodesHtml = "";
         
-        if(f.accessCode && f.expiresAt > now) {
-            const diff = f.expiresAt - now;
+        // --- HIỂN THỊ MÃ ĐỀ CON KÈM BỘ ĐẾM NGƯỢC THỰC TẾ ---
+        if(f.childCodesData && f.childCodesData.expiresAt > now) {
+            const diff = f.childCodesData.expiresAt - now;
             const mins = Math.floor(diff / 60000);
             const secs = Math.floor((diff % 60000) / 1000);
             const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
 
-            codeBadge = `
-                <div class="mt-2 p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[11px] text-emerald-400 font-bold">🔑 Mã: <b class="font-mono tracking-widest text-white">${f.accessCode}</b></span>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[9px] text-amber-400 font-black animate-pulse">⏳ ${timeStr}</span>
-                            <button onclick="copyToClipboard('${f.accessCode}')" class="hover:scale-125 transition-transform text-xs" title="Sao chép">📋</button>
-                        </div>
+            childCodesHtml = `
+                <div class="mt-2 mb-2 p-2 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[9px] text-purple-400 font-bold uppercase">Mã đề con (120p):</span>
+                        <span class="text-[9px] text-amber-400 font-black animate-pulse">⏳ ${timeStr}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1">
+                        ${f.childCodesData.codes.map(c => `<span class="bg-purple-500/20 text-purple-300 text-[10px] px-1.5 py-0.5 rounded border border-purple-500/30 font-mono font-bold">${c}</span>`).join('')}
                     </div>
                 </div>`;
-        } else if (f.accessCode && f.expiresAt <= now) {
-            delete f.accessCode;
-            delete f.expiresAt;
+        } else if (f.childCodesData && f.childCodesData.expiresAt <= now) {
+            delete f.childCodesData;
             saveFolders();
         }
 
+        // --- MÃ GỐC (6 SỐ) ---
+        if(f.accessCode && f.expiresAt > now) {
+            const diff = f.expiresAt - now;
+            const mins = Math.floor(diff / 60000);
+            codeBadge = `<div class="mt-2 p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[11px] text-emerald-400 font-bold">🔑 Mã gốc: <b class="text-white">${f.accessCode}</b> (Còn ${mins}p)</div>`;
+        }
+
         return `
-        <div class="bg-white/5 border border-white/10 p-4 rounded-2xl relative overflow-hidden flex flex-col justify-between">
+        <div class="bg-white/5 border border-white/10 p-4 rounded-2xl relative flex flex-col justify-between">
             <div>
                 <h4 class="text-md font-bold truncate text-indigo-100">${f.name}</h4>
-                <p class="text-[10px] text-slate-500 uppercase tracking-wider">${f.questions ? f.questions.length : 0} câu hỏi</p>
+                ${childCodesHtml}
+                <p class="text-[10px] text-slate-500 uppercase mt-1">${f.questions ? f.questions.length : 0} câu hỏi</p>
                 ${codeBadge}
             </div>
-
-            <!-- CỤM NÚT BẤM TỐI ƯU GỌN GÀNG -->
             <div class="grid grid-cols-2 gap-2 mt-4">
-                <button class="col-span-2 py-2.5 bg-indigo-500/40 hover:bg-indigo-500 text-white rounded-xl text-[11px] font-black border-2 border-indigo-400 shadow-lg backdrop-blur-md transition-all" onclick="openFolder(${i})">
-                    🔍 CHI TIẾT & SỬA
-                </button>
-                
-                <button class="py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-bold shadow-lg" onclick="shareFolder(${i})">
-                    🔗 CẤP MÃ
-                </button>
-
-                <button class="py-2 bg-orange-500/20 text-orange-300 rounded-xl text-[10px] font-bold" onclick="startFolderQuiz(${i})">
-                    🎯 VÀO THI
-                </button>
-
-                <button class="py-2 bg-slate-800 text-slate-300 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-slate-700 transition-all" onclick="showQuizAnalytics(${i})">
-                    📊 THỐNG KÊ
-                </button>
-
-                <!-- NÚT XUẤT FILE ĐÃ THU NHỎ (NẰM CẠNH THỐNG KÊ) -->
-                <button class="py-2 bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 transition-all" 
-                        onclick="exportFolderToWord(${i}); event.stopPropagation();">
-                    🖨️ XUẤT WORD
-                </button>
-
-                <button class="col-span-2 py-1.5 bg-red-500/5 hover:bg-red-500/20 text-red-400/60 hover:text-red-400 text-[9px] font-medium rounded-lg transition-all" onclick="deleteFolder(${i})">
-                    🗑️ XÓA BỘ ĐỀ
-                </button>
+                <button class="col-span-2 py-2.5 bg-indigo-600 text-white rounded-xl text-[11px] font-bold" onclick="openFolder(${i})">🔍 CHI TIẾT</button>
+                <button class="py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-bold" onclick="shareFolder(${i})">🔗 MÃ GỐC</button>
+                <button class="py-2 bg-purple-600 text-white rounded-xl text-[10px] font-bold" onclick="generateChildCodes(${i})">🔢 MÃ CON</button>
+                <button class="py-2 bg-orange-500/20 text-orange-300 rounded-xl text-[10px] font-bold" onclick="startFolderQuiz(${i})">🎯 THI THỬ</button>
+                <button class="py-2 bg-slate-800 text-slate-300 rounded-xl text-[10px] font-bold" onclick="showQuizAnalytics(${i})">📊 THỐNG KÊ</button>
+                <button class="col-span-2 py-1.5 bg-red-500/10 text-red-500 text-[9px]" onclick="deleteFolder(${i})">🗑️ XÓA BỘ ĐỀ</button>
             </div>
         </div>`;
     });
 
     container.innerHTML = htmlFolders.reverse().join('');
+}
+
+async function generateChildCodes(idx) {
+    const isVip = currentUser.isRoot || currentUser.isPremium;
+    const today = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+    const safeU = currentUser.user.replace(/\./g, '_');
+
+    // 1. KIỂM TRA GIỚI HẠN 5 LẦN TẠO/NGÀY CHO BẢN FREE
+    if (!isVip) {
+        const limitSnap = await rdb.ref(`system/usage_limits/sub_exams/${safeU}/${today}`).once('value');
+        const usedToday = limitSnap.val() || 0;
+        if (usedToday >= 5) {
+            return sysNotify("HẾT LƯỢT MIỄN PHÍ", "Hôm nay bạn đã dùng hết 5 lượt tạo mã con. Hãy quay lại vào ngày mai!", "warn");
+        }
+    }
+
+    const folder = foldersDB[idx];
+    if (!folder || !folder.questions || folder.questions.length === 0) {
+        return sysNotify("Lỗi", "Bộ đề này chưa có câu hỏi!", "error");
+    }
+
+    // 2. NHẬP THÔNG TIN MÃ
+    const countStr = await sysPrompt("Số lượng mã đề", "Bạn muốn tạo bao nhiêu mã đề con?", "4", "4");
+    if (!countStr) return;
+    const startCodeStr = await sysPrompt("Mã bắt đầu", "Nhập mã số bắt đầu (Ví dụ: 101):", "101", "101");
+    if (!startCodeStr) return;
+
+    let count = parseInt(countStr);
+    let startNum = parseInt(startCodeStr);
+    let requestedCodes = [];
+    for (let i = 0; i < count; i++) { requestedCodes.push((startNum + i).toString()); }
+
+    sysNotify("Hệ thống", "Đang kiểm tra tính khả dụng của mã trên toàn máy chủ...", "info");
+
+    // 3. KIỂM TRA TRÙNG MÃ ĐANG CÒN HẠN TRÊN SERVER
+    const shareMapSnap = await rdb.ref('system/global_share_map').once('value');
+    const activeMaps = shareMapSnap.val() || {};
+    const now = Date.now();
+
+    let conflictedCode = requestedCodes.find(c => activeMaps[c] && activeMaps[c].expiresAt > now);
+
+    if (conflictedCode) {
+        closeNotify();
+        return sysNotify("MÃ ĐÃ CÓ NGƯỜI DÙNG", `Mã <b>${conflictedCode}</b> đang được sử dụng bởi người khác. Vui lòng chọn dãy số khác (Ví dụ: 201, 301...)`, "error");
+    }
+
+    // 4. TIẾN HÀNH TẠO MÃ (HẠN 120 PHÚT)
+    const expiry = now + (120 * 60 * 1000);
+    
+    for (let code of requestedCodes) {
+        let shuffledQ = JSON.parse(JSON.stringify(folder.questions));
+        shuffledQ = shuffleArray(shuffledQ);
+        shuffledQ.forEach(q => {
+            const correctText = q.options[q.correct];
+            q.options = shuffleArray(q.options);
+            q.correct = q.options.indexOf(correctText);
+        });
+
+        rdb.ref('system/global_share_map/' + code).set({
+            admin: currentUser.user,
+            folderIdx: idx,
+            examName: folder.name + " (Mã " + code + ")",
+            fixedQuestions: shuffledQ,
+            expiresAt: expiry,
+            isChildCode: true
+        });
+    }
+
+    // 5. CẬP NHẬT GIỚI HẠN VÀ LƯU DỮ LIỆU
+    if (!isVip) {
+        const used = (await rdb.ref(`system/usage_limits/sub_exams/${safeU}/${today}`).once('value')).val() || 0;
+        rdb.ref(`system/usage_limits/sub_exams/${safeU}/${today}`).set(used + 1);
+    }
+
+    foldersDB[idx].childCodesData = { codes: requestedCodes, expiresAt: expiry };
+    saveFolders();
+    
+    closeNotify();
+    showModernToast("Thành công", `Đã tạo ${count} mã đề con liền kề thành công!`, "success");
+    renderFolders();
 }
 
 function toggleShuffleOutside(idx, checkbox) {
@@ -3122,12 +3190,51 @@ function toggleShuffleOutside(idx, checkbox) {
 }
 
 async function createNewFolder() {
-    const isVip = usersDB[currentUser.user]?.isPremium;
-    if (!isVip && foldersDB.length >= 5) return openPremiumModal();
+    const isVip = currentUser.isRoot || currentUser.isPremium;
+
+    // 1. KIỂM TRA GIỚI HẠN CỨNG 10 BỘ ĐỀ CHO TÀI KHOẢN FREE
+    if (!isVip && foldersDB.length >= 10) {
+        sysNotify(
+            "GIỚI HẠN BỘ ĐỀ", 
+            "Bạn đã dùng hết hạn mức <b>10 bộ đề</b> miễn phí.<br>Vui lòng nâng cấp <b>Premium</b> để tạo không giới hạn!", 
+            "warn"
+        );
+        setTimeout(() => openPremiumModal(), 2000);
+        return;
+    }
+
+    // 2. NHẬP TÊN BỘ ĐỀ
     const name = await sysPrompt("Bộ đề mới", "Nhập tên bộ đề:");
     if (!name) return;
-    foldersDB.push({ name: name, questions: [] });
-    saveFolders(); renderFolders(); updateFolderDropdowns();
+
+    // 3. TIẾN HÀNH LƯU
+    foldersDB.push({ 
+        name: name, 
+        questions: [], 
+        isShuffle: false,
+        createdAt: Date.now() 
+    });
+
+    saveFolders(); 
+    renderFolders(); 
+    updateFolderDropdowns();
+
+    // 4. HIỂN THỊ THÔNG BÁO "NỔ" SỐ LƯỢNG NHƯ YÊU CẦU
+    if (!isVip) {
+        // Thông báo cho tài khoản FREE: hiện X/10
+        showModernToast(
+            "THÀNH CÔNG", 
+            `Đã tạo: <b>${name}</b>. Hiện có: <b class="text-white">${foldersDB.length}/10</b> bộ đề FREE.`, 
+            "success"
+        );
+    } else {
+        // Thông báo cho tài khoản Premium: không giới hạn
+        showModernToast(
+            "THÀNH CÔNG", 
+            `Đã tạo: <b>${name}</b> (Hội viên Premium 💎)`, 
+            "success"
+        );
+    }
 }
 
 function openFolder(i) {
@@ -3273,58 +3380,90 @@ function handleJoinQuiz() {
 
     sysNotify("Đang kiểm tra", "Vui lòng đợi...", "info");
 
+    // Bước 1: Kiểm tra mã đề trên bản đồ chia sẻ hệ thống
     rdb.ref('system/global_share_map/' + code).once('value', (s) => {
         const data = s.val();
-        if(!data || Date.now() > data.expiresAt) return sysNotify("Lỗi", "Mã đề sai hoặc hết hạn!", "error");
+        
+        // Kiểm tra mã tồn tại và còn hạn dùng
+        if(!data || Date.now() > data.expiresAt) {
+            closeNotify();
+            return sysNotify("Lỗi", "Mã đề không tồn tại hoặc đã hết hạn!", "error");
+        }
 
         const safeUser = name.replace(/[.$#[\]]/g, "_") + "_" + code; 
         currentExamCode = code;
 
+        // Bước 2: Kiểm tra xem thí sinh này đã nộp bài mã này chưa
         rdb.ref('system/submissions/' + code + '/' + safeUser).once('value', (sub) => {
             if (sub.exists()) {
                 closeNotify();
                 return sysNotify("Từ chối", "Bạn đã hoàn thành bài thi này trước đó!", "error");
             }
 
-            // LẤY CẢ BỘ ĐỀ ĐỂ LẤY TÊN (NAME)
-            rdb.ref('users_data/' + data.admin + '/quiz_folders/' + data.folderIdx).once('value', (folderSnap) => {
-                const folderData = folderSnap.val();
-                if(!folderData || !folderData.questions) return sysNotify("Lỗi", "Bộ đề không tồn tại!", "error");
-
-                // Tạo bản sao sạch để không làm hỏng đề gốc trên Firebase
-                let questionsToDisplay = JSON.parse(JSON.stringify(folderData.questions));
-
-                // Thực hiện xáo trộn nếu Admin bật chế độ Shuffle
-                if (folderData.isShuffle) {
-                    // 1. Trộn thứ tự câu hỏi
-                    questionsToDisplay = shuffleArray(questionsToDisplay);
-
-                    // 2. Trộn thứ tự đáp án A, B, C, D bên trong từng câu
-                    questionsToDisplay.forEach(q => {
-                        const correctText = q.options[q.correct]; // Ghi nhớ nội dung đáp án đúng
-                        q.options = shuffleArray(q.options);      // Trộn mảng đáp án
-                        q.correct = q.options.indexOf(correctText); // Tìm lại index mới của đáp án đúng
-                    });
-                    console.log("Hệ thống: Đã kích hoạt xáo trộn đề thi.");
-                }
-
-                activeQuestions = questionsToDisplay;
+            // ================================================================
+            // TRƯỜNG HỢP A: ĐÂY LÀ MÃ ĐỀ CON (Tính năng Premium)
+            // ================================================================
+            if (data.isChildCode && data.fixedQuestions) {
+                // Sử dụng ngay bộ câu hỏi đã được "chốt" thứ tự từ trước
+                activeQuestions = data.fixedQuestions;
                 
                 currentUser = { 
                     name: name, 
                     user: safeUser, 
                     isAdmin: false, 
                     adminSource: data.admin, 
-                    folderSourceIdx: data.folderIdx,
                     examCode: code,
-                    examName: folderData.name // Lưu tên bài thi vào đây
+                    examName: data.examName || "Bài thi mã " + code
                 };
 
                 loginSuccess();
-                // Hiển thị tên bài thi ra màn hình chờ
-                document.getElementById('display-exam-name').innerText = "BÀI THI: " + folderData.name;
+                document.getElementById('display-exam-name').innerText = currentUser.examName;
                 closeNotify();
-            });
+                console.log("Hệ thống: Đã tải mã đề con cố định.");
+            } 
+            
+            // ================================================================
+            // TRƯỜNG HỢP B: ĐÂY LÀ MÃ ĐỀ GỐC (Logic thông thường)
+            // ================================================================
+            else {
+                rdb.ref('users_data/' + data.admin + '/quiz_folders/' + data.folderIdx).once('value', (folderSnap) => {
+                    const folderData = folderSnap.val();
+                    if(!folderData || !folderData.questions) {
+                        closeNotify();
+                        return sysNotify("Lỗi", "Dữ liệu bộ đề gốc không còn tồn tại!", "error");
+                    }
+
+                    // Tạo bản sao để xáo trộn
+                    let questionsToDisplay = JSON.parse(JSON.stringify(folderData.questions));
+
+                    // Thực hiện xáo trộn nếu Admin bật chế độ Shuffle
+                    if (folderData.isShuffle) {
+                        questionsToDisplay = shuffleArray(questionsToDisplay);
+                        questionsToDisplay.forEach(q => {
+                            const correctText = q.options[q.correct];
+                            q.options = shuffleArray(q.options);
+                            q.correct = q.options.indexOf(correctText);
+                        });
+                        console.log("Hệ thống: Đã xáo trộn đề từ thư mục gốc.");
+                    }
+
+                    activeQuestions = questionsToDisplay;
+                    
+                    currentUser = { 
+                        name: name, 
+                        user: safeUser, 
+                        isAdmin: false, 
+                        adminSource: data.admin, 
+                        folderSourceIdx: data.folderIdx,
+                        examCode: code,
+                        examName: folderData.name
+                    };
+
+                    loginSuccess();
+                    document.getElementById('display-exam-name').innerText = "BÀI THI: " + folderData.name;
+                    closeNotify();
+                });
+            }
         });
     });
 }
@@ -4306,11 +4445,36 @@ async function clearAllDB() {
     }
 }
 
-function deleteFolder(i) {
-    // Phải xóa theo index i được truyền từ originalIndex
-    foldersDB.splice(i, 1); 
-    saveFolders(); 
-    renderFolders(); 
+async function deleteFolder(i) {
+    const folder = foldersDB[i];
+    if (!folder) return;
+
+    // Nội dung thông báo hiển thị tên bộ đề và số câu hỏi sắp bị xóa
+    const confirmMsg = `
+        Bạn có chắc chắn muốn xóa bộ đề: <br>
+        <b class="text-red-400 text-lg uppercase">${folder.name}</b> <br><br>
+        <span class="text-[11px] text-slate-400">
+            ⚠️ Hành động này sẽ xóa vĩnh viễn <b>${folder.questions ? folder.questions.length : 0} câu hỏi</b> bên trong và không thể hoàn tác.
+        </span>
+    `;
+
+    // Đổi tên nút OK thành "XÓA NGAY" để cảnh báo
+    const okBtn = document.getElementById('nt-btn-ok');
+    const originalText = okBtn.innerText;
+    okBtn.innerText = "XÓA NGAY";
+
+    // Chờ người dùng nhấn "Đồng ý" hoặc "Hủy"
+    if (await sysConfirm(confirmMsg)) {
+        foldersDB.splice(i, 1); // Xóa bộ đề khỏi mảng
+        saveFolders();          // Lưu vào Firebase & LocalStorage
+        renderFolders();        // Cập nhật lại giao diện danh sách
+        
+        // Hiện thêm 1 thông báo nhỏ (Toast) báo đã xóa xong
+        showModernToast("ĐÃ XÓA", `Bộ đề <b>${folder.name}</b> đã bị gỡ bỏ khỏi hệ thống.`, "info");
+    }
+
+    // Trả lại chữ cũ cho nút bấm để không ảnh hưởng các thông báo khác
+    okBtn.innerText = originalText;
 }
 
 function switchAuth(t) { 

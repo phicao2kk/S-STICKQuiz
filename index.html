@@ -1103,79 +1103,87 @@ body.scrolling::-webkit-scrollbar-thumb {
                     </div>
 
                     <div class="pt-6">
-                        <label class="block text-sm font-semibold text-slate-300 uppercase tracking-wider mb-2" id="label-edit-mode">2. Nhập câu hỏi thủ công</label>
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-                            <!-- Chọn loại câu hỏi -->
-                            <select id="manual-type" class="input-control text-[10px] font-bold py-2 bg-indigo-900/20" onchange="updateManualUI(this.value)">
-                                <option value="choice">🔘 TRẮC NGHIỆM 4 CÂU</option>
-                                <option value="tf">⚖️ ĐÚNG / SAI</option>
-                                <option value="blank">📝 ĐIỀN VÀO CHỖ TRỐNG</option>
-                            </select>
-                            <!-- Nhập Link Multimedia -->
-                            <div class="space-y-1">
-                                <input type="text" id="manual-img" class="input-control text-[10px] py-2" placeholder="🔗 Link Hình ảnh (Khuyên dùng ImgBB)">
-                                <p class="text-[9px] text-indigo-400">
-                                    * Ưu tiên dùng <a href="https://vi.imgbb.com/" target="_blank" class="underline text-emerald-400 font-bold">ImgBB.com</a> (chọn 'Link trực tiếp') để ảnh hiện 100%.
-                                </p>
-                            </div>
-                            <div>
-                                <input type="text" id="manual-audio" class="input-control text-[10px] py-2" placeholder="🔗 Link Âm thanh (Khuyên dùng Catbox.moe)">
-                                <p class="text-[9px] text-indigo-400 mt-1">
-                                    * Thầy cô dùng <a href="https://catbox.moe" target="_blank" class="underline text-emerald-400 font-bold">Catbox.moe</a> để lấy link nhạc để không bị lỗi Google chặn.
-                                </p>
-                            </div>
-                            <div class="flex items-center text-[9px] text-yellow-300 italic px-2 border border-dashed border-white/10 rounded-xl">
-                                *Dùng imgbb.com (Để lấy link tải ảnh) và dùng catbox.moe (Để lấy link âm thanh)
-                            </div>
-                        </div>
-                        <textarea id="manual-q" class="input-control min-h-[100px]" placeholder="Nội dung câu hỏi..."></textarea>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                            <!-- Đáp án A -->
-                            <div class="flex items-center">
-                                <div class="manual-label bg-indigo-600 px-4 py-3 rounded-l-xl text-white font-black shadow-lg">A</div>
-                                <input type="text" id="manual-a" class="input-control !m-0 !rounded-l-none" placeholder="Nội dung đáp án A...">
-                            </div>
+    <div class="flex items-center justify-between mb-4">
+        <label class="text-sm font-extrabold text-indigo-400 uppercase tracking-widest flex items-center gap-2" id="label-edit-mode">
+            <span class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-lg">✍️</span> 
+            2. Nhập câu hỏi thủ công
+        </label>
+        <select id="manual-type" class="bg-slate-800 border border-white/10 text-[10px] font-bold py-2 px-3 rounded-xl text-indigo-300 outline-none" onchange="updateManualUI(this.value)">
+            <option value="choice">🔘 TRẮC NGHIỆM 4 CÂU</option>
+            <option value="tf">⚖️ ĐÚNG / SAI</option>
+            <option value="blank">📝 ĐIỀN VÀO CHỖ TRỐNG</option>
+        </select>
+    </div>
 
-                            <!-- Đáp án B -->
-                            <div class="flex items-center">
-                                <div class="manual-label bg-indigo-600 px-4 py-3 rounded-l-xl text-white font-black shadow-lg">B</div>
-                                <input type="text" id="manual-b" class="input-control !m-0 !rounded-l-none" placeholder="Nội dung đáp án B...">
-                            </div>
+    <div class="space-y-4 bg-black/20 p-5 rounded-[24px] border border-white/5 shadow-inner">
+        <textarea id="manual-q" class="input-control min-h-[80px]" placeholder="Nội dung câu hỏi..."></textarea>
 
-                            <!-- Đáp án C - Tìm dòng này và sửa id thành manual-c -->
-                            <div class="flex items-center">
-                                <div class="manual-label bg-indigo-600 px-4 py-3 rounded-l-xl text-white font-black shadow-lg">C</div>
-                                <input type="text" id="manual-c" class="input-control !m-0 !rounded-l-none" placeholder="Nội dung đáp án C...">
-                            </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input type="text" id="manual-img" class="input-control !py-3 !text-[11px]" placeholder="🖼️ Link hình ảnh (ImgBB, Catbox...)">
+            <input type="text" id="manual-audio" class="input-control !py-3 !text-[11px]" placeholder="🔊 Link âm thanh (Catbox.moe...)">
+        </div>
 
-                            <!-- Đáp án D -->
-                            <div class="flex items-center">
-                                <div class="manual-label bg-indigo-600 px-4 py-3 rounded-l-xl text-white font-black shadow-lg">D</div>
-                                <input type="text" id="manual-d" class="input-control !m-0 !rounded-l-none" placeholder="Nội dung đáp án D...">
-                            </div>
-                        </div>
-                        
-                        <div class="flex flex-col md:flex-row gap-4 mt-4 p-5 bg-white/5 rounded-2xl border border-white/10">
-                            <div class="flex-1">
-                                <label class="block text-[10px] font-bold text-indigo-300 mb-2 uppercase">Lựa chọn Đáp án đúng:</label>
-                                <select id="manual-correct" class="input-control font-bold text-emerald-400">
-                                    <option value="0" class="text-black">✅ ĐÁP ÁN A ĐÚNG</option>
-                                    <option value="1" class="text-black">✅ ĐÁP ÁN B ĐÚNG</option>
-                                    <option value="2" class="text-black">✅ ĐÁP ÁN C ĐÚNG</option>
-                                    <option value="3" class="text-black">✅ ĐÁP ÁN D ĐÚNG</option>
-                                </select>
-                            </div>
-                            <div class="flex-1">
-                                <label class="block text-[10px] font-bold text-indigo-300 mb-6 uppercase">Hành động:</label>
-                                <div class="flex flex-wrap gap-2">
-                                    <input type="hidden" id="edit-index" value="-1">
-                                    <input type="hidden" id="edit-folder-q-index" value="-1">
-                                    <button id="btn-save-q" class="btn-success flex-1" onclick="saveQuestion()">LƯU VÀO NGÂN HÀNG</button>
-                                    <button id="btn-cancel-edit" class="hidden bg-slate-600 px-4" onclick="cancelEdit()">HỦY</button>
-                                </div>
-                            </div>
-                        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+            <div class="flex items-center group">
+                <div class="manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5 transition-all">A</div>
+                <input type="text" id="manual-a" class="input-control !m-0 !rounded-l-none" placeholder="Đáp án A / Ý a...">
+            </div>
+            <div class="flex items-center group">
+                <div class="manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5 transition-all">B</div>
+                <input type="text" id="manual-b" class="input-control !m-0 !rounded-l-none" placeholder="Đáp án B / Ý b...">
+            </div>
+            <div id="wrap-manual-c" class="flex items-center group">
+                <div class="manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5 transition-all">C</div>
+                <input type="text" id="manual-c" class="input-control !m-0 !rounded-l-none" placeholder="Đáp án C / Ý c...">
+            </div>
+            <div id="wrap-manual-d" class="flex items-center group">
+                <div class="manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5 transition-all">D</div>
+                <input type="text" id="manual-d" class="input-control !m-0 !rounded-l-none" placeholder="Đáp án D / Ý d...">
+            </div>
+        </div>
+
+        <!-- Vùng Chốt đáp án chuẩn ảnh -->
+        <div class="flex flex-col md:flex-row gap-4 mt-2 p-4 bg-indigo-500/5 rounded-[32px] border border-indigo-500/10 items-end">
+            <div class="flex-1 w-full">
+                <label id="label-correct-ans" class="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">✅ Xác định đáp án đúng:</label>
+                
+                <div id="choice-correct-zone">
+                    <select id="manual-correct" class="w-full bg-slate-900 border border-indigo-500/30 text-emerald-400 font-bold py-3 px-4 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all">
+                        <option value="0">👉 ĐÁP ÁN A LÀ ĐÚNG</option>
+                        <option value="1">👉 ĐÁP ÁN B LÀ ĐÚNG</option>
+                        <option value="2">👉 ĐÁP ÁN C LÀ ĐÚNG</option>
+                        <option value="3">👉 ĐÁP ÁN D LÀ ĐÚNG</option>
+                    </select>
+                </div>
+
+                <div id="tf-correct-zone" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="flex items-center justify-between bg-black/40 p-3 rounded-2xl border border-white/5">
+                        <span class="text-xs font-bold text-white ml-2">Ý A:</span>
+                        <select id="tf-a" class="bg-indigo-600 text-white text-xs font-bold rounded-lg px-4 py-2 outline-none cursor-pointer hover:bg-indigo-500 transition-all"><option value="1">ĐÚNG</option><option value="0">SAI</option></select>
+                    </div>
+                    <div class="flex items-center justify-between bg-black/40 p-3 rounded-2xl border border-white/5">
+                        <span class="text-xs font-bold text-white ml-2">Ý B:</span>
+                        <select id="tf-b" class="bg-indigo-600 text-white text-xs font-bold rounded-lg px-4 py-2 outline-none cursor-pointer hover:bg-indigo-500 transition-all"><option value="1">ĐÚNG</option><option value="0">SAI</option></select>
+                    </div>
+                    <div class="flex items-center justify-between bg-black/40 p-3 rounded-2xl border border-white/5">
+                        <span class="text-xs font-bold text-white ml-2">Ý C:</span>
+                        <select id="tf-c" class="bg-indigo-600 text-white text-xs font-bold rounded-lg px-4 py-2 outline-none cursor-pointer hover:bg-indigo-500 transition-all"><option value="1">ĐÚNG</option><option value="0">SAI</option></select>
+                    </div>
+                    <div class="flex items-center justify-between bg-black/40 p-3 rounded-2xl border border-white/5">
+                        <span class="text-xs font-bold text-white ml-2">Ý D:</span>
+                        <select id="tf-d" class="bg-indigo-600 text-white text-xs font-bold rounded-lg px-4 py-2 outline-none cursor-pointer hover:bg-indigo-500 transition-all"><option value="1">ĐÚNG</option><option value="0">SAI</option></select>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-2 shrink-0">
+                <input type="hidden" id="edit-index" value="-1">
+                <input type="hidden" id="edit-folder-q-index" value="-1">
+                <button id="btn-save-q" class="btn-success h-[56px] !px-10 !rounded-2xl font-black shadow-lg" onclick="saveQuestion()">LƯU CÂU HỎI</button>
+                <button id="btn-cancel-edit" class="hidden bg-slate-700 hover:bg-slate-600 text-white h-[56px] px-6 rounded-2xl" onclick="cancelEdit()">HỦY</button>
+            </div>
+        </div>
+    </div>
+</div>
 
                         <div class="mt-4 p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/20">
                             <label class="block text-[10px] font-bold text-emerald-400 mb-2 uppercase italic">Hoặc thêm nhanh vào Bộ đề cụ thể:</label>
@@ -2813,59 +2821,137 @@ function handleRegister() {
     switchAuth('login');
 }
 
+// 1. Hàm hiện Sidebar & Phân quyền Admin (Khắc phục bị ẩn)
 function loginSuccess() {
-    // 1. Ẩn màn hình đăng nhập và hiện khung ứng dụng
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app-content').classList.remove('hidden');
+    document.getElementById('header').classList.remove('hidden');
     
-    // 2. HIỆN HEADER (Chỉ hiện sau khi đăng nhập thành công)
-    const header = document.getElementById('header');
-    header.classList.remove('hidden');
-    
-    // Lấy các vùng nội dung cần điều khiển
     const adminZone = document.getElementById('admin-zone');
     const studentZone = document.getElementById('student-zone');
-    const chatContainer = document.getElementById('chat-container');
 
-    if (currentUser.isAdmin) {
+    if (currentUser && currentUser.isAdmin === true) {
         if (adminZone) adminZone.classList.remove('hidden');
-        document.getElementById('admin-menu-folders').classList.remove('hidden');
-        document.getElementById('admin-menu-storage').classList.remove('hidden');
-        if (studentZone) studentZone.classList.add('hidden');
+        
+        // Buộc hiển thị các mục menu Admin
+        document.getElementById('admin-menu-folders')?.classList.remove('hidden');
+        document.getElementById('admin-menu-storage')?.classList.remove('hidden');
 
         if (currentUser.isRoot) {
-            document.getElementById('admin-menu-users').classList.remove('hidden');
-            document.getElementById('admin-menu-otp').classList.remove('hidden');
-            document.getElementById('admin-menu-premium').classList.remove('hidden');
-            if(chatContainer) chatContainer.classList.add('hidden');
-        } else {
-            if(chatContainer) chatContainer.classList.remove('hidden');
+            document.getElementById('admin-menu-users')?.classList.remove('hidden');
+            document.getElementById('admin-menu-otp')?.classList.remove('hidden');
+            document.getElementById('admin-menu-premium')?.classList.remove('hidden');
+            document.getElementById('admin-menu-chat')?.classList.remove('hidden');
         }
+        if (studentZone) studentZone.classList.add('hidden');
     } else {
         if (adminZone) adminZone.classList.add('hidden');
-        document.getElementById('admin-menu-folders').classList.add('hidden');
-        document.getElementById('admin-menu-storage').classList.add('hidden');
         if (studentZone) studentZone.classList.remove('hidden');
-        if (chatContainer) chatContainer.classList.add('hidden');
     }
 
-    // Cập nhật thông tin hiển thị
     document.getElementById('inf-email').innerText = currentUser.user;
     document.getElementById('inf-fullname').innerText = currentUser.name;
     document.getElementById('side-username').innerText = currentUser.name;
-    
-    updateAvatarUI(); 
-    renderAdminPreview(); 
-    renderFolders(); 
-    checkPremiumUI(); // Hàm này sẽ điều khiển Badge Vàng/Xám bên trong Header
-    updateFolderDropdowns();
+    updateAvatarUI(); renderAdminPreview(); renderFolders(); checkPremiumUI(); updateFolderDropdowns();
+}
 
-    if (currentUser.isRoot) {
-        const masterPanel = document.getElementById('root-master-premium-panel');
-        if (masterPanel) masterPanel.classList.remove('hidden');
-        renderMasterPremiumList();
-        renderUsersManager();
+// 2. Điều khiển ẩn/hiện Zone (Đúng/Sai, Trắc nghiệm, Điền từ)
+function updateManualUI(type) {
+    const wrapA = document.getElementById('manual-a').closest('.group');
+    const wrapB = document.getElementById('manual-b').closest('.group');
+    const wrapC = document.getElementById('wrap-manual-c');
+    const wrapD = document.getElementById('wrap-manual-d');
+    const choiceZone = document.getElementById('choice-correct-zone');
+    const tfZone = document.getElementById('tf-correct-zone');
+    const labelCorrect = document.getElementById('label-correct-ans');
+    const labelA = wrapA.querySelector('.manual-label');
+
+    // Mặc định hiện tất cả và reset nhãn A màu tím
+    [wrapA, wrapB, wrapC, wrapD, labelCorrect, choiceZone, tfZone].forEach(el => el?.classList.remove('hidden'));
+    labelA.innerText = "A";
+    labelA.className = "manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5 transition-all";
+
+    if (type === 'tf') {
+        if (choiceZone) choiceZone.classList.add('hidden');
+        if (tfZone) tfZone.classList.remove('hidden');
+        document.getElementById('manual-a').placeholder = "Nội dung ý a...";
+        document.getElementById('manual-b').placeholder = "Nội dung ý b...";
+        document.getElementById('manual-c').placeholder = "Nội dung ý c...";
+        document.getElementById('manual-d').placeholder = "Nội dung ý d...";
+    } else if (type === 'blank') {
+        [wrapB, wrapC, wrapD, choiceZone, tfZone].forEach(el => el?.classList.add('hidden'));
+        labelA.innerText = "🔑";
+        labelA.className = "manual-label bg-emerald-600 text-white px-4 py-3 rounded-l-2xl font-black transition-all";
+        document.getElementById('manual-a').placeholder = "Nhập đáp án đúng tại đây...";
+    } else {
+        if (tfZone) tfZone.classList.add('hidden');
+        if (choiceZone) choiceZone.classList.remove('hidden');
+        document.getElementById('manual-a').placeholder = "Nội dung đáp án A...";
     }
+}
+
+// 3. Tự động nhảy giao diện khi sửa (✏️)
+function editQ(i) {
+    const q = db[i]; 
+    if (!q) return;
+
+    // Kích hoạt giao diện theo loại câu hỏi
+    const type = q.type || 'choice';
+    document.getElementById('manual-type').value = type;
+    updateManualUI(type); 
+
+    // Đổ dữ liệu văn bản
+    document.getElementById('manual-q').value = q.text;
+    document.getElementById('manual-a').value = q.options[0] || "";
+    document.getElementById('manual-b').value = q.options[1] || "";
+    document.getElementById('manual-c').value = q.options[2] || "";
+    document.getElementById('manual-d').value = q.options[3] || "";
+    document.getElementById('manual-img').value = q.image || ""; 
+    document.getElementById('manual-audio').value = q.audio || ""; 
+
+    // Đổ dữ liệu đáp án đúng
+    if (type === 'tf') {
+        const c = q.correct || [1, 1, 1, 1];
+        document.getElementById('tf-a').value = c[0];
+        document.getElementById('tf-b').value = c[1];
+        document.getElementById('tf-c').value = c[2];
+        document.getElementById('tf-d').value = c[3];
+    } else if (type === 'choice') {
+        document.getElementById('manual-correct').value = q.correct;
+    }
+
+    document.getElementById('edit-index').value = i;
+    document.getElementById('edit-folder-q-index').value = "-1";
+    document.querySelectorAll('.manual-label').forEach(l => l.classList.replace('bg-indigo-600/20', 'bg-orange-500/20'));
+    document.getElementById('btn-save-q').innerText = "CẬP NHẬT";
+    document.getElementById('btn-cancel-edit').classList.remove('hidden');
+    document.getElementById('label-edit-mode').innerHTML = "🛠️ ĐANG SỬA CÂU HỎI";
+    document.getElementById('label-edit-mode').scrollIntoView({ behavior: 'smooth' });
+}
+
+// 4. Hàm Hủy (Reset hoàn toàn giao diện)
+function cancelEdit() {
+    document.getElementById('edit-index').value = "-1";
+    document.getElementById('edit-folder-q-index').value = "-1"; 
+    document.getElementById('manual-type').value = 'choice';
+    updateManualUI('choice');
+    
+    document.getElementById('manual-q').value = "";
+    document.getElementById('manual-a').value = "";
+    document.getElementById('manual-b').value = "";
+    document.getElementById('manual-c').value = "";
+    document.getElementById('manual-d').value = "";
+    document.getElementById('manual-img').value = "";
+    document.getElementById('manual-audio').value = "";
+
+    document.querySelectorAll('.manual-label').forEach(l => {
+        l.classList.remove('bg-orange-500/20');
+        l.classList.add('bg-indigo-600/20');
+    });
+
+    document.getElementById('btn-save-q').innerText = "LƯU VÀO NGÂN HÀNG";
+    document.getElementById('btn-cancel-edit').classList.add('hidden');
+    document.getElementById('label-edit-mode').innerHTML = "2. Nhập câu hỏi thủ công";
 }
 
 

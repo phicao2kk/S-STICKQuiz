@@ -1,24 +1,22 @@
 {
-  "name": "S-TICK Quiz • Hệ thống Trắc nghiệm",
+  "name": "S-TICK Quiz",
   "short_name": "S-TICK",
-  "description": "Hệ thống thi trắc nghiệm v4.0",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#6366f1",
-  "orientation": "portrait",
   "icons": [
     {
       "src": "https://i.ibb.co/nNCs81Dp/LOGO-S-STICK.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "https://i.ibb.co/nNCs81Dp/LOGO-S-STICK.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

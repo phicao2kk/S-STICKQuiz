@@ -305,7 +305,29 @@ html, body {
             transition: 0.3s; 
         }
         #notify-container.active { opacity: 1; visibility: visible; }
-        #notify-box { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); padding: 30px; border-radius: 24px; width: 90%; max-width: 400px; text-align: center; transform: scale(0.9); transition: 0.3s; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        #notify-box { 
+            background: #1e293b; 
+            border: 1px solid rgba(255,255,255,0.1); 
+            padding: 25px; 
+            border-radius: 24px; 
+            width: 95%; /* Tăng độ rộng trên mobile */
+            max-width: 400px; 
+            text-align: center; 
+            transform: scale(0.9); 
+            transition: 0.3s; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            
+            /* BỔ SUNG DÒNG DƯỚI ĐÂY ĐỂ TRÁNH MẤT NÚT KHI HIỆN BÀN PHÍM */
+            max-height: 90vh; 
+            overflow-y: auto; 
+            position: relative;
+            margin-bottom: 20px; /* Tạo khoảng cách đáy */
+        }
+        .notify-btns button {
+            flex: 1;
+            min-height: 45px;
+            font-size: 14px;
+        }
         #notify-container.active #notify-box { transform: scale(1); }
         .notify-icon { font-size: 48px; margin-bottom: 15px; display: block; }
         .notify-title { font-size: 20px; font-weight: 800; color: white; margin-bottom: 10px; }
@@ -2143,30 +2165,50 @@ function sysNotify(title, msg, type = 'info') {
     document.getElementById('notify-container').classList.add('active');
 }
 
-function sysConfirm(msg) {
+function sysPrompt(title, msg, placeholder = "", defaultValue = "") {
     return new Promise(resolve => {
-        document.getElementById('nt-icon').innerText = '⚠️'; // Đổi icon sang cảnh báo
-        document.getElementById('nt-title').innerText = 'XÁC NHẬN XÓA';
-        document.getElementById('nt-msg').innerHTML = msg; // SỬA: Dùng innerHTML để hiện định dạng đẹp
-        document.getElementById('nt-input').classList.add('hidden');
+        // Reset trạng thái nút OK để chắc chắn nó hiện ra
+        const okBtn = document.getElementById('nt-btn-ok');
+        okBtn.innerText = "Đồng ý";
+        okBtn.className = "bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold w-full";
+        okBtn.classList.remove('hidden');
+
+        document.getElementById('nt-icon').innerText = '📝';
+        document.getElementById('nt-title').innerText = title;
+        document.getElementById('nt-msg').innerHTML = msg;
+        
+        const input = document.getElementById('nt-input');
+        input.value = defaultValue; 
+        input.placeholder = placeholder;
+        input.classList.remove('hidden');
+        
         document.getElementById('nt-btn-cancel').classList.remove('hidden');
         document.getElementById('notify-container').classList.add('active');
-        notifyResolver = resolve;
+        
+        // Tự động cuộn khung nhìn xuống input để thấy nút bấm
+        setTimeout(() => input.focus(), 300);
+        
+        notifyResolver = (res) => resolve(res ? input.value : null);
     });
 }
 
-function sysPrompt(title, msg, placeholder = "", defaultValue = "") {
+function sysConfirm(msg) {
     return new Promise(resolve => {
-        document.getElementById('nt-icon').innerText = '📝';
-        document.getElementById('nt-title').innerText = title;
-        document.getElementById('nt-msg').innerText = msg;
-        const input = document.getElementById('nt-input');
-        input.value = defaultValue; input.placeholder = placeholder;
-        input.classList.remove('hidden');
+        // Reset nút về trạng thái chuẩn
+        const okBtn = document.getElementById('nt-btn-ok');
+        okBtn.innerText = "Xác nhận";
+        okBtn.className = "bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold w-full";
+        okBtn.classList.remove('hidden');
+
+        document.getElementById('nt-icon').innerText = '⚠️';
+        document.getElementById('nt-title').innerText = 'Xác nhận';
+        document.getElementById('nt-msg').innerHTML = msg;
+        
+        document.getElementById('nt-input').classList.add('hidden');
         document.getElementById('nt-btn-cancel').classList.remove('hidden');
         document.getElementById('notify-container').classList.add('active');
-        setTimeout(() => input.focus(), 100);
-        notifyResolver = (res) => resolve(res ? input.value : null);
+        
+        notifyResolver = resolve;
     });
 }
 
@@ -6106,6 +6148,15 @@ function exportFolderToWord(idx) {
         sysNotify("Lỗi", "Không thể tạo file Word", "error");
     }
 }
+
+// Thêm vào trong window.onload hoặc cuối script
+document.getElementById('nt-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        // Giả lập click vào nút OK
+        closeNotify(true);
+    }
+});
 
 </script>
 <!-- GIAO DIỆN CHAT CHO ADMIN CON -->

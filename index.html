@@ -17,6 +17,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="S-STICK">
+    <link rel="preload" as="image" href="https://i.ibb.co/B5P92C4Y/LOGO-S-STICK-c-n-n.png">
     <title>S-STICK Quiz • Hệ thống Trắc nghiệm v5.0 - Professional Admin Multi-User</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -29,6 +30,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+
+/* Mặc định cho máy tính: Hiện video */
+.video-bg {
+    display: block;
+}
+
+/* Dành cho điện thoại (màn hình nhỏ hơn 768px) */
+@media (max-width: 768px) {
+    .video-bg {
+        /* Nếu máy yếu, bạn có thể chọn ẩn hẳn video để logo hiện ra ngay */
+        display: none !important; 
+    }
+    body {
+        /* Thay bằng một tấm ảnh nền mờ nhẹ nhàng, dung lượng chỉ khoảng 20-30KB */
+        background: #0f172a url('https://i.ibb.co/SDctD2GP/N-n-t-nh.jpg');
+    }
+}
 
 /* 1. ĐỊNH DẠNG Ô ĐÁP ÁN: Kích thước cân đối, đều nhau */
 .quiz-opt {
@@ -932,8 +950,12 @@ body.scrolling::-webkit-scrollbar-thumb {
     </div>
 </div>
 
-<video autoplay muted loop playsinline class="video-bg">
-    <source src="https://res.cloudinary.com/drqnbdzx4/video/upload/v1772519461/2697038-uhd_3840_2160_30fps_k2qdnz.mp4" type="video/mp4">
+<video autoplay muted loop playsinline poster="https://i.ibb.co/B5P92C4Y/LOGO-S-STICK-c-n-n.png" class="video-bg">
+    <!-- Bản WebM cực nhẹ cho điện thoại và Chrome/Edge -->
+    <source src="https://res.cloudinary.com/drqnbdzx4/video/upload/c_scale,w_1280,q_auto,f_webm/v1772519461/2697038-uhd_3840_2160_30fps_k2qdnz.mp4" type="video/webm">
+    
+    <!-- Bản MP4 dự phòng cho Safari/iPhone đời cũ -->
+    <source src="https://res.cloudinary.com/drqnbdzx4/video/upload/c_scale,w_1280,q_auto,f_mp4/v1772519461/2697038-uhd_3840_2160_30fps_k2qdnz.mp4" type="video/mp4">
 </video>
 
 <div id="overlay" onclick="toggleMenu(true)"></div>
@@ -1006,7 +1028,11 @@ body.scrolling::-webkit-scrollbar-thumb {
 <div id="login-screen" class="fixed inset-0 flex items-center justify-center px-4 z-[50]">
     <div class="card glass shadow-2xl w-full" style="max-width: 420px;">
         <div class="text-center pb-6">
-            <img src="https://i.ibb.co/B5P92C4Y/LOGO-S-STICK-c-n-n.png" class="w-24 h-24 mx-auto rounded-3xl mb-6 shadow-2xl p-1 bg-white/10"> 
+            <img src="https://i.ibb.co/B5P92C4Y/LOGO-S-STICK-c-n-n.png" 
+                fetchpriority="high" 
+                loading="eager" 
+                decoding="sync"
+                class="w-24 h-24 mx-auto rounded-3xl mb-6 shadow-2xl p-1 bg-white/10">
             <!-- Tiêu đề có nút F5 -->
             <div class="flex items-center justify-center gap-3 mt-4">
                 <h1 class="text-4xl font-black brand-run" style="letter-spacing: 2px;">S-STICK Quiz</h1>
@@ -1175,7 +1201,7 @@ body.scrolling::-webkit-scrollbar-thumb {
                         </div>
                     </div>
 
-<div class="pt-6">
+<div class="pt-6" id="manual-editor-section"> <!-- Thêm ID vào đây -->
     <div class="flex items-center justify-between mb-4">
         <label class="text-sm font-extrabold text-indigo-400 uppercase tracking-widest flex items-center gap-2" id="label-edit-mode">
             <span class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-lg">✍️</span> 
@@ -1183,7 +1209,7 @@ body.scrolling::-webkit-scrollbar-thumb {
         </label>
     </div>
 
-    <div class="space-y-4 bg-black/20 p-5 rounded-[24px] border border-white/5 shadow-inner">
+    <div id="manual-editor-container" class="space-y-4 bg-black/20 p-5 rounded-[24px] border border-white/5 shadow-inner transition-all duration-500">
         <textarea id="manual-q" class="input-control min-h-[80px]" placeholder="Nội dung câu hỏi..."></textarea>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
@@ -1970,10 +1996,14 @@ function saveInlineFolderEdit(idx) {
         correct: correct
     };
 
-    saveFolders(); // Lưu Firebase
-    renderFolderQuestions(); // Vẽ lại danh sách câu hỏi ở trên
-    closeInlineEditor(); // Đóng và xóa editor
-    showModernToast("Thành công", "Đã cập nhật câu hỏi trong bộ đề!", "success");
+    saveFolders(); // Lưu lên Firebase
+    renderFolderQuestions(); // Vẽ lại giao diện
+    closeInlineEditor(); // Đóng ô sửa
+    
+    // --- CHÈN DÒNG NÀY VÀO ĐÂY ---
+    syncUpdateToFirebaseCodes(currentFolderIdx); 
+
+    showModernToast("Thành công", "Đã cập nhật & đồng bộ mã đề!", "success");
 }
 
 // 3. Hàm đóng editor
@@ -2171,27 +2201,29 @@ function saveQuestion() {
     if (folderQIdx !== -1) {
         // TRƯỜNG HỢP 1: Đang sửa trực tiếp trong Bộ đề
         foldersDB[currentFolderIdx].questions[folderQIdx] = newQ;
-        saveFolders(); // Gửi lên Firebase node quiz_folders
+        saveFolders(); 
         renderFolderQuestions();
-        showModernToast("Thành công", "Đã cập nhật câu hỏi vào Bộ đề!", "success");
+        
+        // --- CHÈN DÒNG NÀY VÀO ĐÂY ---
+        syncUpdateToFirebaseCodes(currentFolderIdx); 
+
+        showModernToast("Thành công", "Đã cập nhật & đồng bộ mã đề!", "success");
     } else if (editIdx !== -1) {
         // TRƯỜNG HỢP 2: Đang sửa trong Ngân hàng chung
         db[editIdx] = newQ;
-        saveDB(); // Gửi lên Firebase node quiz_db
+        saveDB(); 
         renderAdminPreview();
         showModernToast("Thành công", "Đã cập nhật Ngân hàng câu hỏi!", "success");
+        
+        // Gợi ý: Nếu bạn muốn sửa ở Ngân hàng mà các Bộ đề có câu này cũng đổi theo, 
+        // thì logic sẽ phức tạp hơn. Hiện tại hệ thống của bạn là copy câu hỏi vào bộ đề, 
+        // nên ta chỉ cần đồng bộ khi sửa trực tiếp trong bộ đề.
     } else {
         // TRƯỜNG HỢP 3: Thêm mới hoàn toàn
         db.push(newQ);
         saveDB();
         renderAdminPreview();
         showModernToast("Thành công", "Đã thêm câu hỏi mới!", "success");
-    }
-
-    // Quan trọng: Sau khi lưu xong, phải cập nhật lại Map chia sẻ nếu đang dùng mã thi
-    if(currentUser.isRoot || currentUser.isAdmin) {
-        // Tự động cập nhật các mã đề đang hoạt động (nếu cần thiết)
-        // Tuy nhiên cách tốt nhất vẫn là re-generate mã.
     }
 
     cancelEdit(); 
@@ -2375,7 +2407,6 @@ function syncDataFromServer() {
     const safeUser = currentUser.user.replace(/\./g, '_');
 
     rdb.ref('users_data/' + safeUser).once('value', (snapshot) => {
-        // ... (Code lấy dữ liệu db, foldersDB giữ nguyên) ...
         const data = snapshot.val();
         if (data) {
             db = data.quiz_db || [];
@@ -2384,83 +2415,60 @@ function syncDataFromServer() {
             localStorage.setItem(getPrefix() + 'quiz_folders', JSON.stringify(foldersDB));
         }
 
-        // --- ĐOẠN ĐÃ CẬP NHẬT: LẤY LỊCH SỬ LÀM BÀI & BÁO TIN NHẮN MỚI ---
+        // --- ĐOẠN ĐÃ CẬP NHẬT: LẤY LỊCH SỬ LÀM BÀI & DẪN ĐẾN TRANG LỊCH SỬ ---
         rdb.ref('users_data/' + safeUser + '/quiz_history').on('value', (historySnap) => {
-        const historyData = historySnap.val() || {};
-        const historyArray = Object.entries(historyData).map(([key, val]) => ({
-            ...val,
-            fbKey: key
-        }));
+            const historyData = historySnap.val() || {};
+            const historyArray = Object.entries(historyData).map(([key, val]) => ({
+                ...val,
+                fbKey: key
+            }));
 
-        // --- LOGIC TÍNH TOÁN THÔNG BÁO MỚI ---
-        const oldHistoryCount = JSON.parse(localStorage.getItem('last_history_count_' + currentUser.user) || "0");
-        const currentCount = historyArray.length;
-        
-        // Kiểm tra nếu người dùng không đang ở trang lịch sử thì mới hiện thông báo
-        const isViewingHistory = !document.getElementById('page-storage').classList.contains('hidden');
+            const oldHistoryCount = JSON.parse(localStorage.getItem('last_history_count_' + currentUser.user) || "0");
+            const currentCount = historyArray.length;
+            const isViewingHistory = !document.getElementById('page-storage').classList.contains('hidden');
 
-        if (currentCount > oldHistoryCount && !isViewingHistory) {
-            const newSubmissions = currentCount - oldHistoryCount;
-            const hBadge = document.getElementById('sidebar-history-badge');
-            if (hBadge) {
-                hBadge.innerText = newSubmissions;
-                hBadge.classList.remove('hidden');
-                // Cập nhật chấm đỏ ở nút Menu tổng
-                updateGlobalMenuDot();
+            if (currentCount > oldHistoryCount && !isViewingHistory) {
+                const newSubmissions = currentCount - oldHistoryCount;
+                const hBadge = document.getElementById('sidebar-history-badge');
+                if (hBadge) {
+                    hBadge.innerText = newSubmissions;
+                    hBadge.classList.remove('hidden');
+                    updateGlobalMenuDot();
+                }
+                
+                if (!isialLoad) {
+                    NOTI_SOUND.play().catch(() => {});
+                    // TRUYỀN THÊM: "page-storage" để click là vào xem điểm ngay
+                    showModernToast("Kết quả mới", `Có ${newSubmissions} thí sinh vừa nộp bài thi!`, "success", "page-storage");
+                }
             }
-            
-            // Phát âm thanh và hiện Toast nếu không phải lần đầu load web
-            if (!isialLoad) {
-                NOTI_SOUND.play().catch(() => {});
-                showModernToast("Kết quả mới", `Có ${newSubmissions} thí sinh vừa nộp bài thi!`, "success");
+
+            quizHistory = historyArray;
+            localStorage.setItem(getPrefix() + 'quiz_history', JSON.stringify(quizHistory));
+            if (isViewingHistory) {
+                if (typeof renderHistoryTable === "function") renderHistoryTable();
             }
-        }
+        });
 
-        quizHistory = historyArray;
-        localStorage.setItem(getPrefix() + 'quiz_history', JSON.stringify(quizHistory));
+        if (currentUser.isAdmin || currentUser.isRoot) { listenToTotalUnread(); }
         
-        if (isViewingHistory) {
-            if (typeof renderHistoryTable === "function") renderHistoryTable();
-        }
-    });
-        // --- HẾT ĐOẠN THÊM MỚI ---
-
-        // KÍCH HOẠT THÔNG BÁO TIN NHẮN NGAY TẠI ĐÂY
-        if (currentUser.isAdmin || currentUser.isRoot) {
-            listenToTotalUnread(); 
-        }
-        
-        // 1. Lắng nghe tài khoản cá nhân để kiểm tra hết hạn Premium
         rdb.ref('system/users_db').on('value', (snap) => {
             const data = snap.val();
             if (data && currentUser) {
                 usersDB = data;
                 localStorage.setItem('users_db', JSON.stringify(usersDB));
-                
                 const safeU = currentUser.user.replace(/\./g, '_');
                 const updatedUserData = data[safeU];
-
                 if (updatedUserData) {
-                    // Lấy trạng thái Premium mới nhất từ Server
                     const newPremiumStatus = updatedUserData.isPremium || false;
-
-                    // --- ĐOẠN QUAN TRỌNG: PHÁT HIỆN KÍCH HOẠT PREMIUM ---
-                    // Nếu không phải lần đầu load trang VÀ trước đó là false VÀ bây giờ là true
                     if (!isCheckingPremiumFirstTime && currentUser.isPremium === false && newPremiumStatus === true) {
-                        // Kích hoạt ngay thông báo chúc mừng
                         showPremiumSuccessAlert(); 
                     }
-
-                    // Cập nhật trạng thái vào bộ nhớ máy để đồng bộ UI
                     currentUser.isPremium = newPremiumStatus;
                     currentUser.premiumExpiresAt = updatedUserData.premiumExpiresAt;
                     localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
-                    
-                    // Sau lần kiểm tra đầu tiên, đặt cờ về false để bắt đầu canh chừng sự thay đổi
                     isCheckingPremiumFirstTime = false;
                 }
-
-                // Cập nhật các bảng quản trị nếu đang mở
                 if (!document.getElementById('page-premium-manager').classList.contains('hidden')) {
                     renderPremiumRequests();
                     renderMasterPremiumList();
@@ -2468,36 +2476,26 @@ function syncDataFromServer() {
                 if (!document.getElementById('page-users-manager').classList.contains('hidden')) {
                     renderUsersManager();
                 }
-
-                // Luôn cập nhật lại giao diện (Huy hiệu, Menu)
                 checkPremiumUI(); 
             }
         });
 
-        // 2. QUAN TRỌNG: Gọi hàm kiểm tra tin nhắn chưa đọc ngay khi vào trang
-        if (currentUser.isAdmin || currentUser.isRoot) {
-            listenToTotalUnread(); 
-        }
+        if (currentUser.isAdmin || currentUser.isRoot) { listenToTotalUnread(); }
 
-        // 3. Dành riêng cho Admin gốc: Cập nhật Bảng Duyệt Bill và Bảng Master Hội Viên
         if (currentUser.isRoot) {
             document.getElementById('admin-menu-premium').classList.remove('hidden');
             document.getElementById('admin-menu-chat').classList.remove('hidden'); 
-            document.getElementById('admin-menu-otp').classList.remove('hidden'); // Thêm dòng này nếu chưa có
+            document.getElementById('admin-menu-otp').classList.remove('hidden');
             document.getElementById('student-zone').classList.add('hidden');
 
             listenToTotalUnread(); 
-            listenToOTPRequests(); // <--- DÁN DÒNG NÀY VÀO ĐÂY
+            listenToOTPRequests();
 
-            // Lắng nghe yêu cầu Duyệt Bill
             rdb.ref('system/global_premium_requests').on('value', (s) => {
                 const requests = s.val() || [];
                 localStorage.setItem('global_premium_requests', JSON.stringify(requests));
-                
-                // Đếm số yêu cầu đang chờ (pending)
                 const pendingCount = requests.filter(r => r.status === 'pending').length;
                 const pBadge = document.getElementById('sidebar-premium-badge');
-                
                 if (pBadge) {
                     if (pendingCount > 0) {
                         pBadge.innerText = pendingCount;
@@ -2507,10 +2505,7 @@ function syncDataFromServer() {
                         pBadge.classList.add('hidden');
                     }
                 }
-                
-                // Cập nhật chấm đỏ menu
                 updateGlobalMenuDot();
-                
                 if (typeof renderPremiumRequests === "function") renderPremiumRequests();
             });
         }
@@ -2519,57 +2514,45 @@ function syncDataFromServer() {
             localStorage.setItem('global_share_map', JSON.stringify(s.val() || {}));
         });
 
-       // --- LOGIC THÔNG BÁO TIN NHẮN LIVE (CHỈ BÁO 1 LẦN DUY NHẤT) ---
-if (currentUser.isRoot) {
-    rdb.ref('system/chats').on('child_changed', (snapshot) => {
-        if (isialLoad) return; 
+        // --- LOGIC THÔNG BÁO TIN NHẮN LIVE ---
+        if (currentUser.isRoot) {
+            rdb.ref('system/chats').on('child_changed', (snapshot) => {
+                if (isialLoad) return; 
+                const data = snapshot.val();
+                if (!data || !data.messages) return;
+                const entries = Object.entries(data.messages);
+                if (entries.length === 0) return;
+                const [msgId, lastMsg] = entries[entries.length - 1];
 
-        const data = snapshot.val();
-        if (!data || !data.messages) return;
-
-        // Lấy danh sách tin nhắn và ID
-        const entries = Object.entries(data.messages);
-        if (entries.length === 0) return;
-
-        // Lấy tin nhắn cuối cùng: [ID, Nội dung]
-        const [msgId, lastMsg] = entries[entries.length - 1];
-
-        // CHẶN TRÙNG: Phải không phải mình gửi && ID chưa được báo && Mới gửi gần đây
-        if (lastMsg.sender !== AD_PHONE && !notifiedMessages.has(msgId)) {
-            const msgTime = lastMsg.time || 0;
-            if (Date.now() - msgTime < 60000) {
-                notifiedMessages.add(msgId); // Đánh dấu đã báo
-                NOTI_SOUND.play().catch(() => {});
-                showModernToast("Tin nhắn mới", `<b>${lastMsg.name}:</b> ${lastMsg.text}`, "info");
-            }
+                if (lastMsg.sender !== AD_PHONE && !notifiedMessages.has(msgId)) {
+                    const msgTime = lastMsg.time || 0;
+                    if (Date.now() - msgTime < 60000) {
+                        notifiedMessages.add(msgId);
+                        NOTI_SOUND.play().catch(() => {});
+                        // TRUYỀN THÊM: "page-chat-admin" để nhảy vào trang chat tổng
+                        showModernToast("Tin nhắn mới", `<b>${lastMsg.name}:</b> ${lastMsg.text}`, "info", "page-chat-admin");
+                    }
+                }
+            });
+        } else if (currentUser.isAdmin) {
+            const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
+            rdb.ref('system/chats/' + chatId + '/messages').limitToLast(1).on('child_added', (snapshot) => {
+                if (isialLoad) return;
+                const msgId = snapshot.key;
+                const msg = snapshot.val();
+                if (msg.sender === AD_PHONE && !notifiedMessages.has(msgId)) {
+                    if (document.getElementById('chat-box').classList.contains('hidden')) {
+                        notifiedMessages.add(msgId);
+                        NOTI_SOUND.play().catch(() => {});
+                        // TRUYỀN THÊM: "openChat" để bật khung chat Messenger cho Admin con
+                        showModernToast("Phản hồi từ Quản trị viên", msg.text, "success", "openChat");
+                    }
+                }
+            });
         }
-    });
-} else if (currentUser.isAdmin) {
-    // ADMIN CON: Lắng nghe phản hồi từ Admin hệ thống
-    const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
-    rdb.ref('system/chats/' + chatId + '/messages').limitToLast(1).on('child_added', (snapshot) => {
-        if (isialLoad) return;
-        
-        const msgId = snapshot.key;
-        const msg = snapshot.val();
 
-        // CHẶN TRÙNG CHO ADMIN CON: ID chưa báo && Gửi từ Admin Gốc
-        if (msg.sender === AD_PHONE && !notifiedMessages.has(msgId)) {
-            if (document.getElementById('chat-box').classList.contains('hidden')) {
-                notifiedMessages.add(msgId); // Đánh dấu đã báo
-                NOTI_SOUND.play().catch(() => {});
-                showModernToast("Phản hồi từ Quản trị viên", msg.text, "success");
-            }
-        }
-    });
-}
-
-        // Tắt cờ load lần đầu sau 3 giây để bắt đầu nhận thông báo thực
         setTimeout(() => { isialLoad = false; }, 3000);
-        if (currentUser.isAdmin) {
-            listenToCandidates(); // Tự động lắng nghe ngay khi đăng nhập
-        }
-
+        if (currentUser.isAdmin) { listenToCandidates(); }
         loginSuccess();
         closeNotify();
     });
@@ -3027,7 +3010,6 @@ function editQ(i) {
     const q = db[i]; 
     if (!q) return;
 
-    // Đổ dữ liệu
     document.getElementById('manual-q').value = q.text || "";
     document.getElementById('manual-a').value = q.options[0] || "";
     document.getElementById('manual-b').value = q.options[1] || "";
@@ -3040,22 +3022,12 @@ function editQ(i) {
 
     const saveBtn = document.getElementById('btn-save-q');
     saveBtn.innerText = "CẬP NHẬT NGÂN HÀNG";
-    saveBtn.classList.remove('btn-success');
-    saveBtn.style.backgroundColor = "#ea580c"; 
+    saveBtn.className = "flex-1 h-[56px] !px-10 !rounded-2xl font-black shadow-lg bg-orange-600 hover:bg-orange-500 text-white transition-all";
     
     document.getElementById('btn-cancel-edit').classList.remove('hidden');
-    document.getElementById('label-edit-mode').innerHTML = `<span class="text-orange-400 font-bold">⚠️ ĐANG SỬA CÂU HỎI ID: ${i + 1}</span>`;
-    
-    // --- KHẮC PHỤC LỖI CUỘN TẠI ĐÂY ---
-    setTimeout(() => {
-        const targetArea = document.getElementById('manual-q').parentElement;
-        targetArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        targetArea.style.border = "2px solid #6366f1";
-        setTimeout(() => {
-            targetArea.style.border = "1px solid rgba(255, 255, 255, 0.1)";
-        }, 1000);
-    }, 150); 
+    document.getElementById('label-edit-mode').innerHTML = `<span class="bg-orange-500/20 px-3 py-1 rounded-lg text-orange-400">⚠️ ĐANG SỬA CÂU ID: ${i + 1}</span>`;
+
+    smartScrollToEditor(); // Gọi ở đây
 }
 
 // 4. Hàm Hủy (Reset hoàn toàn giao diện)
@@ -3241,21 +3213,11 @@ async function clearAllHistory() {
         return sysNotify("Thông báo", "Không có dữ liệu lịch sử để xóa.", "info");
     }
 
-    // NỘI DUNG ĐÃ ĐƯỢC ĐỊNH DẠNG LẠI CHO THÔNG THOÁNG
     const confirmMsg = `
         <div class="text-left space-y-3">
-            <b class="text-red-500 uppercase text-lg">⚠️ Cảnh báo quan trọng!</b><br>
-            <span class="text-slate-200">Bạn có chắc chắn muốn <b class="text-white">XÓA SẠCH</b> toàn bộ lịch sử làm bài không?</span>
-            
-            <div class="bg-black/20 p-3 rounded-xl border border-white/5 mt-2">
-                <p class="text-indigo-400 font-bold mb-2">Hành động này sẽ thực hiện:</p>
-                <div class="space-y-2 text-[13px] leading-relaxed">
-                    <p>1. <b class="text-white">Xóa vĩnh viễn</b> mọi kết quả của thí sinh.</p>
-                    <p>2. <b class="text-emerald-400 uppercase">Mở khóa</b> cho tất cả thí sinh đã từng thi để họ có thể vào làm lại bài.</p>
-                </div>
-            </div>
-            
-            <p class="text-[11px] text-slate-500 italic mt-2">* Lưu ý: Thao tác này không thể hoàn tác.</p>
+            <b class="text-red-500 uppercase text-lg">⚠️ XÁC NHẬN RESET TOÀN BỘ</b><br>
+            <span class="text-slate-200">Bạn có chắc chắn muốn xóa lịch sử và <b class="text-emerald-400">CHO PHÉP THI LẠI</b> không?</span>
+            <p class="text-[11px] text-slate-500 italic">* Lưu ý: Mọi kết quả cũ sẽ mất và học sinh có thể dùng tên cũ để vào thi lại.</p>
         </div>
     `;
 
@@ -3263,43 +3225,40 @@ async function clearAllHistory() {
         sysNotify("Đang xử lý...", "Đang xóa lịch sử và mở khóa thí sinh...", "info");
 
         try {
-            // 1. Thu thập danh sách các "khóa chặn" cần xóa trên Firebase
+            const safeAdminPath = currentUser.user.replace(/\./g, '_');
             const tasks = [];
+
+            // 1. MỞ CHẶN: Xóa từng "ổ khóa" trên Firebase
             quizHistory.forEach(h => {
                 if (h.examCode && h.user) {
-                    const cleanSubmission = rdb.ref(`system/submissions/${h.examCode}/${h.user}`).remove();
+                    // PHẢI CÓ safeAdminPath ở đầu thì mới xóa đúng chỗ đã chặn
+                    const cleanSubmission = rdb.ref(`system/submissions/${safeAdminPath}/${h.examCode}/${h.user}`).remove();
                     tasks.push(cleanSubmission);
                 }
             });
 
-            // 2. Thực hiện xóa tất cả các lệnh chặn đồng thời
+            // 2. XÓA DANH SÁCH: Xóa kho điểm của Admin
+            tasks.push(rdb.ref(`users_data/${safeAdminPath}/quiz_history`).remove());
+
+            // Thực hiện tất cả các lệnh xóa
             await Promise.all(tasks);
 
-            // 3. Xóa sạch kho dữ liệu lịch sử của Admin trên Firebase
-            const safeAdminPath = currentUser.user.replace(/\./g, '_');
-            await rdb.ref('users_data/' + safeAdminPath + '/quiz_history').remove();
-
-            // 4. Cập nhật LocalStorage và giao diện
+            // 3. Cập nhật giao diện local
             quizHistory = [];
             localStorage.setItem(getPrefix() + 'quiz_history', JSON.stringify(quizHistory));
-            
-            // --- RESET THÔNG BÁO ---
             localStorage.setItem('last_history_count_' + currentUser.user, "0");
             
-            const hBadge = document.getElementById('sidebar-history-badge');
-            if (hBadge) {
-                hBadge.innerText = "0";
-                hBadge.classList.add('hidden');
+            if (document.getElementById('sidebar-history-badge')) {
+                document.getElementById('sidebar-history-badge').classList.add('hidden');
             }
-            
             if (typeof updateGlobalMenuDot === "function") updateGlobalMenuDot();
 
-            sysNotify("Thành công", "Đã xóa sạch lịch sử. Tất cả thí sinh hiện có thể vào thi lại!", "success");
+            sysNotify("Thành công", "Đã dọn sạch. Hiện tại tất cả thí sinh có thể vào thi lại!", "success");
             renderHistoryTable(); 
 
         } catch (error) {
-            console.error("Lỗi khi xóa lịch sử:", error);
-            sysNotify("Lỗi hệ thống", "Không thể hoàn tất việc xóa dữ liệu. Vui lòng thử lại!", "error");
+            console.error("Lỗi xóa:", error);
+            sysNotify("Lỗi", "Không thể hoàn tất việc xóa dữ liệu!", "error");
         }
     }
 }
@@ -3409,8 +3368,6 @@ function editTempQ(idx) {
     if (!q) return;
 
     currentEditingTempIdx = idx;
-
-    // Đổ dữ liệu vào form
     document.getElementById('manual-q').value = q.text;
     document.getElementById('manual-a').value = q.options[0];
     document.getElementById('manual-b').value = q.options[1];
@@ -3422,19 +3379,37 @@ function editTempQ(idx) {
     btnSave.innerText = "XÁC NHẬN SỬA CÂU TẠM #" + (idx + 1);
     btnSave.className = "flex-1 py-4 bg-orange-600 text-white font-bold rounded-xl shadow-lg";
     
-    document.getElementById('label-edit-mode').innerHTML = `<span class="animate-pulse text-orange-400">📝 ĐANG SỬA CÂU TẠM THỜI #${idx + 1}</span>`;
+    document.getElementById('label-edit-mode').innerHTML = `<span class="bg-orange-500/20 px-3 py-1 rounded-lg text-orange-400 animate-pulse">📝 ĐANG SỬA CÂU TẠM #${idx + 1}</span>`;
     
-    // --- KHẮC PHỤC LỖI CUỘN TẠI ĐÂY ---
+    smartScrollToEditor(); // Gọi ở đây
+}
+
+function smartScrollToEditor() {
+    const container = document.getElementById('manual-editor-container');
+    const input = document.getElementById('manual-q');
+
+    if (!container || !input) return;
+
+    // 1. Thêm hiệu ứng nháy sáng ngay lập tức để tạo cảm giác phản hồi nhanh
+    container.classList.add('edit-active-focus');
+
+    // 2. QUAN TRỌNG NHẤT: Focus nhưng CẤM trình duyệt tự cuộn (preventScroll)
+    // Điều này ngăn chặn việc màn hình bị đẩy xuống đáy rồi mới nảy lên
+    input.focus({ preventScroll: true });
+
+    // 3. Thực hiện cuộn mượt vào giữa tâm màn hình ngay lập tức
+    // Sử dụng delay cực nhỏ (50ms) để đảm bảo trình duyệt đã nhận lệnh focus
     setTimeout(() => {
-        const targetArea = document.getElementById('manual-q').parentElement;
-        targetArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // Hiệu ứng nháy sáng vùng nhập liệu để nhận diện
-        targetArea.classList.add('edit-active-focus');
-        setTimeout(() => targetArea.classList.remove('edit-active-focus'), 1000);
-    }, 150); // Chờ 150ms để layout ổn định
-    
-    document.getElementById('manual-q').focus();
+        container.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+        });
+
+        // 4. Xóa class sau khi hiệu ứng hoàn tất
+        setTimeout(() => {
+            container.classList.remove('edit-active-focus');
+        }, 1000);
+    }, 50); 
 }
 
 function confirmImport() { 
@@ -3553,9 +3528,11 @@ function saveManualQToFolder() {
         document.getElementById('manual-d').value.trim()
     ];
 
+    // 1. Kiểm tra tính hợp lệ
     if (folderIdx === "" || !foldersDB[folderIdx]) return sysNotify("Lỗi", "Vui lòng chọn một bộ đề!", "warn");
     if (!qText) return sysNotify("Lỗi", "Vui lòng nhập nội dung câu hỏi!", "warn");
 
+    // 2. Xác định đáp án đúng
     let correct;
     if (qType === 'tf') {
         correct = [];
@@ -3567,7 +3544,7 @@ function saveManualQToFolder() {
         correct = parseInt(document.getElementById('manual-correct').value);
     }
 
-    // Tạo đối tượng câu hỏi mới
+    // 3. Tạo đối tượng câu hỏi mới
     const newQuestion = {
         text: qText,
         options: optValues,
@@ -3577,12 +3554,11 @@ function saveManualQToFolder() {
         audio: qAudio
     };
 
-    // --- 1. NẠP VÀO BỘ ĐỀ ĐÃ CHỌN ---
+    // --- BƯỚC A: NẠP VÀO BỘ ĐỀ ĐÃ CHỌN ---
     if (!foldersDB[folderIdx].questions) foldersDB[folderIdx].questions = [];
     foldersDB[folderIdx].questions.push(JSON.parse(JSON.stringify(newQuestion)));
 
-    // --- 2. TỰ ĐỘNG NẠP VÀO NGÂN HÀNG CHUNG (DB) ---
-    // Kiểm tra xem nội dung câu hỏi này đã có trong Ngân hàng chung chưa
+    // --- BƯỚC B: TỰ ĐỘNG NẠP VÀO NGÂN HÀNG CHUNG (Để tái sử dụng) ---
     const isDupInBank = db.some(
         bankQ => bankQ.text.trim().toLowerCase() === qText.toLowerCase()
     );
@@ -3590,22 +3566,27 @@ function saveManualQToFolder() {
     if (!isDupInBank) {
         db.push(JSON.parse(JSON.stringify(newQuestion)));
         saveDB();              // Lưu Ngân hàng chung lên Firebase
-        renderAdminPreview();  // Cập nhật danh sách hiển thị ở trang chủ Admin
+        renderAdminPreview();  // Vẽ lại danh sách ở Trang chủ Admin
     }
 
-    // Lưu dữ liệu bộ đề
-    saveFolders(); 
-    updateFolderDropdowns(); // Cập nhật lại các ô chọn nếu cần
+    // --- BƯỚC C: LƯU VÀ ĐỒNG BỘ MÃ ĐỀ ĐANG CHẠY ---
+    saveFolders(); // Lưu dữ liệu bộ đề gốc
 
-    showModernToast("THÀNH CÔNG", `Đã thêm vào bộ đề: <b>${foldersDB[folderIdx].name}</b> và Ngân hàng chung.`, "success");
+    // GỌI ĐỒNG BỘ: Mọi mã đề đang hoạt động của Folder này trên Server sẽ được cập nhật ngay
+    syncUpdateToFirebaseCodes(folderIdx); 
+
+    updateFolderDropdowns(); 
+
+    // 4. Thông báo và Reset Form
+    showModernToast("THÀNH CÔNG", `Đã thêm vào bộ đề: <b>${foldersDB[folderIdx].name}</b> và đồng bộ mã thi!`, "success");
     
-    // Reset form để nhập câu tiếp theo
+    // Reset form để sẵn sàng nhập câu tiếp theo
     document.getElementById('manual-q').value = "";
     document.getElementById('manual-a').value = "";
     document.getElementById('manual-b').value = "";
     document.getElementById('manual-c').value = "";
     document.getElementById('manual-d').value = "";
-    document.getElementById('manual-q').focus();
+    document.getElementById('manual-q').focus(); // Đưa con trỏ về ô nhập liệu để nhập nhanh
 }
 
 function cancelImport() {
@@ -5560,19 +5541,26 @@ function listenToOTPRequests() {
             }
         }
         
-        // Sau khi cập nhật số ở badge, cập nhật luôn chấm đỏ ở nút Menu chính
+        // Cập nhật chấm đỏ ngoài menu
         updateGlobalMenuDot();
         
-        // Thông báo Toast nếu có yêu cầu mới (khi web đang mở)
+        // --- LOGIC THÔNG BÁO NỔ ĐIỀU HƯỚNG THÔNG MINH ---
         if (!isialLoad && pendingOTP > 0) {
-            // Bạn có thể mở dòng dưới nếu muốn hiện thông báo nổi
-            // showModernToast("Yêu cầu OTP", `Có ${pendingOTP} yêu cầu cấp mã mới!`, "warn");
+             NOTI_SOUND.play().catch(() => {});
+             // THÊM: Tham số "page-otp-manager" để click là dẫn tới trang duyệt mã ngay
+             showModernToast(
+                "YÊU CẦU OTP MỚI", 
+                `Có <b>${pendingOTP}</b> yêu cầu cấp mã đang chờ xử lý!`, 
+                "warn", 
+                "page-otp-manager"
+             );
         }
     });
 }
 
 // 1. Hàm hiển thị Toast thông báo xịn xò
-function showModernToast(title, msg, type = "info") {
+// Hàm hiển thị Toast thông báo thông minh: Click vào đâu dẫn về đó
+function showModernToast(title, msg, type = "info", targetPage = null) {
     const container = document.getElementById('toast-container');
     if (!container) return;
 
@@ -5586,13 +5574,12 @@ function showModernToast(title, msg, type = "info") {
 
     toast.className = 'modern-toast';
     toast.style.borderLeft = `6px solid ${theme.border}`;
-    toast.style.cursor = 'pointer';
     
     toast.innerHTML = `
         <div class="toast-icon" style="background: ${theme.bg}; color: ${theme.border}">${theme.icon}</div>
         <div class="toast-content">
             <div class="toast-title" style="color: ${theme.border}; font-weight: 800; font-size: 13px;">${title}</div>
-            <div class="toast-desc" style="font-size: 12px; line-height: 1.4;">${msg}</div>
+            <div class="toast-desc" style="font-size: 11px; line-height: 1.4;">${msg}</div>
         </div>
         <button onclick="this.parentElement.remove()" class="text-slate-500 hover:text-white ml-2 text-xl">✕</button>
     `;
@@ -5600,22 +5587,28 @@ function showModernToast(title, msg, type = "info") {
     container.appendChild(toast);
     setTimeout(() => toast.classList.add('show'), 100);
     
-    // Click vào Toast là mở ngay khung chat
+    // LOGIC ĐIỀU HƯỚNG THÔNG MINH KHI CLICK
     toast.onclick = (e) => {
         if(e.target.tagName !== 'BUTTON') {
-            if (currentUser.isRoot) showPage('page-chat-admin');
-            else toggleChatBox();
+            if (targetPage) {
+                // Nếu là lệnh đặc biệt mở Chat cho Admin con
+                if (targetPage === 'openChat') {
+                    toggleChatBox();
+                } else {
+                    // Còn lại là chuyển trang ID
+                    showPage(targetPage);
+                }
+            }
             toast.remove();
         }
     };
 
-    // Tự động đóng sau 10 giây
     setTimeout(() => {
         if(toast.parentElement) {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 600);
         }
-    }, 10000);
+    }, 8000);
 }
 
 // 2. Hàm lắng nghe tổng số tin nhắn chưa đọc từ Firebase
@@ -6984,6 +6977,9 @@ function listenToCandidates() {
             return;
         }
 
+        // Xóa bộ đếm cũ trước khi tạo bảng mới
+        if (monitorInterval) clearInterval(monitorInterval);
+
         let html = "";
         const sortedExamCodes = Object.keys(data).sort();
 
@@ -7002,28 +6998,27 @@ function listenToCandidates() {
             studentsEntries.forEach(([safeUser, s]) => {
                 const isDone = s.status === 'ĐÃ NỘP BÀI';
                 const isWaiting = s.status === 'ĐÃ TRUY CẬP VÀO ĐỀ';
-                const sId = safeUser;
                 
-                // --- LOGIC THÔNG BÁO NỔ (TOAST) ---
+                const sId = safeUser; 
+
+                // LOGIC THÔNG BÁO NỔ ĐIỀU HƯỚNG THÔNG MINH
                 if (!isialLoad) {
                     const studentKey = `${examCode}_${safeUser}`;
                     const oldStatus = trackedStudents[studentKey];
-
-                    // 1. Phát hiện thí sinh mới vào
+                    
                     if (!oldStatus) {
                         NOTI_SOUND.play().catch(() => {});
-                        showModernToast("THÍ SINH MỚI", `<b>${s.name}</b> vừa truy cập đề <b>[${examCode}]</b>`, "info");
+                        // THÊM: Dẫn về trang giám sát
+                        showModernToast("THÍ SINH MỚI", `<b>${s.name}</b> vừa vào đề <b>${examCode}</b>`, "info", "page-candidates-manager");
                         updateCandidateBadge(1);
-                    } 
-                    // 2. Phát hiện thí sinh vừa bấm nộp bài
-                    else if (oldStatus !== 'ĐÃ NỘP BÀI' && s.status === 'ĐÃ NỘP BÀI') {
+                    } else if (oldStatus !== 'ĐÃ NỘP BÀI' && s.status === 'ĐÃ NỘP BÀI') {
                         NOTI_SOUND.play().catch(() => {});
-                        showModernToast("BÀI THI MỚI", `<b>${s.name}</b> đã hoàn thành đề <b>[${examCode}]</b>: <b>${s.score}đ</b>`, "success");
+                        // THÊM: Dẫn về trang giám sát
+                        showModernToast("BÀI THI MỚI", `<b>${s.name}</b> đã nộp bài đề <b>${examCode}</b>`, "success", "page-candidates-manager");
                         updateCandidateBadge(1);
                     }
-                    trackedStudents[studentKey] = s.status; // Cập nhật trạng thái đã theo dõi
+                    trackedStudents[studentKey] = s.status;
                 } else {
-                    // Nếu là lần đầu load trang, chỉ lưu vào bộ nhớ tracking mà không nổ thông báo
                     trackedStudents[`${examCode}_${safeUser}`] = s.status;
                 }
 
@@ -7041,12 +7036,34 @@ function listenToCandidates() {
                             ${isWaiting ? 'ĐANG ĐỢI...' : (isDone ? 'HOÀN THÀNH' : '--:--')}
                         </div>
                     </td>
-                    <td class="pr-6 text-right"><span class="text-lg font-black ${isDone ? 'text-white' : 'text-slate-700'}">${s.score}</span></td>
+                    <td class="pr-6 text-right"><span class="text-lg font-black ${isDone ? 'text-white' : 'text-slate-700'}">${s.score || '---'}</span></td>
                 </tr>`;
             });
         });
         body.innerHTML = html;
-        // Tái khởi động bộ đếm giờ (giữ nguyên logic đếm giờ cũ của bạn ở đây...)
+
+        // BỘ ĐẾM GIỜ ĐỒNG BỘ THEO ID safeUser
+        monitorInterval = setInterval(() => {
+            const now = getServerTime();
+            sortedExamCodes.forEach(ec => {
+                Object.entries(data[ec]).forEach(([safeUser, s]) => {
+                    if (s.status === 'ĐANG LÀM BÀI' && s.endTime) {
+                        const clockEl = document.getElementById(`clock-${safeUser}`);
+                        if (clockEl) {
+                            const remain = s.endTime - now;
+                            if (remain > 0) {
+                                const m = Math.floor(remain / 60000);
+                                const sec = Math.floor((remain % 60000) / 1000);
+                                clockEl.innerText = `Còn ${m}p ${sec}s`;
+                            } else {
+                                clockEl.innerText = "HẾT GIỜ";
+                                clockEl.style.color = "#ef4444";
+                            }
+                        }
+                    }
+                });
+            });
+        }, 1000);
     });
 }
 
@@ -7101,6 +7118,69 @@ function updateAdminMenus() {
      }
 }
 // Gọi nó ngay sau khi loginSuccess hoàn tất
+
+// ==========================================
+// HÀM ĐỒNG BỘ CẬP NHẬT: SỬA ĐẾN ĐÂU - MÃ ĐỀ ĐỔI ĐẾN ĐÓ
+// ==========================================
+async function syncUpdateToFirebaseCodes(folderIdx) {
+    if (folderIdx === -1) return;
+    
+    const folder = foldersDB[folderIdx];
+    const safeAdmin = currentUser.user.replace(/\./g, '_');
+    const now = Date.now();
+
+    // Hiện thông báo đang xử lý ngầm
+    showModernToast("ĐANG ĐỒNG BỘ", "Đang cập nhật thay đổi ra các mã đề đang hoạt động...", "info");
+
+    try {
+        // 1. Lấy toàn bộ bản đồ mã đề trên Server
+        const snapshot = await rdb.ref('system/global_share_map').once('value');
+        const allActiveMaps = snapshot.val() || {};
+        
+        const updates = {};
+        let count = 0;
+
+        // 2. Tìm các mã đề thuộc về Folder này của chính Admin này
+        for (const code in allActiveMaps) {
+            const mapData = allActiveMaps[code];
+            
+            // Điều kiện: Đúng Admin + Đúng Folder Index + Mã còn hạn dùng
+            if (mapData.admin === currentUser.user && 
+                mapData.folderIdx === folderIdx && 
+                mapData.expiresAt > now) {
+                
+                count++;
+                
+                // Nếu là mã đề con (đã xáo trộn sẵn)
+                if (mapData.isChildCode) {
+                    // Tạo bản sao mới từ câu hỏi đã sửa của Folder
+                    let freshQuestions = JSON.parse(JSON.stringify(folder.questions));
+                    
+                    // Xáo trộn lại một lần nữa để đảm bảo tính minh bạch của mã con
+                    freshQuestions = shuffleArray(freshQuestions);
+                    freshQuestions.forEach(q => {
+                        const correctText = q.options[q.correct];
+                        q.options = shuffleArray(q.options);
+                        q.correct = q.options.indexOf(correctText);
+                    });
+                    
+                    updates[`system/global_share_map/${code}/fixedQuestions`] = freshQuestions;
+                }
+                
+                // Luôn cập nhật tên bài thi nếu bạn có lỡ đổi tên Folder
+                updates[`system/global_share_map/${code}/examName`] = folder.name + (mapData.isChildCode ? ` (Mã ${code})` : "");
+            }
+        }
+
+        // 3. Đẩy tất cả cập nhật lên Firebase cùng một lúc (Multi-path update)
+        if (Object.keys(updates).length > 0) {
+            await rdb.ref().update(updates);
+            showModernToast("THÀNH CÔNG", `Đã cập nhật dữ liệu cho ${count} mã đề đang chạy!`, "success");
+        }
+    } catch (err) {
+        console.error("Lỗi đồng bộ:", err);
+    }
+}
 
 </script>
 <!-- GIAO DIỆN CHAT CHO ADMIN CON -->

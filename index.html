@@ -1708,6 +1708,7 @@ document.onkeydown = function(e) {
 // 2. BIẾN TOÀN CỤC & HẰNG SỐ (FULL LOGIC CŨ)
 // ==========================================
 let isF12EnabledByRoot = false; // Trạng thái công tắc
+let candidatesInitialDataLoaded = false; // Cờ hiệu riêng cho trang Giám sát
 let notifyResolver = null;
 const AD_EMAIL = "cnhphi25@pdu.edu.vn", AD_PHONE = "0978877125", AD_PASS_ = "04082007";
 const SECRET_KEY = "04082007"; 
@@ -3951,13 +3952,13 @@ function handleJoinQuiz() {
             const endTimeMs = Date.now() + durationMs;
 
             // GHI DANH THÍ SINH (Giai đoạn: Chờ ở phòng chờ)
-            const safeAdminPath = data.admin.replace(/\./g, '_');
+            const safeAdminPath = data.admin.replace(/\./g, '_'); // Phải chuyển email admin thành gạch dưới
 
             rdb.ref(`system/active_sessions/${safeAdminPath}/${code}/${safeUser}`).set({
                 name: name,
                 startTime: Date.now(),
-                endTime: 0,                   // Chưa có thời gian kết thúc
-                status: 'ĐÃ TRUY CẬP VÀO ĐỀ',  // Trạng thái chờ
+                endTime: 0,
+                status: 'ĐÃ TRUY CẬP VÀO ĐỀ', // <--- Trạng thái này sẽ kích hoạt thông báo
                 score: '---',
                 examName: data.examName || "Đề thi " + code
             });
@@ -6967,22 +6968,25 @@ function listenToCandidates() {
     if (!currentUser || !currentUser.isAdmin) return;
     const safeAdmin = currentUser.user.replace(/\./g, '_');
     
+    // Lắng nghe node active_sessions của Admin này
     rdb.ref(`system/active_sessions/${safeAdmin}`).on('value', (snapshot) => {
         const data = snapshot.val();
         const body = document.getElementById('candidates-table-body');
-        if (!body) return;
-
+        
+        // 1. Nếu không có ai, xóa bảng và dừng lại
         if (!data) {
-            body.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-500 italic">Chưa có thí sinh nào tham gia.</td></tr>';
+            if(body) body.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-500 italic">Chưa có thí sinh nào tham gia.</td></tr>';
+            candidatesInitialDataLoaded = true; // Đánh dấu đã load xong (dù trống)
             return;
         }
 
-        // Xóa bộ đếm cũ trước khi tạo bảng mới
+        // 2. Xóa bộ đếm cũ để tránh lặp
         if (monitorInterval) clearInterval(monitorInterval);
 
         let html = "";
         const sortedExamCodes = Object.keys(data).sort();
 
+        // 3. Duyệt qua từng mã đề và từng thí sinh
         sortedExamCodes.forEach((examCode) => {
             html += `
                 <tr class="bg-indigo-500/10">
@@ -6996,34 +7000,35 @@ function listenToCandidates() {
             
             const studentsEntries = Object.entries(data[examCode]);
             studentsEntries.forEach(([safeUser, s]) => {
-                const isDone = s.status === 'ĐÃ NỘP BÀI';
-                const isWaiting = s.status === 'ĐÃ TRUY CẬP VÀO ĐỀ';
-                
-                const sId = safeUser; 
+                const sId = safeUser;
+                const studentUniqueKey = `${examCode}_${safeUser}`; // ID duy nhất để không bị lẫn giữa các đề
+                const oldStatus = trackedStudents[studentUniqueKey];
 
-                // LOGIC THÔNG BÁO NỔ ĐIỀU HƯỚNG THÔNG MINH
-                if (!isialLoad) {
-                    const studentKey = `${examCode}_${safeUser}`;
-                    const oldStatus = trackedStudents[studentKey];
-                    
+                // --- LOGIC NỔ THÔNG BÁO THÔNG MINH ---
+                // Chỉ nổ thông báo nếu đây KHÔNG PHẢI là lần tải dữ liệu đầu tiên khi mở web
+                if (candidatesInitialDataLoaded) {
                     if (!oldStatus) {
+                        // Thí sinh hoàn toàn mới vừa nhấn "Xác nhận vào thi"
                         NOTI_SOUND.play().catch(() => {});
-                        // THÊM: Dẫn về trang giám sát
-                        showModernToast("THÍ SINH MỚI", `<b>${s.name}</b> vừa vào đề <b>${examCode}</b>`, "info", "page-candidates-manager");
+                        showModernToast("THAM GIA MỚI 👤", `Thí sinh <b>${s.name}</b> đã vào đề <b>${examCode}</b>`, "info", "page-candidates-manager");
                         updateCandidateBadge(1);
                     } else if (oldStatus !== 'ĐÃ NỘP BÀI' && s.status === 'ĐÃ NỘP BÀI') {
+                        // Thí sinh vừa nộp bài
                         NOTI_SOUND.play().catch(() => {});
-                        // THÊM: Dẫn về trang giám sát
-                        showModernToast("BÀI THI MỚI", `<b>${s.name}</b> đã nộp bài đề <b>${examCode}</b>`, "success", "page-candidates-manager");
+                        showModernToast("BÀI THI MỚI ✅", `Thí sinh <b>${s.name}</b> đã hoàn thành đề <b>${examCode}</b>`, "success", "page-candidates-manager");
                         updateCandidateBadge(1);
                     }
-                    trackedStudents[studentKey] = s.status;
-                } else {
-                    trackedStudents[`${examCode}_${safeUser}`] = s.status;
                 }
 
+                // Cập nhật trạng thái vào bộ nhớ tạm để so sánh lần sau
+                trackedStudents[studentUniqueKey] = s.status;
+
+                // 4. Vẽ hàng dữ liệu
+                const isDone = s.status === 'ĐÃ NỘP BÀI';
+                const isWaiting = s.status === 'ĐÃ TRUY CẬP VÀO ĐỀ';
+
                 html += `
-                <tr class="border-b border-white/5 hover:bg-white/5 transition">
+                <tr class="border-b border-white/5 hover:bg-white/5 transition animate-in fade-in slide-in-from-left-2 duration-500">
                     <td class="py-3 pl-6"><div class="font-bold text-white text-sm">${s.name || "N/A"}</div></td>
                     <td class="text-center font-mono text-xs text-slate-500">${examCode}</td>
                     <td class="text-center">
@@ -7040,9 +7045,14 @@ function listenToCandidates() {
                 </tr>`;
             });
         });
-        body.innerHTML = html;
 
-        // BỘ ĐẾM GIỜ ĐỒNG BỘ THEO ID safeUser
+        // Cập nhật giao diện bảng
+        if(body) body.innerHTML = html;
+        
+        // Sau khi vẽ xong lần đầu tiên, cho phép nổ thông báo từ lần sau
+        candidatesInitialDataLoaded = true;
+
+        // 5. Khởi động lại bộ đếm giờ (giữ nguyên logic cũ)
         monitorInterval = setInterval(() => {
             const now = getServerTime();
             sortedExamCodes.forEach(ec => {

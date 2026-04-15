@@ -853,6 +853,12 @@ body.scrolling::-webkit-scrollbar-thumb {
     border: 2px solid #6366f1 !important;
 }
 
+button:disabled {
+    opacity: 0.2 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+}
+
     </style>
 </head>
 <body>
@@ -1176,22 +1182,23 @@ body.scrolling::-webkit-scrollbar-thumb {
                         <p class="text-orange-400 font-bold mb-2">⚠️ Phát hiện <span id="temp-count">0</span> câu hỏi:</p>
                         <div id="temp-preview" class="text-xs text-slate-400 bg-black/20 p-3 rounded-lg mb-4 italic"></div>
                         
-                        <!-- CHỌN BỘ ĐỀ ĐỂ NHẬP NHANH (KHI PHÁT HIỆN CÂU HỎI) -->
+                        <!-- CHỌN BỘ ĐỀ ĐỂ NHẬP NHANH -->
                         <div class="mb-4 p-3 bg-white/5 rounded-xl border border-white/10">
                             <label class="block text-[10px] font-bold text-indigo-300 mb-2 uppercase">Chọn bộ đề để nhập nhanh:</label>
-                            <div class="flex flex-wrap gap-2">
-                                <!-- Ô chọn bộ đề -->
-                                <select id="import-to-folder-select" class="input-control text-xs py-2 flex-1 min-w-[120px]"></select>
+                            <div class="flex flex-col gap-2">
+                                <!-- Hàng 1: Ô chọn chiếm 100% -->
+                                <select id="import-to-folder-select" class="input-control text-xs py-3 w-full !m-0"></select>
                                 
-                                <!-- Nút Nhập vào bộ đề -->
-                                <button onclick="importTempToFolder()" class="bg-indigo-500 hover:bg-indigo-400 text-[10px] px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-all shadow-lg shadow-indigo-900/20">
-                                    NHẬP VÀO BỘ ĐỀ
-                                </button>
+                                <!-- Hàng 2: Hai nút chia đôi 50/50 luôn nằm cạnh nhau -->
+                                <div class="flex gap-2">
+                                    <button onclick="importTempToFolder()" class="flex-1 bg-indigo-500 hover:bg-indigo-400 text-[10px] py-3 rounded-xl font-bold whitespace-nowrap transition-all shadow-lg shadow-indigo-900/20">
+                                        NHẬP VÀO BỘ ĐỀ
+                                    </button>
 
-                                <!-- NÚT MỚI: Tạo bộ đề mới ngay tại chỗ -->
-                                <button onclick="createNewFolder()" class="bg-slate-700 hover:bg-slate-600 text-[10px] px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-all border border-white/10">
-                                    📂 TẠO BỘ ĐỀ MỚI
-                                </button>
+                                    <button onclick="createNewFolder()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-[10px] py-3 rounded-xl font-bold whitespace-nowrap transition-all border border-white/10">
+                                        📂 TẠO BỘ ĐỀ MỚI
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -1251,20 +1258,20 @@ body.scrolling::-webkit-scrollbar-thumb {
     </div>
 </div>
 
-                        <!-- MỤC THÊM NHANH VÀO BỘ ĐỀ + NÚT TẠO MỚI -->
-                        <div class="mt-4 p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/20">
-                            <label class="block text-[10px] font-bold text-emerald-400 mb-2 uppercase italic">Hoặc thêm nhanh vào Bộ đề cụ thể:</label>
-                            <div class="flex flex-wrap gap-2">
-                                <!-- Ô chọn bộ đề -->
-                                <select id="manual-to-folder-select" class="input-control text-xs py-2 flex-1 min-w-[120px]"></select>
-                                
-                                <!-- Nút Thêm vào bộ đề -->
-                                <button onclick="saveManualQToFolder()" class="bg-emerald-600 hover:bg-emerald-500 text-[10px] px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-all shadow-lg shadow-emerald-900/20">
+                        <!-- MỤC THÊM NHANH VÀO BỘ ĐỀ -->
+                    <div class="mt-4 p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/20">
+                        <label class="block text-[10px] font-bold text-emerald-400 mb-2 uppercase italic">Hoặc thêm nhanh vào Bộ đề cụ thể:</label>
+                        <div class="flex flex-col gap-2">
+                            <!-- Hàng 1: Ô chọn chiếm 100% -->
+                            <select id="manual-to-folder-select" class="input-control text-xs py-3 w-full !m-0"></select>
+                            
+                            <!-- Hàng 2: Hai nút chia đôi 50/50 -->
+                            <div class="flex gap-2">
+                                <button onclick="saveManualQToFolder()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-[10px] py-3 rounded-xl font-bold whitespace-nowrap transition-all shadow-lg shadow-emerald-900/20">
                                     ➕ THÊM VÀO
                                 </button>
 
-                                <!-- NÚT MỚI: Tạo bộ đề mới -->
-                                <button onclick="createNewFolder()" class="bg-slate-700 hover:bg-slate-600 text-[10px] px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-all border border-white/10">
+                                <button onclick="createNewFolder()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-[10px] py-3 rounded-xl font-bold whitespace-nowrap transition-all border border-white/10">
                                     📂 TẠO BỘ ĐỀ MỚI
                                 </button>
                             </div>
@@ -1490,17 +1497,21 @@ body.scrolling::-webkit-scrollbar-thumb {
         </div>
     </div>
 
-    <div id="page-quiz-view" class="page hidden">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div class="lg:col-span-8">
-                <div class="card glass min-h-[500px] flex flex-col shadow-2xl relative">
-                    <div id="current-q-box" class="flex-1"></div>
-                    <div class="flex justify-between items-center mt-8 pt-6 border-t border-white/10">
-                        <button id="btn-prev" onclick="moveQ(-1)" class="bg-white/5 border border-white/10 shadow-none px-8">TRƯỚC</button>
-                        <button id="btn-next" onclick="moveQ(1)" class="px-8">KẾ TIẾP</button>
-                    </div>
+<div id="page-quiz-view" class="page hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-8">
+            <div class="card glass min-h-[500px] flex flex-col shadow-2xl relative">
+                <!-- NỘI DUNG CÂU HỎI Ở ĐÂY -->
+                <div id="current-q-box" class="flex-1"></div> 
+
+                <!-- NÚT BẤM PHẢI NẰM RIÊNG Ở DƯỚI ĐÂY -->
+                <div class="flex justify-between items-center mt-8 pt-6 border-t border-white/10">
+                    <button id="btn-prev" onclick="moveQ(-1)" class="bg-white/5 border border-white/10 px-8 py-3 rounded-xl font-bold">TRƯỚC</button>
+                    <button id="btn-next" onclick="moveQ(1)" class="bg-indigo-600 px-8 py-3 rounded-xl font-bold">KẾ TIẾP</button>
                 </div>
             </div>
+        </div>
+        <!-- Cột bên phải (Timer/Nav) giữ nguyên -->
 
             <div class="lg:col-span-4 space-y-4">
                 <div id="timer-box" class="glass font-mono">45:00</div>
@@ -4089,20 +4100,20 @@ function startFolderQuiz(i) {
 
 function renderQuestion() {
     const q = activeQuestions[currentIdx];
-    if (!q) return;
+    if (!q) {
+        console.error("Không tìm thấy câu hỏi ở chỉ số:", currentIdx);
+        return;
+    }
 
+    // 1. Vẽ nội dung câu hỏi
     let options = q.options || [];
     let contentHtml = `<div class="grid grid-cols-1 gap-3">`;
-    
     options.forEach((opt, i) => {
         if (!opt || opt === "...") return;
         const isSelected = (userAnswers[currentIdx] === i);
-        const activeClass = isSelected ? 'active-selected' : '';
-        let iconLeft = String.fromCharCode(65 + i);
-
         contentHtml += `
-            <div class="quiz-opt ${activeClass}" onclick="selectOption(${i})">
-                <div class="opt-circle">${iconLeft}</div>
+            <div class="quiz-opt ${isSelected ? 'active-selected' : ''}" onclick="selectOption(${i})">
+                <div class="opt-circle">${String.fromCharCode(65 + i)}</div>
                 <span class="text-md leading-snug break-words">${opt}</span>
             </div>`;
     });
@@ -4116,7 +4127,30 @@ function renderQuestion() {
         </div>
         <p class="text-xl font-bold mb-6 text-white leading-relaxed">${q.text}</p>
         <div class="w-full">${contentHtml}</div>`;
-    renderNav();
+
+    // 2. KHÓA CỨNG NÚT BẰNG THUỘC TÍNH VÀ CLASS
+    const prevBtn = document.getElementById('btn-prev');
+    const nextBtn = document.getElementById('btn-next');
+
+    // Nút Trước
+    if (currentIdx === 0) {
+        prevBtn.disabled = true;
+        prevBtn.classList.add('opacity-20', 'pointer-events-none');
+    } else {
+        prevBtn.disabled = false;
+        prevBtn.classList.remove('opacity-20', 'pointer-events-none');
+    }
+
+    // Nút Sau
+    if (currentIdx === activeQuestions.length - 1) {
+        nextBtn.disabled = true;
+        nextBtn.classList.add('opacity-20', 'pointer-events-none');
+    } else {
+        nextBtn.disabled = false;
+        nextBtn.classList.remove('opacity-20', 'pointer-events-none');
+    }
+
+    renderNav(); // Cập nhật bảng số bên phải
 }
 
 function renderNav() {
@@ -4141,13 +4175,24 @@ function renderNav() {
 }
 
 function jumpTo(idx) { currentIdx = idx; renderQuestion(); }
+
 function moveQ(step) { 
-    stopAllQuizAudio(); // Thêm dòng này
-    let next = currentIdx + step; 
+    // Ép kiểu số cho chắc chắn
+    let next = parseInt(currentIdx) + parseInt(step); 
+    
+    // Kiểm tra giới hạn
     if(next >= 0 && next < activeQuestions.length) { 
         currentIdx = next; 
+        console.log("Đang chuyển sang câu:", currentIdx + 1);
+        
         renderQuestion(); 
-    } 
+        
+        // Buộc màn hình cuộn lên đầu câu hỏi (tránh bị kẹt ở đáy trang)
+        window.scrollTo(0, 0);
+        document.getElementById('app-content').scrollTop = 0;
+    } else {
+        console.warn("Vượt quá giới hạn câu hỏi!");
+    }
 }
 
 function startTimer() {

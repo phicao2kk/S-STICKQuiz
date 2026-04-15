@@ -981,81 +981,77 @@ button:disabled {
     </div>
 </div>
 
-<!-- Modal Đăng ký Premium -->
+<!-- Modal Đăng ký Premium - Bản Gọn Gàng Side-by-Side -->
 <div id="premium-modal" class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden" onclick="closePremiumModal()">
-    <div class="premium-border rounded-[32px] w-[95%] max-w-[440px] p-8 relative shadow-2xl animate-in fade-in zoom-in duration-300" onclick="event.stopPropagation()">
-        <div class="text-center mb-6">
-            <span class="text-5xl block mb-2">🔔</span>
-            <h2 class="text-2xl font-extrabold text-white">Đăng ký Premium</h2>
+    <div class="premium-border rounded-[32px] w-[95%] max-w-[440px] p-6 md:p-8 relative shadow-2xl animate-in fade-in zoom-in duration-300" onclick="event.stopPropagation()">
+        <div class="text-center mb-4">
+            <span class="text-4xl block mb-1">💎</span>
+            <h2 class="text-xl font-extrabold text-white">Đăng ký Premium</h2>
         </div>
 
-        <div class="space-y-4 mb-6">
-            <h3 class="text-center font-extrabold text-premium tracking-widest text-lg uppercase">Quyền lợi Premium</h3>
-            <ul class="space-y-2 text-[13px] text-slate-300">
+        <!-- QUYỀN LỢI CHI 2 CỘT CHO NGẮN -->
+        <div class="mb-4">
+            <h3 class="text-center font-black text-premium tracking-widest text-[11px] uppercase mb-2">Quyền lợi đặc biệt</h3>
+            <ul class="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px] text-slate-300">
                 <li>✅ Không giới hạn bộ đề</li>
-                <li>✅ Tăng tốc độ Quét ảnh (OCR)</li>
+                <li>✅ Quét ảnh (OCR) nhanh</li>
                 <li>✅ Tự động tạo mã đề con</li>
-                <li>✅ Lưu trữ đám mây an toàn</li>
+                <li>✅ Lưu trữ đám mây</li>
             </ul>
         </div>
 
-        <!-- BẢNG THÔNG TIN THANH TOÁN -->
-        <div class="payment-box p-5 rounded-2xl space-y-2 text-[13px] mb-6">
-            <p class="text-amber-400 font-bold uppercase text-[12px] mb-2">Đăng ký premium chỉ với 20k/tháng:</p>
+        <!-- BẢNG THÔNG TIN THANH TOÁN (THU GỌN) -->
+        <div class="payment-box p-4 rounded-2xl space-y-1.5 text-[12px] mb-4">
+            <p class="text-amber-400 font-bold uppercase text-[10px] mb-1">Thanh toán chỉ 20k/tháng:</p>
             
-            <div class="flex justify-between items-center py-1">
-                <span>🏦 Ngân hàng:</span> 
-                <b class="text-indigo-200 font-bold">MB BANK</b>
+            <div class="flex justify-between items-center">
+                <span class="text-slate-400">🏦 Ngân hàng:</span> 
+                <b class="text-indigo-200">MB BANK</b>
             </div>
-            
-            <div class="flex justify-between items-center py-1">
-                <span>🔢 Số TK:</span> 
-                <b class="text-amber-200 font-mono text-lg tracking-wider">0978877125</b>
+            <div class="flex justify-between items-center">
+                <span class="text-slate-400">🔢 Số TK:</span> 
+                <b class="text-amber-200 font-mono text-base tracking-wider">0978877125</b>
             </div>
-            
-            <div class="flex justify-between items-center py-1">
-                <span>👤 Chủ TK:</span> 
-                <b class="text-emerald-200 uppercase font-extrabold">CAO NGUYỄN HỒNG PHI</b>
+            <div class="flex justify-between items-center border-b border-white/5 pb-1.5">
+                <span class="text-slate-400">👤 Chủ TK:</span> 
+                <b class="text-emerald-200 uppercase font-bold text-[11px]">CAO NGUYỄN HỒNG PHI</b>
             </div>
-
-            <div class="pt-2 border-t border-white/5 flex justify-between items-center">
-                <span>💰 Nội dung:</span> 
+            <div class="pt-1 flex justify-between items-center">
+                <span class="text-slate-400">💰 Nội dung:</span> 
                 <b class="text-indigo-400">PREMIUM <span id="premium-acc-tag">...</span></b>
             </div>
 
-            <!-- MỤC TẢI ẢNH ĐƯỢC ĐƯA XUỐNG ĐÂY -->
-            <div class="mt-4 pt-4 border-t border-white/5">
+            <!-- MỤC TẢI ẢNH (GIỮ NGUYÊN FORM) -->
+            <div class="mt-3 pt-3 border-t border-white/5">
                 <input type="file" id="input-proof-img" class="hidden" accept="image/*" onchange="previewProofImage(this)">
-                
-                <button onclick="document.getElementById('input-proof-img').click()" class="w-full py-3 bg-white/5 border border-dashed border-white/20 rounded-2xl text-slate-300 text-[10px] hover:bg-white/10 transition-all flex items-center justify-center gap-2">
-                    <span id="proof-btn-text">📸 TẢI ẢNH MINH CHỨNG (BILL)</span>
+                <button onclick="document.getElementById('input-proof-img').click()" class="w-full py-2.5 bg-white/5 border border-dashed border-white/20 rounded-xl text-slate-300 text-[9px] hover:bg-white/10 transition-all font-bold">
+                    📸 TẢI ẢNH MINH CHỨNG (BILL)
                 </button>
-
-                <div id="proof-preview-container" class="hidden mt-4 text-center">
+                <div id="proof-preview-container" class="hidden mt-2 text-center">
                     <div class="relative inline-block">
-                        <img id="proof-img-display" class="mx-auto w-24 h-36 object-cover rounded-xl border-2 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.3)]">
-                        <button onclick="removeProofImage()" class="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full text-[10px] flex items-center justify-center shadow-lg">✕</button>
+                        <img id="proof-img-display" class="mx-auto h-24 w-auto object-contain rounded-xl border-2 border-indigo-500 shadow-lg">
+                        <button onclick="removeProofImage()" class="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full text-[10px]">✕</button>
                     </div>
                 </div>
             </div>
         </div>
 
-                <!-- Chèn đoạn này vào TRÊN nút "ĐÃ CHUYỂN KHOẢN" -->
-        <button onclick="handleQuickTransfer()" class="w-full py-4 mb-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-black rounded-2xl shadow-xl transition-all border-none flex items-center justify-center gap-2">
-            ⚡ CHUYỂN KHOẢN NHANH (MỞ APP BANK)
+        <!-- NÚT CHUYỂN KHOẢN NHANH -->
+        <button onclick="handleQuickTransfer()" class="w-full py-3.5 mb-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black rounded-2xl shadow-xl transition-all border-none text-xs flex items-center justify-center gap-2">
+            ⚡ CHUYỂN KHOẢN NHANH (MỞ APP)
         </button>
 
-        <!-- 2 NÚT HÀNH ĐỘNG -->
-        <div class="flex flex-col gap-3">
-            <button id="btn-transferred-request" onclick="handleTransferredRequest()" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl shadow-lg transition-all border-none">
+        <!-- 2 NÚT CẠNH NHAU ĐỂ TIẾT KIỆM DIỆN TÍCH -->
+        <div class="flex gap-2">
+            <button id="btn-transferred-request" onclick="handleTransferredRequest()" class="flex-[1.5] py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl shadow-lg transition-all border-none text-[11px]">
                 ĐÃ CHUYỂN KHOẢN
             </button>
-            <button onclick="closePremiumModal()" class="w-full py-3 bg-white/5 hover:bg-white/10 text-slate-400 font-semibold rounded-2xl transition-all border border-white/10">
+            <button onclick="closePremiumModal()" class="flex-1 py-3.5 bg-white/5 hover:bg-white/10 text-slate-400 font-semibold rounded-2xl transition-all border border-white/10 text-[11px]">
                 ĐỒNG Ý (ĐÓNG)
             </button>
         </div>
         
-        <p class="text-[10px] text-slate-500 text-center mt-4">Vui lòng chờ Admin duyệt sau khi nhấn chuyển khoản.</p>
+        <p class="text-[9px] text-slate-500 text-center mt-3">Vui lòng chờ Admin duyệt sau khi gửi bill.</p>
     </div>
 </div>
 
@@ -2571,7 +2567,7 @@ function showPreviewZone() {
 }
 
 function updateGlobalMenuDot() {
-    // Danh sách tất cả các ID Badge đang có trên Sidebar
+    // Danh sách các ID Badge trên Sidebar cần kiểm tra
     const badges = [
         'sidebar-chat-badge',
         'sidebar-premium-badge',
@@ -2585,7 +2581,7 @@ function updateGlobalMenuDot() {
 
     badges.forEach(id => {
         const el = document.getElementById(id);
-        // Nếu badge tồn tại, KHÔNG bị ẩn và số bên trong lớn hơn 0
+        // Nếu Badge tồn tại, không bị ẩn và số > 0
         if (el && !el.classList.contains('hidden') && parseInt(el.innerText) > 0) {
             hasAnyNotification = true;
         }
@@ -2686,17 +2682,17 @@ function syncDataFromServer() {
             }
         });
 
-        if (currentUser.isAdmin || currentUser.isRoot) { listenToTotalUnread(); }
-
         if (currentUser.isRoot) {
             document.getElementById('admin-menu-premium').classList.remove('hidden');
             document.getElementById('admin-menu-chat').classList.remove('hidden'); 
             document.getElementById('admin-menu-otp').classList.remove('hidden');
             document.getElementById('student-zone').classList.add('hidden');
 
-            listenForNewUsers();
-            listenToTotalUnread(); 
-            listenToOTPRequests();
+// CHỈ CẦN GỌI CÁC HÀM NÀY MỘT LẦN
+        listenForNewUsers();
+        listenToTotalUnread(); // <--- Lắng nghe và giữ chấm đỏ vĩnh viễn
+        listenToOTPRequests();
+
 
             rdb.ref('system/global_premium_requests').on('value', (s) => {
                 const requests = s.val() || [];
@@ -5472,17 +5468,21 @@ function openPremiumModal() {
 function handleQuickTransfer() {
     if (!currentUser) return sysNotify("Lỗi", "Vui lòng đăng nhập!", "error");
 
-    const bankName = "MB BANK"; // Tên ngân hàng
+    const bankName = "MB BANK";
     const accountNo = "0978877125";
     const amount = 20000;
     const content = `PREMIUM ${currentUser.user.toUpperCase()}`;
     const accountName = "CAO NGUYEN HONG PHI";
 
-    // Link ảnh QR
     const qrUrl = `https://img.vietqr.io/image/MB-${accountNo}-compact2.jpg?amount=${amount}&addInfo=${encodeURIComponent(content)}&accountName=${encodeURIComponent(accountName)}`;
 
     const ntBox = document.getElementById('notify-container');
-    document.getElementById('nt-icon').innerText = '💳';
+    
+    // ĐÃ BỎ ICON CHIẾM DIỆN TÍCH TẠI ĐÂY
+    const iconEl = document.getElementById('nt-icon');
+    iconEl.innerText = ""; 
+    iconEl.classList.add('hidden'); // Ẩn hẳn khối icon để nội dung đẩy lên trên
+
     document.getElementById('nt-title').innerText = 'THANH TOÁN PREMIUM';
     
     document.getElementById('nt-msg').innerHTML = `
@@ -5491,34 +5491,31 @@ function handleQuickTransfer() {
                 <img src="${qrUrl}" style="width:200px; height:auto; display:block; margin:0 auto;" alt="QR Thanh Toan">
             </div>
             
-            <p class="text-[10px] text-amber-400 font-bold uppercase italic">Mẹo: Chụp màn hình rồi mở App Bank quét ảnh để thanh toán nhanh</p>
+            <p class="text-[10px] text-amber-400 font-bold uppercase italic px-4">Mẹo: Chụp màn hình rồi mở App Bank quét ảnh để thanh toán nhanh</p>
 
-            <div class="space-y-2 mt-4">
-                <!-- HÀNG 1: TÊN NGÂN HÀNG (MỚI THÊM) -->
+            <div class="space-y-2 mt-4 text-left">
                 <div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border border-white/5">
-                    <div class="text-left">
+                    <div>
                         <p class="text-[9px] text-slate-500 uppercase">Ngân hàng</p>
                         <p class="text-sm font-bold text-white">${bankName}</p>
                     </div>
-                    <button onclick="copyPaymentInfo('${bankName}', 'Đã copy tên Ngân hàng')" class="bg-indigo-600/20 text-indigo-400 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-indigo-500/30 active:scale-90 transition">SAO CHÉP</button>
+                    <button onclick="copyPaymentInfo('${bankName}', 'Đã copy tên Ngân hàng')" class="bg-indigo-600/20 text-indigo-400 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-indigo-500/30">SAO CHÉP</button>
                 </div>
 
-                <!-- HÀNG 2: SỐ TÀI KHOẢN -->
                 <div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border border-white/5">
-                    <div class="text-left">
+                    <div>
                         <p class="text-[9px] text-slate-500 uppercase">Số tài khoản</p>
                         <p class="text-sm font-mono font-bold text-white">${accountNo}</p>
                     </div>
-                    <button onclick="copyPaymentInfo('${accountNo}', 'Đã copy Số tài khoản')" class="bg-indigo-600/20 text-indigo-400 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-indigo-500/30 active:scale-90 transition">SAO CHÉP</button>
+                    <button onclick="copyPaymentInfo('${accountNo}', 'Đã copy Số tài khoản')" class="bg-indigo-600/20 text-indigo-400 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-indigo-500/30">SAO CHÉP</button>
                 </div>
 
-                <!-- HÀNG 3: NỘI DUNG -->
                 <div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border border-white/5">
-                    <div class="text-left">
-                        <p class="text-[9px] text-slate-500 uppercase">Nội dung chuyển khoản</p>
+                    <div>
+                        <p class="text-[9px] text-slate-500 uppercase">Nội dung</p>
                         <p class="text-sm font-bold text-indigo-300">${content}</p>
                     </div>
-                    <button onclick="copyPaymentInfo('${content}', 'Đã copy Nội dung')" class="bg-indigo-600/20 text-indigo-400 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-indigo-500/30 active:scale-90 transition">SAO CHÉP</button>
+                    <button onclick="copyPaymentInfo('${content}', 'Đã copy Nội dung')" class="bg-indigo-600/20 text-indigo-400 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-indigo-500/30">SAO CHÉP</button>
                 </div>
             </div>
         </div>
@@ -5526,7 +5523,11 @@ function handleQuickTransfer() {
     
     const okBtn = document.getElementById('nt-btn-ok');
     okBtn.innerText = 'TÔI ĐÃ CHUYỂN XONG';
-    okBtn.onclick = () => closeNotify();
+    okBtn.onclick = () => {
+        closeNotify();
+        // Khi đóng thông báo thanh toán, nhớ hiện lại icon cho các thông báo khác dùng
+        iconEl.classList.remove('hidden'); 
+    };
     document.getElementById('nt-btn-cancel').classList.add('hidden');
     ntBox.classList.add('active');
 }
@@ -5617,16 +5618,17 @@ function toggleChatBox() {
     box.classList.toggle('hidden');
 
     if (isOpening) {
-        // Nếu đang mở hộp chat -> Reset thông báo
         const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
+        // Khi mở hộp chat, báo ngay cho Firebase là đã xem hết tin nhắn của User này
         rdb.ref('system/chats/' + chatId).update({
-            unread: 0,
+            unreadUser: 0, 
             userLastSeen: Date.now()
         });
         
-        // Ẩn chấm đỏ ngay lập tức để tạo cảm giác mượt mà
-        document.getElementById('chat-noti-dot')?.classList.add('hidden');
-        document.getElementById('chat-input')?.focus();
+        // Ẩn badge trên giao diện ngay lập tức
+        document.getElementById('chat-noti-number')?.classList.add('hidden');
+        document.getElementById('sidebar-chat-badge')?.classList.add('hidden');
+        updateGlobalMenuDot();
     }
 }
 
@@ -5658,7 +5660,6 @@ function sendChatMessage() {
     
     const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
 
-    // 1. Gửi tin nhắn của người dùng lên Firebase
     const msgData = {
         sender: currentUser.user,
         name: currentUser.name,
@@ -5666,11 +5667,16 @@ function sendChatMessage() {
         text: text,
         time: Date.now()
     };
-    rdb.ref('system/chats/' + chatId + '/messages').push(msgData);
-    rdb.ref('system/chats/' + chatId + '/unread').transaction(c => (c || 0) + 1);
-    input.value = "";
 
-    // 2. HIỆU ỨNG AI ĐANG GÕ CHỮ
+    // 1. Đẩy tin nhắn lên
+    rdb.ref('system/chats/' + chatId + '/messages').push(msgData);
+    
+    // 2. Tăng số lượng tin chưa đọc cho Root Admin trên Server
+    rdb.ref('system/chats/' + chatId + '/unreadRoot').transaction(c => (c || 0) + 1);
+
+    input.value = "";
+    
+    // Hiệu ứng AI (Nếu mày vẫn muốn dùng AI trả lời tự động thì để lại đoạn dưới này)
     const container = document.getElementById('chat-messages');
     const typingDiv = document.createElement('div');
     typingDiv.id = "ai-typing";
@@ -5679,23 +5685,11 @@ function sendChatMessage() {
     container.appendChild(typingDiv);
     container.scrollTop = container.scrollHeight;
 
-    // 3. AI PHẢN HỒI SAU 1.5 GIÂY
     setTimeout(() => {
-        // Xóa hiệu ứng đang gõ
-        const el = document.getElementById('ai-typing');
-        if(el) el.remove();
-
+        const el = document.getElementById('ai-typing'); if(el) el.remove();
         const aiResponse = getSmartAIResponse(text);
-        const aiMsg = {
-            sender: AD_PHONE, // Giả danh Admin gốc
-            name: "HỖ TRỢ TỰ ĐỘNG",
-            text: aiResponse,
-            time: Date.now(),
-            isAI: true // Đánh dấu là AI
-        };
-        
+        const aiMsg = { sender: AD_PHONE, name: "HỖ TRỢ TỰ ĐỘNG", text: aiResponse, time: Date.now(), isAI: true };
         rdb.ref('system/chats/' + chatId + '/messages').push(aiMsg);
-        NOTI_SOUND.play().catch(() => {});
     }, 1500);
 }
 
@@ -5703,18 +5697,35 @@ function loadChatMessages() {
     if(!currentUser) return;
     const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
     const container = document.getElementById('chat-messages');
+    const badgeIcon = document.getElementById('chat-noti-number'); 
+
     if(!container) return;
 
     rdb.ref('system/chats/' + chatId).on('value', (snapshot) => {
         const data = snapshot.val();
         
-        // --- LOGIC XỬ LÝ THÔNG BÁO (BADGE & DOT) ---
-        const unreadCount = (data && data.unread) ? data.unread : 0;
+        // 1. LẤY SỐ TIN CHƯA ĐỌC TỪ SERVER (UNREADUSER)
+        const unreadCount = (data && data.unreadUser) ? data.unreadUser : 0;
         const isBoxClosed = document.getElementById('chat-box').classList.contains('hidden');
-        const sBadge = document.getElementById('sidebar-chat-badge'); // Badge trong Menu Sidebar
-        const iconDot = document.getElementById('chat-noti-dot');    // Chấm đỏ trên Icon nổi
 
-        // 1. Cập nhật số lượng trên Sidebar
+        // Nếu Admin con ĐANG MỞ hộp chat thì tự động báo cho server là đã đọc (reset về 0)
+        if (!isBoxClosed && unreadCount > 0) {
+            rdb.ref('system/chats/' + chatId).update({ unreadUser: 0 });
+            return; // Firebase sẽ trigger lại hàm này với unreadCount = 0
+        }
+
+        // 2. HIỂN THỊ SỐ TRÊN BONG BÓNG CHAT (GÓC PHẢI)
+        if (badgeIcon) {
+            if (unreadCount > 0 && isBoxClosed) {
+                badgeIcon.innerText = unreadCount;
+                badgeIcon.classList.remove('hidden');
+            } else {
+                badgeIcon.classList.add('hidden');
+            }
+        }
+
+        // 3. HIỂN THỊ SỐ TRÊN SIDEBAR MENU (TIN NHẮN HỖ TRỢ)
+        const sBadge = document.getElementById('sidebar-chat-badge');
         if (sBadge) {
             if (unreadCount > 0) {
                 sBadge.innerText = unreadCount;
@@ -5723,20 +5734,11 @@ function loadChatMessages() {
                 sBadge.classList.add('hidden');
             }
         }
-
-        // 2. Cập nhật chấm đỏ trên Icon nổi (chỉ hiện khi đang đóng hộp chat)
-        if (iconDot) {
-            if (unreadCount > 0 && isBoxClosed) {
-                iconDot.classList.remove('hidden');
-            } else {
-                iconDot.classList.add('hidden');
-            }
-        }
-
-        // 3. Gọi cập nhật chấm đỏ Menu chính (☰)
+        
+        // Cập nhật chấm đỏ ngoài Menu chính (☰)
         updateGlobalMenuDot();
-        // ------------------------------------------
 
+        // --- PHẦN VẼ TIN NHẮN (GIỮ NGUYÊN CỦA MÀY) ---
         if(!data || !data.messages) {
             container.innerHTML = '<div class="text-slate-500 text-[10px] text-center mt-20 opacity-30 font-black">Bắt đầu trò chuyện...</div>';
             return;
@@ -5751,7 +5753,6 @@ function loadChatMessages() {
 
         msgs.forEach(([id, m], index) => {
             const currentDateString = new Date(m.time).toDateString();
-            
             if (currentDateString !== lastDateString) {
                 fullHtml += `<div class="chat-date-separator"><span>${getChatDateLabel(m.time)}</span></div>`;
                 lastDateString = currentDateString;
@@ -5784,15 +5785,22 @@ function loadChatUserList() {
     rdb.ref('system/chats').on('value', (snapshot) => {
         const list = document.getElementById('chat-user-list');
         const data = snapshot.val();
-        if (!data) return;
+        if (!data) {
+            list.innerHTML = '<p class="text-slate-500 text-xs text-center">Chưa có cuộc hội thoại nào.</p>';
+            return;
+        };
+
         list.innerHTML = Object.keys(data).map(userId => {
-            const unread = data[userId].unread || 0;
+            // Lấy số tin chưa đọc của Root Admin từ user này
+            const unreadForRoot = data[userId].unreadRoot || 0;
+            
             return `
-                <button onclick="selectChatUser('${userId}')" id="btn-chat-${userId}" class="chat-user-btn flex justify-between items-center w-full">
+                <button onclick="selectChatUser('${userId}')" id="btn-chat-${userId}" class="chat-user-btn flex justify-between items-center w-full mb-2">
                     <div class="flex-1 truncate">
-                        <div class="font-bold text-sm text-white">${userId}</div>
+                        <div class="font-bold text-sm text-white">${userId.replace(/_/g, '.')}</div>
                     </div>
-                    ${unread > 0 ? `<span class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">+${unread}</span>` : ''}
+                    <!-- HIỆN BỘ ĐẾM RIÊNG CHO TỪNG USER -->
+                    ${unreadForRoot > 0 ? `<span class="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg animate-pulse">${unreadForRoot}</span>` : ''}
                 </button>`;
         }).reverse().join('');
     });
@@ -5800,46 +5808,46 @@ function loadChatUserList() {
 
 function selectChatUser(userId) {
     currentActiveChatUser = userId;
-    document.getElementById('admin-chat-header').innerText = "Đang chat với: " + userId;
+    document.getElementById('admin-chat-header').innerText = "Đang chat với: " + userId.replace(/_/g, '.');
     document.getElementById('admin-chat-input-zone').classList.remove('hidden');
-    rdb.ref('system/chats/' + userId + '/adminLastSeen').set(Date.now());
-    rdb.ref('system/chats/' + userId + '/unread').set(0);
 
-    rdb.ref('system/chats/' + userId).on('value', (snapshot) => {
+    // 1. Reset số tin chưa đọc của Root trên Server ngay khi bấm vào
+    rdb.ref('system/chats/' + userId).update({
+        unreadRoot: 0,
+        adminLastSeen: Date.now()
+    });
+
+    // 2. Lắng nghe tin nhắn từ node 'messages' và vẽ ra màn hình
+    rdb.ref('system/chats/' + userId + '/messages').on('value', (snapshot) => {
         const container = document.getElementById('admin-chat-messages');
         const data = snapshot.val();
-        if(!data || !data.messages) {
-            container.innerHTML = "";
+        
+        if (!data) {
+            container.innerHTML = '<div class="text-slate-500 text-xs text-center mt-10">Chưa có tin nhắn nào.</div>';
             return;
         }
 
-        const msgs = Object.entries(data.messages);
-        const userSeenTime = data.userLastSeen || 0;
-        
+        const msgs = Object.entries(data);
         let fullHtml = "";
         let lastDateString = "";
 
-        msgs.forEach(([id, m], index) => {
+        msgs.forEach(([id, m]) => {
+            // Thanh ngày tháng
             const currentDateString = new Date(m.time).toDateString();
-            
             if (currentDateString !== lastDateString) {
                 fullHtml += `<div class="chat-date-separator"><span>${getChatDateLabel(m.time)}</span></div>`;
                 lastDateString = currentDateString;
             }
 
-            const isMe = m.sender === AD_PHONE;
-            const isLastSeenByPartner = (isMe && m.time <= userSeenTime && (index === msgs.length - 1 || msgs[index+1][1].time > userSeenTime));
+            const isMe = m.sender === AD_PHONE; // Root Admin gửi
             const partnerAvatar = m.avatar || 'https://ui-avatars.com/api/?name=' + userId;
 
             fullHtml += `
                 <div class="msg-row ${isMe ? 'right' : 'left'} animate-in fade-in duration-300">
                     ${!isMe ? `<img src="${partnerAvatar}" class="msg-avatar-main shadow-md">` : ''}
                     <div class="msg-content-wrapper">
-                        <span class="msg-sender-name">${m.name}</span>
+                        <span class="msg-sender-name">${isMe ? 'Bạn' : m.name}</span>
                         <div class="msg-bubble shadow-sm">${m.text}<span class="msg-time">${formatChatTime(m.time)}</span></div>
-                        <div class="seen-receipts">
-                            ${isLastSeenByPartner ? `<img src="${partnerAvatar}" class="mini-seen-avatar show">` : ''}
-                        </div>
                     </div>
                 </div>`;
         });
@@ -5852,10 +5860,22 @@ function selectChatUser(userId) {
 function sendAdminReply() {
     const input = document.getElementById('admin-chat-input');
     const text = input.value.trim();
-    if(!text || !currentActiveChatUser) return;
-    const msgData = { sender: AD_PHONE, name: "Quản trị viên", text: text, time: Date.now() };
+    if (!text || !currentActiveChatUser) return;
+
+    const msgData = { 
+        sender: AD_PHONE, 
+        name: "Quản trị viên", 
+        text: text, 
+        time: Date.now(),
+        avatar: "" 
+    };
+
+    // 1. Đẩy tin nhắn vào database
     rdb.ref('system/chats/' + currentActiveChatUser + '/messages').push(msgData);
-    rdb.ref('system/chats/' + currentActiveChatUser + '/adminLastSeen').set(Date.now());
+
+    // 2. QUAN TRỌNG: Tăng số tin chưa đọc cho thằng Admin con (unreadUser)
+    rdb.ref('system/chats/' + currentActiveChatUser + '/unreadUser').transaction(c => (c || 0) + 1);
+
     input.value = "";
 }
 
@@ -5890,69 +5910,49 @@ if (loginContainer) {
 }
 
 // Lắng nghe tất cả các tin nhắn chưa đọc để cập nhật lên Sidebar và hiện Popup thông báo
+// Tìm đoạn if (currentUser.isRoot) trong syncDataFromServer và thay bằng cái này:
 if (currentUser.isRoot) {
+    // Lắng nghe TỔNG số tin chưa đọc từ TẤT CẢ các Admin con trên server
+    rdb.ref('system/chats').on('value', (snapshot) => {
+        const data = snapshot.val();
+        let totalUnreadForRoot = 0;
+
+        if (data) {
+            // Duyệt qua từng người dùng, cộng dồn unreadRoot
+            for (const userId in data) {
+                totalUnreadForRoot += (data[userId].unreadRoot || 0);
+            }
+        }
+        
+        const badge = document.getElementById('sidebar-chat-badge');
+        if (badge) {
+            badge.innerText = totalUnreadForRoot;
+            if (totalUnreadForRoot > 0) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+        // Hiện chấm đỏ ở nút Menu chính ☰
+        updateGlobalMenuDot();
+    });
+
+    // Phần hiện Toast thông báo khi có tin nhắn mới (giữ nguyên để báo chuông)
     rdb.ref('system/chats').on('child_changed', (snapshot) => {
         if (isialLoad) return;
         const data = snapshot.val();
         if (!data || !data.messages) return;
-
-        // Chuyển Object tin nhắn thành mảng để lấy tin nhắn cuối
         const msgEntries = Object.entries(data.messages);
-        if (msgEntries.length === 0) return;
-
         const [msgId, lastMsg] = msgEntries[msgEntries.length - 1];
-
-        // CHẶN THÔNG BÁO LẶP:
-        // 1. Phải là tin nhắn từ người khác (không phải AD_PHONE gửi)
-        // 2. ID tin nhắn này chưa nằm trong Set notifiedMessages
-        // 3. Tin nhắn mới được gửi trong vòng 30 giây đổ lại (tránh báo tin nhắn cũ khi load lại dữ liệu)
         if (lastMsg.sender !== AD_PHONE && !notifiedMessages.has(msgId)) {
-            const msgTime = lastMsg.time || 0;
-            if (Date.now() - msgTime < 30000) { 
-                notifiedMessages.add(msgId); // Đánh dấu đã báo tin nhắn này
-                
+            if (Date.now() - lastMsg.time < 30000) { 
+                notifiedMessages.add(msgId);
                 NOTI_SOUND.play().catch(() => {});
                 showModernToast("Tin nhắn mới", `<b>${lastMsg.name}:</b> ${lastMsg.text}`, "info", "page-chat-admin");
             }
         }
     });
-} else if (currentUser.isAdmin) {
-    const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
-    // Đối với Admin con, chỉ lấy tin nhắn cuối cùng mới thêm vào
-    rdb.ref('system/chats/' + chatId + '/messages').limitToLast(1).on('child_added', (snapshot) => {
-        if (isialLoad) return;
-        const msgId = snapshot.key;
-        const msg = snapshot.val();
-
-        if (msg.sender === AD_PHONE && !notifiedMessages.has(msgId)) {
-            if (document.getElementById('chat-box').classList.contains('hidden')) {
-                notifiedMessages.add(msgId);
-                NOTI_SOUND.play().catch(() => {});
-                showModernToast("Phản hồi từ Quản trị viên", msg.text, "success");
-            }
-        }
-    });
 }
-
-    // TRƯỜNG HỢP 2: DÀNH CHO ADMIN CON (Nhận phản hồi từ Admin Gốc)
-    else if (currentUser.isAdmin) {
-        const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
-        rdb.ref('system/chats/' + chatId + '/unread').on('value', (snapshot) => {
-            const unreadCount = snapshot.val() || 0;
-            
-            if (isFirstLogin && unreadCount > 0) {
-                isFirstLogin = false;
-                setTimeout(() => {
-                    NOTI_SOUND.play().catch(() => {});
-                    showModernToast(
-                        "BẠN CÓ PHẢN HỒI MỚI", 
-                        `Quản trị viên đã trả lời tin nhắn của bạn. Bạn có <b class="text-white">${unreadCount}</b> tin nhắn chưa xem.`, 
-                        "success"
-                    );
-                }, 2000);
-            }
-        });
-    }
 
 function listenToOTPRequests() {
     if (!currentUser || !currentUser.isRoot) return;
@@ -6046,27 +6046,30 @@ toast.onclick = (e) => {
 function listenToTotalUnread() {
     if (!currentUser || !currentUser.isRoot) return;
 
+    // Lắng nghe toàn bộ node chats trên server
     rdb.ref('system/chats').on('value', (snapshot) => {
         const data = snapshot.val();
-        let totalUnread = 0;
+        let totalUnreadForRoot = 0;
+
         if (data) {
+            // Duyệt qua tất cả các Admin con, cộng dồn unreadRoot
             for (const userId in data) {
-                totalUnread += (data[userId].unread || 0);
+                totalUnreadForRoot += (data[userId].unreadRoot || 0);
             }
         }
         
+        // 1. Hiện số lượng lên Sidebar "Tin nhắn hỗ trợ"
         const badge = document.getElementById('sidebar-chat-badge');
         if (badge) {
-            if (totalUnread > 0) {
-                badge.innerText = totalUnread;
-                badge.classList.remove('hidden');
-            } else {
-                badge.innerText = "0";
-                badge.classList.add('hidden');
-            }
+            badge.innerText = totalUnreadForRoot;
+            totalUnreadForRoot > 0 ? badge.classList.remove('hidden') : badge.classList.add('hidden');
         }
-        // Gọi cập nhật chấm đỏ menu ngay lập tức
-        updateGlobalMenuDot();
+
+        // 2. Hiện chấm đỏ ở nút Menu chính (☰)
+        const menuDot = document.getElementById('global-menu-dot');
+        if (menuDot) {
+            totalUnreadForRoot > 0 ? menuDot.classList.remove('hidden') : menuDot.classList.add('hidden');
+        }
     });
 }
 
@@ -7659,7 +7662,7 @@ async function syncUpdateToFirebaseCodes(folderIdx) {
     <button onclick="toggleChatBox()" class="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-[0_10px_25px_rgba(99,102,241,0.5)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all border-2 border-white/20">
         <span id="chat-icon-text" class="text-2xl">💬</span>
         <!-- Chấm đỏ báo tin nhắn mới trên icon -->
-        <span id="chat-noti-dot" class="absolute top-0 right-0 w-4 h-4 bg-red-500 border-2 border-slate-900 rounded-full hidden"></span>
+        <span id="chat-noti-number" class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full border-2 border-slate-900 hidden flex items-center justify-center">0</span>
     </button>
 
     <!-- Khung Chat -->

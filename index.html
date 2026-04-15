@@ -48,6 +48,27 @@
     }
 }
 
+/* Thanh ngăn cách ngày tháng */
+.chat-date-separator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0 15px;
+    position: relative;
+}
+.chat-date-separator span {
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 50px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(5px);
+}
+
 /* 1. ĐỊNH DẠNG Ô ĐÁP ÁN: Kích thước cân đối, đều nhau */
 .quiz-opt {
     display: flex;
@@ -1818,6 +1839,11 @@ function initSmartScrollEffect() {
     if (sidebar) {
         sidebar.addEventListener('scroll', () => handleScrollEvent(sidebar, 'sidebar'), { passive: true });
     }
+}
+
+function getChatDateLabel(ts) {
+    const d = new Date(ts);
+    return d.toLocaleDateString('vi-VN', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 // Hàm cập nhật trạng thái lên Firebase
@@ -5407,20 +5433,31 @@ function loadChatMessages() {
     rdb.ref('system/chats/' + chatId).on('value', (snapshot) => {
         const data = snapshot.val();
         if(!data || !data.messages) {
-            container.innerHTML = '<div class="text-slate-500 text-[10px] text-center mt-20 opacity-30 uppercase tracking-widest font-black">Bắt đầu trò chuyện...</div>';
+            container.innerHTML = '<div class="text-slate-500 text-[10px] text-center mt-20 opacity-30 font-black">Bắt đầu trò chuyện...</div>';
             return;
         }
 
         const msgs = Object.entries(data.messages);
         const adminSeenTime = data.adminLastSeen || 0;
         const adminAvatar = "https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff";
+        
+        let fullHtml = "";
+        let lastDate = ""; // Biến tạm lưu ngày của tin nhắn trước đó
 
-        container.innerHTML = msgs.map(([id, m], index) => {
+        msgs.forEach(([id, m], index) => {
+            const currentDate = new Date(m.time).toDateString(); // Lấy định dạng ngày để so sánh
+            
+            // Nếu ngày hiện tại khác ngày của tin nhắn trước -> Chèn thanh ngăn cách
+            if (currentDate !== lastDate) {
+                fullHtml += `<div class="chat-date-separator"><span>${getChatDateLabel(m.time)}</span></div>`;
+                lastDate = currentDate;
+            }
+
             const isMe = m.sender === currentUser.user;
             const isLastSeenByPartner = (isMe && m.time <= adminSeenTime && (index === msgs.length - 1 || msgs[index+1][1].time > adminSeenTime));
             
-            return `
-                <div class="msg-row ${isMe ? 'right' : 'left'}">
+            fullHtml += `
+                <div class="msg-row ${isMe ? 'right' : 'left'} animate-in fade-in duration-300">
                     ${!isMe ? `<img src="${m.avatar || 'https://ui-avatars.com/api/?name=' + m.name}" class="msg-avatar-main">` : ''}
                     <div class="msg-content-wrapper">
                         ${!isMe ? `<span class="msg-sender-name">${m.name} ${m.isAI ? '<span class="bot-badge">BOT AI</span>' : ''}</span>` : ''}
@@ -5430,8 +5467,9 @@ function loadChatMessages() {
                         </div>
                     </div>
                 </div>`;
-        }).join('');
+        });
 
+        container.innerHTML = fullHtml;
         container.scrollTop = container.scrollHeight;
     });
 }
@@ -5466,16 +5504,31 @@ function selectChatUser(userId) {
     rdb.ref('system/chats/' + userId).on('value', (snapshot) => {
         const container = document.getElementById('admin-chat-messages');
         const data = snapshot.val();
-        if(!data || !data.messages) return;
+        if(!data || !data.messages) {
+            container.innerHTML = "";
+            return;
+        }
+
         const msgs = Object.entries(data.messages);
         const userSeenTime = data.userLastSeen || 0;
         
-        container.innerHTML = msgs.map(([id, m], index) => {
+        let fullHtml = "";
+        let lastDate = "";
+
+        msgs.forEach(([id, m], index) => {
+            const currentDate = new Date(m.time).toDateString();
+            
+            if (currentDate !== lastDate) {
+                fullHtml += `<div class="chat-date-separator"><span>${getChatDateLabel(m.time)}</span></div>`;
+                lastDate = currentDate;
+            }
+
             const isMe = m.sender === AD_PHONE;
             const isLastSeenByPartner = (isMe && m.time <= userSeenTime && (index === msgs.length - 1 || msgs[index+1][1].time > userSeenTime));
             const partnerAvatar = m.avatar || 'https://ui-avatars.com/api/?name=' + userId;
-            return `
-                <div class="msg-row ${isMe ? 'right' : 'left'}">
+
+            fullHtml += `
+                <div class="msg-row ${isMe ? 'right' : 'left'} animate-in fade-in duration-300">
                     ${!isMe ? `<img src="${partnerAvatar}" class="msg-avatar-main">` : ''}
                     <div class="msg-content-wrapper">
                         <span class="msg-sender-name">${m.name}</span>
@@ -5485,7 +5538,9 @@ function selectChatUser(userId) {
                         </div>
                     </div>
                 </div>`;
-        }).join('');
+        });
+
+        container.innerHTML = fullHtml;
         container.scrollTop = container.scrollHeight;
     });
 }

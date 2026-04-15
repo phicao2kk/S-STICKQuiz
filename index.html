@@ -1092,7 +1092,11 @@ button:disabled {
             💬 Tin nhắn hỗ trợ 
             <span id="sidebar-chat-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
         </div>
-        <div id="admin-menu-users" class="menu-item hidden" onclick="showPage('page-users-manager')">👥 Quản lý tài khoản</div>
+        <!-- Tìm dòng Quản lý tài khoản cũ và thay bằng dòng này -->
+        <div id="admin-menu-users" class="menu-item hidden" onclick="showPage('page-users-manager'); clearUserBadge();">
+            👥 Quản lý tài khoản
+            <span id="sidebar-users-badge" class="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
+        </div>
         <div id="admin-menu-otp" class="menu-item hidden" onclick="showPage('page-otp-manager')">
             🔑 Cấp mã đổi MK
             <span id="sidebar-otp-badge" class="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-2 hidden">0</span>
@@ -1695,7 +1699,14 @@ button:disabled {
             <h3 class="text-xl font-bold mb-6">👥 QUẢN LÝ TÀI KHOẢN</h3>
             <div class="overflow-x-auto">
                 <table>
-                    <thead><tr><th>Họ tên</th><th>Tài khoản</th><th>Mật khẩu</th><th>Hành động</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Họ tên</th>
+                            <th>Tài khoản</th>
+                            <th>Mật khẩu</th>
+                            <th class="text-center">Hành động</th>
+                        </tr>
+                    </thead>
                     <tbody id="users-table-body"></tbody>
                 </table>
             </div>
@@ -1836,6 +1847,8 @@ let currentFolderIdx = -1, currentIdx = 0, userAnswers = [], quizInterval = null
 let tempQuestions = [], idleTimeout, activeQuestions = [];
 let trackedStudents = {}; // Dùng để lưu trạng thái cũ của thí sinh
 let candidateNotifyCount = 0;
+let newUserNotifyCount = 0; // Biến đếm số tài khoản mới chưa xem
+let usersInitialLoad = true; // Cờ đánh dấu lần đầu tải dữ liệu
 const IDLE_TIME = 15 * 60 * 1000;
 const SUGGESTION_KEY = 'recent_accounts';
 const loginInput = document.getElementById('login-user');
@@ -1893,6 +1906,62 @@ function getServerTime() {
     let isFirstLogin = true; 
     let isialLoad = true;
     
+    // 1. Hàm lắng nghe thành viên mới (Chỉ dành cho Root Admin)
+function listenForNewUsers() {
+    if (!currentUser || !currentUser.isRoot) return;
+
+    // Lấy mốc thời gian hiện tại để chỉ thông báo những người đăng ký SAU khi Admin vào web
+    const sessionStartTime = Date.now();
+
+    rdb.ref('system/users_db').on('child_added', (snapshot) => {
+        if (usersInitialLoad) return; // Bỏ qua đợt tải dữ liệu cũ lúc đầu
+
+        const newUser = snapshot.val();
+        // Chỉ thông báo nếu tài khoản này mới được tạo (createdAt lớn hơn lúc admin vào)
+        // Hoặc đơn giản là thông báo mọi user mới add vào node
+        
+        NOTI_SOUND.play().catch(() => {});
+        
+        // Nổ thông báo Toast
+        showModernToast(
+            "THÀNH VIÊN MỚI 👤", 
+            `Tài khoản <b>${newUser.fullname}</b> (${snapshot.key.replace(/_/g, '.')}) vừa đăng ký.`, 
+            "success", 
+            "page-users-manager" // Khi bấm vào sẽ nhảy tới trang quản lý
+        );
+
+        // Cập nhật số lượng trên Badge
+        updateUserBadge(1);
+    });
+
+    // Đánh dấu đã tải xong dữ liệu cũ sau 2 giây
+    rdb.ref('system/users_db').once('value', () => {
+        setTimeout(() => { usersInitialLoad = false; }, 2000);
+    });
+}
+
+// 2. Hàm cập nhật số lượng trên Sidebar
+function updateUserBadge(num) {
+    newUserNotifyCount += num;
+    const badge = document.getElementById('sidebar-users-badge');
+    if (badge && newUserNotifyCount > 0) {
+        badge.innerText = newUserNotifyCount;
+        badge.classList.remove('hidden');
+        updateGlobalMenuDot(); // Cập nhật chấm đỏ ngoài Menu chính
+    }
+}
+
+// 3. Hàm xóa thông báo khi Admin bấm vào xem trang
+function clearUserBadge() {
+    newUserNotifyCount = 0;
+    const badge = document.getElementById('sidebar-users-badge');
+    if (badge) {
+        badge.classList.add('hidden');
+        badge.innerText = "0";
+    }
+    updateGlobalMenuDot();
+}
+
     // LOGIC ĐIỀU KHIỂN HIỆN THANH CUỘN KHI VUỐT
 function initSmartScrollEffect() {
     const sidebar = document.getElementById('sidebar-menu-content');
@@ -2502,26 +2571,33 @@ function showPreviewZone() {
 }
 
 function updateGlobalMenuDot() {
-    const chatBadge = document.getElementById('sidebar-chat-badge');
-    const premiumBadge = document.getElementById('sidebar-premium-badge');
-    const otpBadge = document.getElementById('sidebar-otp-badge');
-    const historyBadge = document.getElementById('sidebar-history-badge');
-    const candidatesBadge = document.getElementById('sidebar-candidates-badge'); // THÊM DÒNG NÀY
+    // Danh sách tất cả các ID Badge đang có trên Sidebar
+    const badges = [
+        'sidebar-chat-badge',
+        'sidebar-premium-badge',
+        'sidebar-otp-badge',
+        'sidebar-history-badge',
+        'sidebar-candidates-badge',
+        'sidebar-users-badge'
+    ];
+
+    let hasAnyNotification = false;
+
+    badges.forEach(id => {
+        const el = document.getElementById(id);
+        // Nếu badge tồn tại, KHÔNG bị ẩn và số bên trong lớn hơn 0
+        if (el && !el.classList.contains('hidden') && parseInt(el.innerText) > 0) {
+            hasAnyNotification = true;
+        }
+    });
+
     const globalDot = document.getElementById('global-menu-dot');
-
-    if (!globalDot) return;
-
-    const chatCount = (chatBadge && !chatBadge.classList.contains('hidden')) ? parseInt(chatBadge.innerText) || 0 : 0;
-    const premiumCount = (premiumBadge && !premiumBadge.classList.contains('hidden')) ? parseInt(premiumBadge.innerText) || 0 : 0;
-    const otpCount = (otpBadge && !otpBadge.classList.contains('hidden')) ? parseInt(otpBadge.innerText) || 0 : 0;
-    const historyCount = (historyBadge && !historyBadge.classList.contains('hidden')) ? parseInt(historyBadge.innerText) || 0 : 0;
-    const candidatesCount = (candidatesBadge && !candidatesBadge.classList.contains('hidden')) ? parseInt(candidatesBadge.innerText) || 0 : 0; // THÊM DÒNG NÀY
-
-    // Kiểm tra thêm candidatesCount ở đây
-    if (chatCount === 0 && premiumCount === 0 && otpCount === 0 && historyCount === 0 && candidatesCount === 0) {
-        globalDot.classList.add('hidden');
-    } else {
-        globalDot.classList.remove('hidden');
+    if (globalDot) {
+        if (hasAnyNotification) {
+            globalDot.classList.remove('hidden');
+        } else {
+            globalDot.classList.add('hidden');
+        }
     }
 }
 
@@ -2618,6 +2694,7 @@ function syncDataFromServer() {
             document.getElementById('admin-menu-otp').classList.remove('hidden');
             document.getElementById('student-zone').classList.add('hidden');
 
+            listenForNewUsers();
             listenToTotalUnread(); 
             listenToOTPRequests();
 
@@ -2767,46 +2844,46 @@ function closeNotify(result = true) {
 }
 
 function showPage(id) {
-    // 1. Ẩn tất cả các phần tử có class 'page'
     const pages = document.querySelectorAll('.page');
-    pages.forEach(p => {
-        p.classList.add('hidden');
-        p.style.display = 'none'; // Ép ẩn bằng style trực tiếp để tránh xung đột CSS
-    });
+    pages.forEach(p => p.classList.add('hidden'));
 
-    // 2. Hiển thị trang mục tiêu
-    const target = document.getElementById(id); 
-    if(target) {
-        target.classList.remove('hidden');
-        target.style.display = 'block'; // Ép hiện trang mong muốn
-        
-        // Nếu là trang làm bài, dùng 'block' hoặc 'grid' tùy layout
-        if (id === 'page-quiz-view') target.style.display = 'block';
+    const target = document.getElementById(id);
+    if (target) target.classList.remove('hidden');
+    
+    toggleMenu(true);
+    window.scrollTo(0, 0);
+
+    // --- TỰ ĐỘNG XÓA BADGE & CHẤM ĐỎ THEO TỪNG TRANG ---
+    if (id === 'page-users-manager') {
+        renderUsersManager();
+        clearUserBadge(); // Xóa số đếm Quản lý tài khoản
     }
     
-    // 3. Đóng menu nếu đang mở
-    toggleMenu(true); 
-    
-    // 4. Quan trọng: Đưa màn hình về đầu trang ngay lập tức
-    window.scrollTo(0, 0);
-    document.body.scrollTop = 0;
-    document.documentElement.scrollTop = 0;
+    if (id === 'page-candidates-manager') {
+        clearCandidateBadge(); // Xóa số đếm Giám sát thí sinh
+    }
 
-    // Xử lý các logic phụ cho từng trang (giữ nguyên của bạn)
     if (id === 'page-storage') {
         renderHistoryTable();
-        localStorage.setItem('last_history_count_' + currentUser.user, JSON.stringify(quizHistory.length));
-        const hBadge = document.getElementById('sidebar-history-badge');
-        if (hBadge) { hBadge.innerText = "0"; hBadge.classList.add('hidden'); }
-        updateGlobalMenuDot();
+        clearHistoryBadge(); // Xóa số đếm Lịch sử làm bài
     }
+
+    if (id === 'page-otp-manager') {
+        renderOTPRequests(); 
+        clearOTPBadge(); // Xóa số đếm OTP
+    }
+
+    if (id === 'page-chat-admin') {
+        loadChatUserList();
+        clearChatBadge(); // Xóa số đếm Tin nhắn
+    }
+
+    // Các logic khác giữ nguyên...
     if(id === 'page-folders-manager') renderFolders();
-    if(id === 'page-otp-manager') renderOTPRequests(); 
     if(id === 'page-premium-manager') {
         renderPremiumRequests();
         if(currentUser.isRoot) renderMasterPremiumList();
     }
-    if(id === 'page-chat-admin') loadChatUserList();
 }
 
 function toggleMenu(f) { 
@@ -3099,54 +3176,48 @@ function loginSuccess() {
     
     const adminZone = document.getElementById('admin-zone');
     const studentZone = document.getElementById('student-zone');
-    const chatBubble = document.getElementById('chat-container'); // Lấy cái cục icon chat
+    const chatContainer = document.getElementById('chat-container'); // Lấy icon chat
 
-    if (currentUser && currentUser.isAdmin === true) {
+    if (currentUser && currentUser.isAdmin) {
         if (adminZone) adminZone.classList.remove('hidden');
-        
-        // Buộc hiển thị các mục menu Admin
         document.getElementById('admin-menu-folders')?.classList.remove('hidden');
         document.getElementById('admin-menu-storage')?.classList.remove('hidden');
         document.getElementById('admin-menu-candidates')?.classList.remove('hidden');
-
-        // --- FIX ICON CHAT TẠI ĐÂY ---
-        if (chatBubble) {
-            if (!currentUser.isRoot) {
-                // Nếu là Admin con: HIỆN icon chat để nhắn cho sếp
-                chatBubble.classList.remove('hidden');
-                loadChatMessages(); // Load tin nhắn luôn
-            } else {
-                // Nếu là Root: ẨN vì đã có trang Quản lý chat riêng
-                chatBubble.classList.add('hidden');
-            }
-        }
 
         if (currentUser.isRoot) {
             document.getElementById('admin-menu-users')?.classList.remove('hidden');
             document.getElementById('admin-menu-otp')?.classList.remove('hidden');
             document.getElementById('admin-menu-premium')?.classList.remove('hidden');
             document.getElementById('admin-menu-chat')?.classList.remove('hidden');
+            
+            // Root Admin dùng trang quản lý chat riêng nên ẩn icon nổi
+            chatContainer?.classList.add('hidden'); 
+            
+            listenToUsersDB(); 
+            listenForNewUsers(); // Kích hoạt lắng nghe thành viên mới (như đã hướng dẫn ở bước trước)
+        } else {
+            // Đây là Admin con -> HIỆN ICON CHAT NỔI
+            chatContainer?.classList.remove('hidden');
+            loadChatMessages(); // Nạp tin nhắn cũ
         }
         if (studentZone) studentZone.classList.add('hidden');
     } else {
+        // Đây là Thí sinh -> HIỆN ICON CHAT NỔI
         if (adminZone) adminZone.classList.add('hidden');
         if (studentZone) studentZone.classList.remove('hidden');
-        // Thí sinh cũng ẩn chat
-        if (chatBubble) chatBubble.classList.add('hidden');
+        chatContainer?.classList.remove('hidden');
+        loadChatMessages();
     }
 
     document.getElementById('inf-email').innerText = currentUser.user;
     document.getElementById('inf-fullname').innerText = currentUser.name;
     document.getElementById('side-username').innerText = currentUser.name;
-    updateAvatarUI(); renderAdminPreview(); renderFolders(); checkPremiumUI(); updateFolderDropdowns();
-
-    if (currentUser.isRoot) {
-        document.getElementById('root-security-panel').classList.remove('hidden');
-        rdb.ref('system/security_config/f12_status').on('value', (snap) => {
-            isF12EnabledByRoot = snap.val() || false;
-            document.getElementById('f12-master-toggle').checked = isF12EnabledByRoot;
-        });
-    }
+    
+    updateAvatarUI();
+    renderAdminPreview();
+    renderFolders();
+    checkPremiumUI();
+    updateFolderDropdowns();
 }
 
 // 3. Tự động nhảy giao diện khi sửa (✏️)
@@ -3447,26 +3518,53 @@ async function resetSingleAttempt(fbKey, examCode, studentId) {
 }
 
 async function clearSpecificFolderHistory(examName) {
+    // 1. Tìm tất cả các bài làm thuộc bộ đề này trong mảng quizHistory
     const targets = quizHistory.filter(h => (h.examName || "Bộ đề không tên") === examName);
-    if (targets.length === 0) return;
-    const confirmMsg = `Bạn có chắc chắn muốn xóa TOÀN BỘ ${targets.length} kết quả của bộ đề [${examName}]?\n\nTất cả thí sinh của đề này sẽ được phép vào thi lại.`;
+    
+    if (targets.length === 0) {
+        return sysNotify("Thông báo", "Không tìm thấy dữ liệu để xóa.", "info");
+    }
+
+    const confirmMsg = `
+        <div class="text-left">
+            <b class="text-red-400 text-lg uppercase">⚠️ RESET BỘ ĐỀ: ${examName}</b><br>
+            <p class="text-slate-300 mt-2">Bạn có chắc chắn muốn xóa toàn bộ <b>${targets.length}</b> kết quả bài thi?</p>
+            <ul class="text-[11px] text-orange-300 mt-2 list-disc ml-4">
+                <li>Điểm số của các thí sinh này sẽ bị xóa vĩnh viễn.</li>
+                <li>Tất cả thí sinh đã làm đề này <b>ĐƯỢC PHÉP THI LẠI</b> ngay lập tức.</li>
+            </ul>
+        </div>
+    `;
 
     if (await sysConfirm(confirmMsg)) {
-        sysNotify("Đang xử lý...", `Đang dọn dẹp lịch sử bộ đề ${examName}...`, "info");
+        sysNotify("Đang xử lý...", `Đang dọn dẹp và mở khóa thí sinh...`, "info");
+        
         try {
             const safeAdminPath = currentUser.user.replace(/\./g, '_');
-            const tasks = [];
+            const updates = {};
+
+            // 2. Duyệt qua từng bài làm để tạo lệnh xóa hàng loạt (Multi-path update)
             targets.forEach(h => {
-                tasks.push(rdb.ref(`users_data/${safeAdminPath}/quiz_history/${h.fbKey}`).remove());
+                // Lệnh xóa trong kho Lịch sử của Admin
+                updates[`users_data/${safeAdminPath}/quiz_history/${h.fbKey}`] = null;
+
+                // Lệnh xóa "Ổ khóa" để thí sinh được vào thi lại
+                // Đường dẫn: system/submissions/admin_id/exam_code/student_id
                 if (h.examCode && h.user) {
-                    tasks.push(rdb.ref(`system/submissions/${h.examCode}/${h.user}`).remove());
+                    updates[`system/submissions/${safeAdminPath}/${h.examCode}/${h.user}`] = null;
                 }
             });
-            await Promise.all(tasks);
-            sysNotify("Thành công", `Đã xóa sạch lịch sử bộ đề: ${examName}`, "success");
+
+            // 3. Đẩy tất cả lệnh xóa lên Firebase trong 1 lần duy nhất để đảm bảo đồng bộ
+            await rdb.ref().update(updates);
+
+            sysNotify("Thành công", `Đã xóa sạch lịch sử và cho phép thi lại bộ đề: <b>${examName}</b>`, "success");
+            
+            // Do chúng ta dùng rdb.ref(...).on('value'), bảng sẽ tự động vẽ lại mà không cần gọi hàm render
+            
         } catch (error) {
-            console.error(error);
-            sysNotify("Lỗi", "Không thể hoàn tất việc xóa dữ liệu bộ đề!", "error");
+            console.error("Lỗi xóa bộ đề:", error);
+            sysNotify("Lỗi hệ thống", "Không thể hoàn tất việc reset dữ liệu. Hãy kiểm tra kết nối mạng!", "error");
         }
     }
 }
@@ -4902,41 +5000,125 @@ function checkPremiumUI() {
     }
 }
 
-function renderUsersManager() {
-    const body = document.getElementById('users-table-body'); 
-    if(!body) return;
+// 1. Hàm lắng nghe dữ liệu tài khoản Realtime từ Firebase
+function listenToUsersDB() {
+    rdb.ref('system/users_db').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            usersDB = data;
+            localStorage.setItem('users_db', JSON.stringify(usersDB));
+            // Tự động vẽ lại bảng nếu đang ở trang Quản lý tài khoản
+            if (!document.getElementById('page-users-manager').classList.contains('hidden')) {
+                renderUsersManager();
+            }
+        }
+    });
+}
 
-    body.innerHTML = Object.keys(usersDB).map(u => {
-        const safeU = u.replace(/\./g, '_'); // Tạo ID an toàn cho HTML (thay dấu chấm bằng gạch dưới)
-        const userData = usersDB[u];
-        
+// 2. Hàm vẽ bảng quản lý người dùng
+function renderUsersManager() {
+    const body = document.getElementById('users-table-body');
+    if (!body) return;
+
+    if (Object.keys(usersDB).length === 0) {
+        body.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-slate-500 italic text-sm">Chưa có dữ liệu thành viên...</td></tr>';
+        return;
+    }
+
+    body.innerHTML = Object.keys(usersDB).reverse().map(safeKey => {
+        const userData = usersDB[safeKey];
+        const displayAccount = safeKey.replace(/_/g, '.');
+
         return `
-        <tr class="border-b border-white/5 hover:bg-white/5 transition">
+        <tr class="border-b border-white/5 hover:bg-white/5 transition group">
+            <!-- CỘT 1: HỌ TÊN -->
+            <td class="py-4 pl-4">
+                <div class="font-bold text-white text-sm">${userData.fullname || 'Không tên'} ${userData.isPremium ? '💎' : ''}</div>
+                <div class="text-[9px] text-slate-500 font-black uppercase tracking-tighter">Thành viên hệ thống</div>
+            </td>
+
+            <!-- CỘT 2: TÊN TÀI KHOẢN -->
             <td class="py-4">
-                <div class="font-bold text-white">${userData.fullname} ${userData.isPremium ? '💎' : ''}</div>
-                <div class="text-[10px] text-slate-500">${u}</div>
+                <div class="text-indigo-400 font-mono text-xs font-bold bg-indigo-500/5 px-2 py-1 rounded-lg border border-indigo-500/10 w-fit">
+                    ${displayAccount}
+                </div>
             </td>
-            <td class="text-slate-400 text-[11px] font-mono">${u}</td>
-            <td>
-                <div class="flex items-center gap-2">
-                    <!-- Hiển thị mặc định là dấu chấm -->
-                    <span id="pw-display-${safeU}" class="font-mono text-indigo-400 tracking-widest text-xs">••••••</span>
-                    
-                    <!-- Nút icon con mắt -->
-                    <button onclick="toggleRowPassword('${safeU}', '${userData.pass}')" class="text-slate-500 hover:text-indigo-400 transition-all p-1">
-                        <span id="pw-icon-${safeU}">👁️</span>
+
+            <!-- CỘT 3: MẬT KHẨU -->
+            <td class="py-4">
+                <div class="flex items-center gap-3 bg-black/30 px-3 py-1.5 rounded-xl border border-white/5 w-fit">
+                    <span id="pw-display-${safeKey}" class="font-mono text-slate-400 text-xs tracking-[2px]">••••••</span>
+                    <button onclick="toggleRowPassword('${safeKey}', '${userData.pass}')" class="text-slate-500 hover:text-white transition-all">
+                        <span id="pw-icon-${safeKey}" class="text-sm">👁️</span>
                     </button>
                 </div>
             </td>
-            <td>
-                <div class="flex gap-2">
-                    <button class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white p-1.5 rounded-lg text-[10px] transition-all" onclick="deleteAcc('${u}')">
-                        XÓA
+
+            <!-- CỘT 4: THAO TÁC (ĐÃ SỬA: Căn giữa chính xác) -->
+            <td class="py-4 text-center">
+                <div class="flex justify-center items-center">
+                    <button class="bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white p-2.5 rounded-xl transition-all shadow-lg" 
+                            onclick="deleteAcc('${safeKey}')" title="Xóa tài khoản">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                     </button>
                 </div>
             </td>
-        </tr>
-    `}).join('');
+        </tr>`;
+    }).join('');
+}
+
+// 3. Hàm ẩn/hiện mật khẩu từng dòng
+function toggleRowPassword(safeKey, actualPass) {
+    const textEl = document.getElementById(`pw-display-${safeKey}`);
+    const iconEl = document.getElementById(`pw-icon-${safeKey}`);
+
+    if (!textEl || !iconEl) return;
+
+    // Nếu đang là dấu chấm thì hiện mật khẩu thật
+    if (textEl.innerText === "••••••") {
+        textEl.innerText = actualPass;
+        textEl.classList.remove('text-slate-400', 'tracking-[2px]');
+        textEl.classList.add('text-emerald-400', 'font-bold'); // Đổi màu xanh lá cho dễ nhìn khi hiện
+        iconEl.innerText = "🔒"; // Đổi icon thành cái khóa (để bấm vào sẽ đóng lại)
+    } 
+    // Nếu đang hiện thì ẩn lại thành dấu chấm
+    else {
+        textEl.innerText = "••••••";
+        textEl.classList.add('text-slate-400', 'tracking-[2px]');
+        textEl.classList.remove('text-emerald-400', 'font-bold');
+        iconEl.innerText = "👁️";
+    }
+}
+
+// 4. Hàm xóa tài khoản vĩnh viễn (Deep Delete)
+async function deleteAcc(safeKey) {
+    const displayUser = safeKey.replace(/_/g, '.');
+    
+    // Chặn xóa nhầm Admin gốc
+    if (displayUser === AD_PHONE || displayUser === AD_EMAIL.toLowerCase()) {
+        return sysNotify("Cảnh báo", "Bạn không thể xóa tài khoản Admin gốc!", "error");
+    }
+
+    const confirmMsg = `Bạn có chắc chắn muốn xóa tài khoản [${displayUser}]?<br><br><span class='text-red-400 text-[10px]'>Hành động này sẽ xóa toàn bộ đề thi và lịch sử của người này.</span>`;
+    
+    if (await sysConfirm(confirmMsg)) {
+        sysNotify("Đang xử lý", "Đang xóa dữ liệu tài khoản...", "info");
+        
+        try {
+            // Xóa ở 3 nơi: DB tài khoản, Dữ liệu cá nhân, Lịch sử chat
+            await Promise.all([
+                rdb.ref('system/users_db/' + safeKey).remove(),
+                rdb.ref('users_data/' + safeKey).remove(),
+                rdb.ref('system/chats/' + safeKey).remove()
+            ]);
+            
+            sysNotify("Thành công", "Đã xóa sạch dữ liệu tài khoản.", "success");
+        } catch (err) {
+            sysNotify("Lỗi", "Không thể xóa: " + err.message, "error");
+        }
+    }
 }
 
 // ==========================================
@@ -5434,16 +5616,17 @@ function toggleChatBox() {
     const isOpening = box.classList.contains('hidden');
     box.classList.toggle('hidden');
 
-    if(isOpening) {
-        // Chỉ khi MỞ bản chat mới thực hiện các lệnh sau
-        document.getElementById('chat-input').focus();
+    if (isOpening) {
+        // Nếu đang mở hộp chat -> Reset thông báo
         const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
-        
-        // Đánh dấu đã xem và reset unread (Lệnh này chỉ chạy 1 lần lúc bấm nút)
         rdb.ref('system/chats/' + chatId).update({
-            userLastSeen: Date.now(),
-            unread: 0
+            unread: 0,
+            userLastSeen: Date.now()
         });
+        
+        // Ẩn chấm đỏ ngay lập tức để tạo cảm giác mượt mà
+        document.getElementById('chat-noti-dot')?.classList.add('hidden');
+        document.getElementById('chat-input')?.focus();
     }
 }
 
@@ -5524,6 +5707,36 @@ function loadChatMessages() {
 
     rdb.ref('system/chats/' + chatId).on('value', (snapshot) => {
         const data = snapshot.val();
+        
+        // --- LOGIC XỬ LÝ THÔNG BÁO (BADGE & DOT) ---
+        const unreadCount = (data && data.unread) ? data.unread : 0;
+        const isBoxClosed = document.getElementById('chat-box').classList.contains('hidden');
+        const sBadge = document.getElementById('sidebar-chat-badge'); // Badge trong Menu Sidebar
+        const iconDot = document.getElementById('chat-noti-dot');    // Chấm đỏ trên Icon nổi
+
+        // 1. Cập nhật số lượng trên Sidebar
+        if (sBadge) {
+            if (unreadCount > 0) {
+                sBadge.innerText = unreadCount;
+                sBadge.classList.remove('hidden');
+            } else {
+                sBadge.classList.add('hidden');
+            }
+        }
+
+        // 2. Cập nhật chấm đỏ trên Icon nổi (chỉ hiện khi đang đóng hộp chat)
+        if (iconDot) {
+            if (unreadCount > 0 && isBoxClosed) {
+                iconDot.classList.remove('hidden');
+            } else {
+                iconDot.classList.add('hidden');
+            }
+        }
+
+        // 3. Gọi cập nhật chấm đỏ Menu chính (☰)
+        updateGlobalMenuDot();
+        // ------------------------------------------
+
         if(!data || !data.messages) {
             container.innerHTML = '<div class="text-slate-500 text-[10px] text-center mt-20 opacity-30 font-black">Bắt đầu trò chuyện...</div>';
             return;
@@ -5534,12 +5747,11 @@ function loadChatMessages() {
         const adminAvatar = "https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff";
         
         let fullHtml = "";
-        let lastDateString = ""; // Biến tạm theo dõi ngày
+        let lastDateString = ""; 
 
         msgs.forEach(([id, m], index) => {
             const currentDateString = new Date(m.time).toDateString();
             
-            // NẾU SANG NGÀY MỚI THÌ HIỆN THANH NGĂN CÁCH
             if (currentDateString !== lastDateString) {
                 fullHtml += `<div class="chat-date-separator"><span>${getChatDateLabel(m.time)}</span></div>`;
                 lastDateString = currentDateString;
@@ -5808,21 +6020,19 @@ function showModernToast(title, msg, type = "info", targetPage = null) {
     container.appendChild(toast);
     setTimeout(() => toast.classList.add('show'), 100);
     
-    // LOGIC ĐIỀU HƯỚNG THÔNG MINH KHI CLICK
-    toast.onclick = (e) => {
-        if(e.target.tagName !== 'BUTTON') {
-            if (targetPage) {
-                // Nếu là lệnh đặc biệt mở Chat cho Admin con
-                if (targetPage === 'openChat') {
-                    toggleChatBox();
-                } else {
-                    // Còn lại là chuyển trang ID
-                    showPage(targetPage);
-                }
+// LOGIC ĐIỀU HƯỚNG THÔNG MINH KHI CLICK VÀO THÔNG BÁO
+toast.onclick = (e) => {
+    if(e.target.tagName !== 'BUTTON') {
+        if (targetPage) {
+            if (targetPage === 'openChat') {
+                toggleChatBox();
+            } else {
+                showPage(targetPage); // Khi gọi showPage, nó sẽ chạy logic clearBadge ở Bước 2
             }
-            toast.remove();
         }
-    };
+        toast.remove();
+    }
+};
 
     setTimeout(() => {
         if(toast.parentElement) {
@@ -7315,8 +7525,38 @@ function clearCandidateBadge() {
     if (badge) {
         badge.classList.add('hidden');
         badge.innerText = "0";
-        updateGlobalMenuDot();
     }
+    updateGlobalMenuDot();
+}
+
+function clearHistoryBadge() {
+    const hBadge = document.getElementById('sidebar-history-badge');
+    if (hBadge) {
+        hBadge.innerText = "0";
+        hBadge.classList.add('hidden');
+    }
+    // Lưu lại số lượng hiện tại vào local để không báo lại bài cũ
+    localStorage.setItem('last_history_count_' + currentUser.user, JSON.stringify(quizHistory.length));
+    updateGlobalMenuDot();
+}
+
+function clearChatBadge() {
+    const cBadge = document.getElementById('sidebar-chat-badge');
+    if (cBadge) {
+        cBadge.innerText = "0";
+        cBadge.classList.add('hidden');
+    }
+    // Chấm đỏ chính sẽ tự mất khi updateGlobalMenuDot chạy
+    updateGlobalMenuDot();
+}
+
+function clearOTPBadge() {
+    const oBadge = document.getElementById('sidebar-otp-badge');
+    if (oBadge) {
+        oBadge.innerText = "0";
+        oBadge.classList.add('hidden');
+    }
+    updateGlobalMenuDot();
 }
 
 // Hàm phụ để kiểm tra trạng thái
@@ -7414,10 +7654,12 @@ async function syncUpdateToFirebaseCodes(folderIdx) {
 
 </script>
 <!-- GIAO DIỆN CHAT CHO ADMIN CON -->
-<div id="chat-container" class="fixed bottom-[80px] right-6 z-[10001] hidden">
+<div id="chat-container" class="fixed bottom-[100px] right-6 z-[9999] hidden">
     <!-- Icon Chat -->
-    <button onclick="toggleChatBox()" class="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-all border-2 border-white/20">
+    <button onclick="toggleChatBox()" class="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-[0_10px_25px_rgba(99,102,241,0.5)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all border-2 border-white/20">
         <span id="chat-icon-text" class="text-2xl">💬</span>
+        <!-- Chấm đỏ báo tin nhắn mới trên icon -->
+        <span id="chat-noti-dot" class="absolute top-0 right-0 w-4 h-4 bg-red-500 border-2 border-slate-900 rounded-full hidden"></span>
     </button>
 
     <!-- Khung Chat -->

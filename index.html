@@ -881,6 +881,87 @@ button:disabled {
     pointer-events: none !important;
 }
 
+/* ============================================================
+   HỆ THỐNG VIỀN LUXURY GLASS - TINH TẾ & CHUYÊN NGHIỆP
+   ============================================================ */
+
+.card.glass {
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important; /* Viền tĩnh siêu mảnh */
+    background: rgba(15, 23, 42, 0.75) !important; /* Nền đậm hơn để chữ nổi bật */
+    backdrop-filter: blur(15px);
+    z-index: 1;
+    overflow: hidden; /* Để hiệu ứng không tràn ra ngoài bo góc */
+}
+
+/* Lớp viền sáng chạy mượt - Chỉ dùng tông Indigo & Purple */
+.card.glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1.5px; /* Độ dày viền */
+    border-radius: inherit; /* Tự động bo góc theo Card */
+    
+    /* Dải màu sang trọng: Indigo -> Purple -> Cyan -> Indigo */
+    background: linear-gradient(
+        135deg,
+        #6366f1, 
+        #a855f7, 
+        #22d3ee, 
+        #6366f1
+    );
+    background-size: 300% 300%;
+    
+    /* Kỹ thuật Mask đục rỗng tâm */
+    -webkit-mask: 
+        linear-gradient(#fff 0 0) content-box, 
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    
+    pointer-events: none;
+    opacity: 0.6; /* Độ đậm nhạt của viền sáng */
+    animation: luxury-flow 10s linear infinite; /* Chạy rất chậm (10 giây) */
+}
+
+/* Lớp sương mờ lấp lánh ở góc (Tạo chiều sâu) */
+.card.glass::after {
+    content: "";
+    position: absolute;
+    top: -20%;
+    left: -20%;
+    width: 50%;
+    height: 50%;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+    z-index: -1;
+    filter: blur(30px);
+    animation: fog-move 8s ease-in-out infinite alternate;
+}
+
+/* Animation chạy viền chậm */
+@keyframes luxury-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Animation sương mờ di chuyển nhẹ */
+@keyframes fog-move {
+    from { transform: translate(0, 0); opacity: 0.3; }
+    to { transform: translate(10%, 10%); opacity: 0.6; }
+}
+
+/* Tinh chỉnh riêng cho các ô đáp án (Quiz-opt) để không bị viền chạy làm mất tập trung */
+.quiz-opt {
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    transition: all 0.3s ease;
+}
+.quiz-opt:hover {
+    border-color: #6366f1 !important;
+    background: rgba(99, 102, 241, 0.1) !important;
+}
+
     </style>
 </head>
 <body>

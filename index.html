@@ -2981,14 +2981,27 @@ function loginSuccess() {
     
     const adminZone = document.getElementById('admin-zone');
     const studentZone = document.getElementById('student-zone');
+    const chatBubble = document.getElementById('chat-container'); // Lấy cái cục icon chat
 
-if (currentUser && currentUser.isAdmin === true) {
-    if (adminZone) adminZone.classList.remove('hidden');
-    
-    // Buộc hiển thị các mục menu Admin
-    document.getElementById('admin-menu-folders')?.classList.remove('hidden');
-    document.getElementById('admin-menu-storage')?.classList.remove('hidden');
-    document.getElementById('admin-menu-candidates')?.classList.remove('hidden'); // THÊM DÒNG NÀY
+    if (currentUser && currentUser.isAdmin === true) {
+        if (adminZone) adminZone.classList.remove('hidden');
+        
+        // Buộc hiển thị các mục menu Admin
+        document.getElementById('admin-menu-folders')?.classList.remove('hidden');
+        document.getElementById('admin-menu-storage')?.classList.remove('hidden');
+        document.getElementById('admin-menu-candidates')?.classList.remove('hidden');
+
+        // --- FIX ICON CHAT TẠI ĐÂY ---
+        if (chatBubble) {
+            if (!currentUser.isRoot) {
+                // Nếu là Admin con: HIỆN icon chat để nhắn cho sếp
+                chatBubble.classList.remove('hidden');
+                loadChatMessages(); // Load tin nhắn luôn
+            } else {
+                // Nếu là Root: ẨN vì đã có trang Quản lý chat riêng
+                chatBubble.classList.add('hidden');
+            }
+        }
 
         if (currentUser.isRoot) {
             document.getElementById('admin-menu-users')?.classList.remove('hidden');
@@ -3000,6 +3013,8 @@ if (currentUser && currentUser.isAdmin === true) {
     } else {
         if (adminZone) adminZone.classList.add('hidden');
         if (studentZone) studentZone.classList.remove('hidden');
+        // Thí sinh cũng ẩn chat
+        if (chatBubble) chatBubble.classList.add('hidden');
     }
 
     document.getElementById('inf-email').innerText = currentUser.user;
@@ -3009,7 +3024,6 @@ if (currentUser && currentUser.isAdmin === true) {
 
     if (currentUser.isRoot) {
         document.getElementById('root-security-panel').classList.remove('hidden');
-        // Lắng nghe trạng thái công tắc từ Firebase
         rdb.ref('system/security_config/f12_status').on('value', (snap) => {
             isF12EnabledByRoot = snap.val() || false;
             document.getElementById('f12-master-toggle').checked = isF12EnabledByRoot;
@@ -5298,14 +5312,20 @@ let currentActiveChatUser = null;
 function toggleChatBox() {
     const box = document.getElementById('chat-box');
     if(!box) return;
+
+    const isOpening = box.classList.contains('hidden');
     box.classList.toggle('hidden');
-    if(!box.classList.contains('hidden')) {
+
+    if(isOpening) {
+        // Chỉ khi MỞ bản chat mới thực hiện các lệnh sau
         document.getElementById('chat-input').focus();
-        // Đánh dấu đã xem khi mở hộp chat
         const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
-        rdb.ref('system/chats/' + chatId + '/userLastSeen').set(Date.now());
-        rdb.ref('system/chats/' + chatId + '/unread').set(0);
-        loadChatMessages();
+        
+        // Đánh dấu đã xem và reset unread (Lệnh này chỉ chạy 1 lần lúc bấm nút)
+        rdb.ref('system/chats/' + chatId).update({
+            userLastSeen: Date.now(),
+            unread: 0
+        });
     }
 }
 
@@ -5381,10 +5401,16 @@ function sendChatMessage() {
 function loadChatMessages() {
     if(!currentUser) return;
     const chatId = currentUser.user.replace(/[.$#[\]]/g, "_");
+    const container = document.getElementById('chat-messages');
+    if(!container) return;
+
     rdb.ref('system/chats/' + chatId).on('value', (snapshot) => {
-        const container = document.getElementById('chat-messages');
         const data = snapshot.val();
-        if(!data || !data.messages) return;
+        if(!data || !data.messages) {
+            container.innerHTML = '<div class="text-slate-500 text-[10px] text-center mt-20 opacity-30 uppercase tracking-widest font-black">Bắt đầu trò chuyện...</div>';
+            return;
+        }
+
         const msgs = Object.entries(data.messages);
         const adminSeenTime = data.adminLastSeen || 0;
         const adminAvatar = "https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff";
@@ -5392,18 +5418,20 @@ function loadChatMessages() {
         container.innerHTML = msgs.map(([id, m], index) => {
             const isMe = m.sender === currentUser.user;
             const isLastSeenByPartner = (isMe && m.time <= adminSeenTime && (index === msgs.length - 1 || msgs[index+1][1].time > adminSeenTime));
+            
             return `
                 <div class="msg-row ${isMe ? 'right' : 'left'}">
                     ${!isMe ? `<img src="${m.avatar || 'https://ui-avatars.com/api/?name=' + m.name}" class="msg-avatar-main">` : ''}
                     <div class="msg-content-wrapper">
-                        <span class="msg-sender-name">${m.name} ${m.isAI ? '<span class="bot-badge">BOT AI</span>' : ''}</span>
+                        ${!isMe ? `<span class="msg-sender-name">${m.name} ${m.isAI ? '<span class="bot-badge">BOT AI</span>' : ''}</span>` : ''}
                         <div class="msg-bubble">${m.text}<span class="msg-time">${formatChatTime(m.time)}</span></div>
                         <div class="seen-receipts">
-                            ${isLastSeenByPartner ? `<img src="${adminAvatar}" class="mini-seen-avatar show" title="Admin đã xem">` : ''}
+                            ${isLastSeenByPartner ? `<img src="${adminAvatar}" class="mini-seen-avatar show">` : ''}
                         </div>
                     </div>
                 </div>`;
         }).join('');
+
         container.scrollTop = container.scrollHeight;
     });
 }
@@ -7239,7 +7267,7 @@ async function syncUpdateToFirebaseCodes(folderIdx) {
 
 </script>
 <!-- GIAO DIỆN CHAT CHO ADMIN CON -->
-<div id="chat-container" class="fixed bottom-12 right-6 z-[10001] hidden">
+<div id="chat-container" class="fixed bottom-[80px] right-6 z-[10001] hidden">
     <!-- Icon Chat -->
     <button onclick="toggleChatBox()" class="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-all border-2 border-white/20">
         <span id="chat-icon-text" class="text-2xl">💬</span>

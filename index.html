@@ -6072,26 +6072,32 @@ function handleQuickTransfer() {
     const content = `PREMIUM ${currentUser.user.toUpperCase()}`;
     const accountName = "CAO NGUYEN HONG PHI";
 
+    // URL ảnh QR
     const qrUrl = `https://img.vietqr.io/image/MB-${accountNo}-compact2.jpg?amount=${amount}&addInfo=${encodeURIComponent(content)}&accountName=${encodeURIComponent(accountName)}`;
 
     const ntBox = document.getElementById('notify-container');
-    
-    // ĐÃ BỎ ICON CHIẾM DIỆN TÍCH TẠI ĐÂY
     const iconEl = document.getElementById('nt-icon');
     iconEl.innerText = ""; 
-    iconEl.classList.add('hidden'); // Ẩn hẳn khối icon để nội dung đẩy lên trên
+    iconEl.classList.add('hidden');
 
     document.getElementById('nt-title').innerText = 'THANH TOÁN PREMIUM';
     
     document.getElementById('nt-msg').innerHTML = `
         <div class="text-center space-y-3">
-            <div class="bg-white p-2 rounded-2xl inline-block shadow-lg border-2 border-indigo-500/20">
-                <img src="${qrUrl}" style="width:200px; height:auto; display:block; margin:0 auto;" alt="QR Thanh Toan">
+            <div class="bg-white p-2 rounded-2xl inline-block shadow-lg border-2 border-indigo-500/20 relative group">
+                <img src="${qrUrl}" id="qr-image-main" style="width:200px; height:auto; display:block; margin:0 auto;" alt="QR Thanh Toan">
             </div>
             
-            <p class="text-[10px] text-amber-400 font-bold uppercase italic px-4">Mẹo: Chụp màn hình rồi mở App Bank quét ảnh để thanh toán nhanh</p>
+            <!-- NÚT TẢI XUỐNG MỚI THÊM -->
+            <div class="px-4">
+                <button onclick="downloadQRPremium('${qrUrl}')" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[11px] font-bold shadow-lg transition-all border-none flex items-center justify-center gap-2">
+                    📥 TẢI MÃ QR VỀ MÁY
+                </button>
+            </div>
 
-            <div class="space-y-2 mt-4 text-left">
+            <p class="text-[10px] text-amber-400 font-bold uppercase italic px-4">Mẹo: Quét mã để tự động điền số tiền và nội dung</p>
+
+            <div class="space-y-2 mt-4 text-left px-4">
                 <div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border border-white/5">
                     <div>
                         <p class="text-[9px] text-slate-500 uppercase">Ngân hàng</p>
@@ -6123,7 +6129,6 @@ function handleQuickTransfer() {
     okBtn.innerText = 'TÔI ĐÃ CHUYỂN XONG';
     okBtn.onclick = () => {
         closeNotify();
-        // Khi đóng thông báo thanh toán, nhớ hiện lại icon cho các thông báo khác dùng
         iconEl.classList.remove('hidden'); 
     };
     document.getElementById('nt-btn-cancel').classList.add('hidden');
@@ -6135,6 +6140,32 @@ function copyPaymentInfo(text, msg) {
     navigator.clipboard.writeText(text).then(() => {
         showModernToast("Thành công", msg, "success");
     });
+}
+
+async function downloadQRPremium(url) {
+    showModernToast("Hệ thống", "Đang chuẩn bị tệp tải xuống...", "info");
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `S-STICK-QR-PAYMENT-${currentUser.user.toUpperCase()}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        
+        // Dọn dẹp
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+        
+        showModernToast("Thành công", "Đã tải mã QR về máy!", "success");
+    } catch (error) {
+        console.error("Lỗi tải QR:", error);
+        // Fallback nếu trình duyệt chặn fetch (do CORS)
+        window.open(url, '_blank');
+        showModernToast("Thông báo", "Vui lòng nhấn giữ vào ảnh QR rồi chọn 'Tải hình ảnh xuống'", "warn");
+    }
 }
 
 function closePremiumModal() { document.getElementById('premium-modal').classList.add('hidden'); }

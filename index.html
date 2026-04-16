@@ -2006,8 +2006,9 @@ function getChatDateLabel(ts) {
 // Hàm cập nhật trạng thái lên Firebase
 function updateF12Security(status) {
     if(!currentUser.isRoot) return;
+    isF12EnabledByRoot = status; // Cập nhật biến này để các hàm bảo mật cho phép/chặn
     rdb.ref('system/security_config/f12_status').set(status);
-    showModernToast("Bảo mật", status ? "Đã mở quyền F12 cho bạn." : "Đã khóa F12 trên toàn hệ thống.", "warn");
+    showModernToast("Bảo mật", status ? "Đã mở quyền F12 cho bạn." : "Đã khóa F12 trên toàn hệ thống.", status ? "success" : "warn");
 }
 
 // GHI ĐÈ LÊN CÁC LỚP BẢO VỆ CŨ CỦA BẠN
@@ -3172,7 +3173,7 @@ function loginSuccess() {
     
     const adminZone = document.getElementById('admin-zone');
     const studentZone = document.getElementById('student-zone');
-    const chatContainer = document.getElementById('chat-container'); // Lấy icon chat
+    const chatContainer = document.getElementById('chat-container'); 
 
     if (currentUser && currentUser.isAdmin) {
         if (adminZone) adminZone.classList.remove('hidden');
@@ -3181,24 +3182,33 @@ function loginSuccess() {
         document.getElementById('admin-menu-candidates')?.classList.remove('hidden');
 
         if (currentUser.isRoot) {
+            // --- DÒNG QUAN TRỌNG NHẤT: HIỆN KHUNG ĐIỀU KHIỂN F12 ---
+            document.getElementById('root-security-panel')?.classList.remove('hidden');
+
             document.getElementById('admin-menu-users')?.classList.remove('hidden');
             document.getElementById('admin-menu-otp')?.classList.remove('hidden');
             document.getElementById('admin-menu-premium')?.classList.remove('hidden');
             document.getElementById('admin-menu-chat')?.classList.remove('hidden');
             
-            // Root Admin dùng trang quản lý chat riêng nên ẩn icon nổi
             chatContainer?.classList.add('hidden'); 
             
             listenToUsersDB(); 
-            listenForNewUsers(); // Kích hoạt lắng nghe thành viên mới (như đã hướng dẫn ở bước trước)
+            listenForNewUsers();
+
+            // --- ĐỒNG BỘ TRẠNG THÁI NÚT GẠT TỪ FIREBASE KHI ĐĂNG NHẬP ---
+            rdb.ref('system/security_config/f12_status').once('value', (snapshot) => {
+                const status = snapshot.val() || false;
+                isF12EnabledByRoot = status; // Cập nhật biến logic hệ thống
+                const toggle = document.getElementById('f12-master-toggle');
+                if (toggle) toggle.checked = status; // Gạt nút tương ứng
+            });
+
         } else {
-            // Đây là Admin con -> HIỆN ICON CHAT NỔI
             chatContainer?.classList.remove('hidden');
-            loadChatMessages(); // Nạp tin nhắn cũ
+            loadChatMessages();
         }
         if (studentZone) studentZone.classList.add('hidden');
     } else {
-        // Đây là Thí sinh -> HIỆN ICON CHAT NỔI
         if (adminZone) adminZone.classList.add('hidden');
         if (studentZone) studentZone.classList.remove('hidden');
         chatContainer?.classList.remove('hidden');

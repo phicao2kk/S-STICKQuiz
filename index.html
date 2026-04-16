@@ -55,6 +55,18 @@
     background: rgba(245, 158, 11, 0.1);
 }
 
+/* Bong bóng chat khi bị thu hồi */
+.msg-bubble.recalled {
+    opacity: 0.4;
+    filter: blur(0.5px);
+    font-style: italic;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px dashed rgba(255, 255, 255, 0.2) !important;
+    color: #94a3b8 !important;
+    pointer-events: none; /* Không cho tương tác */
+    user-select: none;
+}
+
 /* Hiệu ứng nháy nhẹ cho câu đang làm để dễ nhận diện hơn */
 .nav-btn.active {
     animation: nav-pulse 2s infinite;
@@ -3542,11 +3554,21 @@ function loginSuccess() {
             showPage('page-home');
         }
 
-    } else {
+} else {
         // --- LOGIC CHO THÍ SINH ---
         if (pwSection) pwSection.classList.add('hidden'); 
         if (profileMenu) profileMenu.innerHTML = "👤 Hồ sơ cá nhân"; 
         if (adminZone) adminZone.classList.add('hidden');
+        
+        // --- BỔ SUNG ĐOẠN NÀY ĐỂ FIX LỖI "ĐANG TẢI..." ---
+        if (currentUser.examName) {
+            document.getElementById('display-exam-name').innerText = currentUser.examName;
+        }
+        if (currentUser.subject) {
+            document.getElementById('display-exam-subject').innerText = "MÔN HỌC: " + currentUser.subject.toUpperCase();
+        }
+        // ----------------------------------------------
+
         if (studentZone) studentZone.classList.remove('hidden');
 
         // BƯỚC QUAN TRỌNG: Kiểm tra khôi phục
@@ -4509,18 +4531,21 @@ async function createNewFolder() {
 
         // Lưu vào cơ sở dữ liệu
         foldersDB.push({ 
-            name: name, 
-            subject: subject,
-            questions: [], 
-            isShuffle: false,
-            createdAt: Date.now() 
-        });
+        name: name, 
+        subject: subject,
+        questions: [], 
+        isShuffle: false,
+        createdAt: Date.now() 
+    });
 
-        saveFolders(); 
-        renderFolders(); 
-        updateFolderDropdowns();
-        
-        closeNotify();
+    // THAY ĐOẠN LƯU VÀ CẬP NHẬT TIẾP THEO THÀNH:
+    const newFolderIdx = foldersDB.length - 1; // Lấy vị trí của bộ đề vừa tạo
+
+    saveFolders(); 
+    renderFolders(); 
+    updateFolderDropdowns(newFolderIdx); // Truyền index mới vào để các ô chọn tự nhảy vào nó
+
+    closeNotify();
 
         // --- HỆ THỐNG THÔNG BÁO HẠN MỨC THÔNG MINH ---
         if (!isVip) {
@@ -4674,6 +4699,8 @@ function handleJoinQuiz() {
             return sysNotify("Lỗi", "Mã đề không tồn tại hoặc hết hạn!", "error");
         }
 
+        document.getElementById('display-exam-name').innerText = data.examName || "Bài thi " + code;
+        document.getElementById('display-exam-subject').innerText = "MÔN HỌC: " + (data.subject || "TỰ DO").toUpperCase();
         const safeUser = name.replace(/[.$#[\]]/g, "_") + "_" + code; 
         const safeAdmin = data.admin.replace(/\./g, '_');
         currentExamCode = code;
@@ -6082,10 +6109,21 @@ function switchAuth(t) {
     document.getElementById('tab-' + t).classList.remove('text-slate-400');
 }
 
-function updateFolderDropdowns() {
-    const folderOptions = foldersDB.map((f, idx) => `<option value="${idx}">${f.name}</option>`).join('');
-    ['import-to-folder-select', 'manual-to-folder-select'].forEach(id => {
-        const el = document.getElementById(id); if(el) el.innerHTML = folderOptions || '<option>Chưa có bộ đề</option>';
+function updateFolderDropdowns(autoSelectIdx = -1) {
+    // 1. Tạo danh sách các option, sau đó đảo ngược (reverse) để cái mới nhất lên đầu
+    const folderOptions = foldersDB.map((f, idx) => {
+        // Kiểm tra xem đây có phải là bộ đề cần tự động chọn không
+        const isSelected = (idx === autoSelectIdx) ? 'selected' : '';
+        return `<option value="${idx}" ${isSelected}>${f.name}</option>`;
+    }).reverse().join('');
+
+    // 2. Cập nhật vào 2 ô Select ở vùng Nhập File và vùng Nhập Thủ Công
+    const selectIds = ['import-to-folder-select', 'manual-to-folder-select'];
+    selectIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerHTML = folderOptions || '<option value="">Chưa có bộ đề</option>';
+        }
     });
 }
 
@@ -6431,34 +6469,39 @@ function loadChatMessages() {
         }
 
         const msgs = Object.entries(data.messages);
-        const adminSeenTime = data.adminLastSeen || 0;
-        const adminAvatar = "https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff";
-        
         let fullHtml = "";
         let lastDateString = ""; 
 
-        msgs.forEach(([id, m], index) => {
-            const currentDateString = new Date(m.time).toDateString();
-            if (currentDateString !== lastDateString) {
-                fullHtml += `<div class="chat-date-separator"><span>${getChatDateLabel(m.time)}</span></div>`;
-                lastDateString = currentDateString;
-            }
+msgs.forEach(([id, m], index) => {
+    if (m.deletedByUser) return;
 
-            const isMe = m.sender === currentUser.user;
-            const isLastSeenByPartner = (isMe && m.time <= adminSeenTime && (index === msgs.length - 1 || msgs[index+1][1].time > adminSeenTime));
-            
-            fullHtml += `
-                <div class="msg-row ${isMe ? 'right' : 'left'} animate-in fade-in duration-300">
-                    ${!isMe ? `<img src="${m.avatar || 'https://ui-avatars.com/api/?name=' + m.name}" class="msg-avatar-main shadow-md">` : ''}
-                    <div class="msg-content-wrapper">
-                        ${!isMe ? `<span class="msg-sender-name">${m.name} ${m.isAI ? '<span class="bot-badge">BOT AI</span>' : ''}</span>` : ''}
-                        <div class="msg-bubble shadow-sm">${m.text}<span class="msg-time">${formatChatTime(m.time)}</span></div>
-                        <div class="seen-receipts">
-                            ${isLastSeenByPartner ? `<img src="${adminAvatar}" class="mini-seen-avatar show" title="Admin đã xem">` : ''}
-                        </div>
+    const isMe = m.sender === currentUser.user;
+    const isRecalled = m.recalled === true; 
+    const msgText = m.text.replace(/'/g, "\\'"); 
+    
+    fullHtml += `
+        <div class="msg-row ${isMe ? 'right' : 'left'} group animate-in fade-in duration-300">
+            ${!isMe ? `<img src="${m.avatar || 'https://ui-avatars.com/api/?name=' + m.name}" class="msg-avatar-main shadow-md">` : ''}
+            <div class="msg-content-wrapper relative max-w-[85%]">
+                ${!isMe ? `<span class="msg-sender-name">${m.name}</span>` : ''}
+                <div class="flex items-center gap-2 ${isMe ? 'flex-row-reverse' : ''}">
+                    
+                    <!-- BONG BÓNG TIN NHẮN CÓ HIỆU ỨNG MỜ -->
+                    <div class="msg-bubble shadow-sm ${isRecalled ? 'recalled' : ''}">
+                        ${isRecalled ? "Đã thu hồi 1 tin nhắn" : m.text}
+                        <span class="msg-time">${formatChatTime(m.time)}</span>
                     </div>
-                </div>`;
-        });
+                    
+                    ${(!isRecalled) ? `
+                        <button onclick="openUserMsgMenu('${chatId}', '${id}', '${msgText}', ${isMe})" 
+                                class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-black/20 text-slate-400 hover:text-white transition-all text-[10px] border border-white/5">
+                            •••
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>`;
+});
 
         container.innerHTML = fullHtml;
         container.scrollTop = container.scrollHeight;
@@ -6474,20 +6517,33 @@ function loadChatUserList() {
         if (!data) {
             list.innerHTML = '<p class="text-slate-500 text-xs text-center">Chưa có cuộc hội thoại nào.</p>';
             return;
-        };
+        }
 
         list.innerHTML = Object.keys(data).map(userId => {
-            // Lấy số tin chưa đọc của Root Admin từ user này
             const unreadForRoot = data[userId].unreadRoot || 0;
             
             return `
-                <button onclick="selectChatUser('${userId}')" id="btn-chat-${userId}" class="chat-user-btn flex justify-between items-center w-full mb-2">
-                    <div class="flex-1 truncate">
-                        <div class="font-bold text-sm text-white">${userId.replace(/_/g, '.')}</div>
-                    </div>
-                    <!-- HIỆN BỘ ĐẾM RIÊNG CHO TỪNG USER -->
-                    ${unreadForRoot > 0 ? `<span class="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg animate-pulse">${unreadForRoot}</span>` : ''}
-                </button>`;
+                <div class="flex items-center gap-2 mb-2">
+                    <!-- NÚT CHỌN HỘI THOẠI (Chiếm phần lớn hàng) -->
+                    <button onclick="selectChatUser('${userId}')" id="btn-chat-${userId}" 
+                            class="chat-user-btn flex-1 flex justify-between items-center p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-indigo-600/20 transition-all overflow-hidden">
+                        <div class="truncate text-left font-bold text-sm text-white">
+                            ${userId.replace(/_/g, '.')}
+                        </div>
+                        <!-- Báo tin nhắn chưa đọc -->
+                        ${unreadForRoot > 0 ? `
+                            <span class="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg animate-pulse ml-2">
+                                ${unreadForRoot}
+                            </span>` : ''}
+                    </button>
+                    
+                    <!-- NÚT X XÓA RIÊNG LẺ - ĐÃ CÀI ĐẶT LUÔN HIỂN THỊ -->
+                    <button onclick="event.stopPropagation(); deleteUserChat('${userId}')" 
+                            class="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all shadow-lg border border-red-500/20"
+                            title="Xóa hội thoại">
+                        ✕
+                    </button>
+                </div>`;
         }).reverse().join('');
     });
 }
@@ -6517,27 +6573,36 @@ function selectChatUser(userId) {
         let fullHtml = "";
         let lastDateString = "";
 
-        msgs.forEach(([id, m]) => {
-            // Thanh ngày tháng
-            const currentDateString = new Date(m.time).toDateString();
-            if (currentDateString !== lastDateString) {
-                fullHtml += `<div class="chat-date-separator"><span>${getChatDateLabel(m.time)}</span></div>`;
-                lastDateString = currentDateString;
-            }
+msgs.forEach(([id, m]) => {
+    if (m.deletedByRoot) return; 
 
-            const isMe = m.sender === AD_PHONE; // Root Admin gửi
-            const partnerAvatar = m.avatar || 'https://ui-avatars.com/api/?name=' + userId;
+    const isMe = m.sender === AD_PHONE;
+    const isRecalled = m.recalled === true; 
+    const partnerAvatar = m.avatar || 'https://ui-avatars.com/api/?name=' + userId;
+    const msgText = m.text.replace(/'/g, "\\'"); 
 
-            fullHtml += `
-                <div class="msg-row ${isMe ? 'right' : 'left'} animate-in fade-in duration-300">
-                    ${!isMe ? `<img src="${partnerAvatar}" class="msg-avatar-main shadow-md">` : ''}
-                    <div class="msg-content-wrapper">
-                        <span class="msg-sender-name">${isMe ? 'Bạn' : m.name}</span>
-                        <div class="msg-bubble shadow-sm">${m.text}<span class="msg-time">${formatChatTime(m.time)}</span></div>
+    fullHtml += `
+        <div class="msg-row ${isMe ? 'right' : 'left'} group animate-in fade-in duration-300">
+            ${!isMe ? `<img src="${partnerAvatar}" class="msg-avatar-main shadow-md">` : ''}
+            <div class="msg-content-wrapper relative max-w-[80%]">
+                <span class="msg-sender-name">${isMe ? 'Bạn' : m.name}</span>
+                <div class="flex items-center gap-2 ${isMe ? 'flex-row-reverse' : ''}">
+                    
+                    <div class="msg-bubble shadow-sm ${isRecalled ? 'recalled' : ''}">
+                        ${isRecalled ? "Đã thu hồi 1 tin nhắn" : m.text}
+                        <span class="msg-time">${formatChatTime(m.time)}</span>
                     </div>
-                </div>`;
-        });
-
+                    
+                    ${!isRecalled ? `
+                        <button onclick="openMsgMenu('${userId}', '${id}', '${msgText}')" 
+                                class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-black/20 text-slate-400 hover:text-white transition-all text-[10px] border border-white/5">
+                            •••
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>`;
+});
         container.innerHTML = fullHtml;
         container.scrollTop = container.scrollHeight;
     });
@@ -8253,23 +8318,23 @@ function listenToCandidates() {
     const body = document.getElementById('candidates-table-body');
     const ref = rdb.ref(`system/active_sessions/${safeAdmin}`);
 
-    if (body) {
-        body.innerHTML = `<tr><td colspan="5" class="text-center py-12"><p class="animate-pulse text-indigo-400 font-bold">📡 ĐANG QUÉT DỮ LIỆU THÍ SINH...</p></td></tr>`;
+    // Hiển thị trạng thái chờ khi mới vào trang
+    if (body && !candidatesInitialDataLoaded) {
+        body.innerHTML = `<tr><td colspan="5" class="text-center py-12"><p class="animate-pulse text-indigo-400 font-bold text-xs uppercase tracking-widest">📡 Đang quét radar thí sinh...</p></td></tr>`;
     }
 
-    ref.off(); // Tắt cái cũ đi
+    ref.off(); // Tắt các trình lắng nghe cũ
 
     ref.on('value', (snapshot) => {
         const data = snapshot.val();
-        monitorCache = data || {}; // CẬP NHẬT DỮ LIỆU VÀO CACHE ĐỂ CHẠY GIỜ
+        monitorCache = data || {}; 
         
         if (!data) {
-            if (body) body.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-500 italic">Hiện tại chưa có thí sinh nào tham gia phòng thi.</td></tr>';
+            if (body) body.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-500 italic text-xs">Hiện tại chưa có thí sinh nào tham gia phòng thi.</td></tr>';
             candidatesInitialDataLoaded = true;
             return;
         }
 
-        // Xóa interval cũ để không bị chồng chéo
         if (monitorInterval) clearInterval(monitorInterval);
 
         let html = "";
@@ -8293,13 +8358,28 @@ function listenToCandidates() {
                 const studentUniqueKey = `${examCode}_${safeUser}`;
                 const oldStatus = trackedStudents[studentUniqueKey];
                 
-                let animClass = ""; 
+                // --- LOGIC NỔ THÔNG BÁO THÔNG MINH ---
                 if (candidatesInitialDataLoaded) {
+                    // TRƯỜNG HỢP 1: THÍ SINH MỚI VÀO
                     if (!oldStatus) {
-                        animClass = "row-candidate-abc"; 
                         NOTI_SOUND.play().catch(() => {});
-                    } else if (oldStatus !== s.status) {
-                        animClass = "status-changed";
+                        showModernToast(
+                            "THÍ SINH MỚI 👥", 
+                            `<b>${s.name}</b> vừa truy cập vào mã đề <b>${examCode}</b>`, 
+                            "success", 
+                            "page-candidates-manager"
+                        );
+                        updateCandidateBadge(1);
+                    } 
+                    // TRƯỜNG HỢP 2: THÍ SINH VỪA NỘP BÀI
+                    else if (oldStatus !== s.status && s.status === 'ĐÃ NỘP BÀI') {
+                        NOTI_SOUND.play().catch(() => {});
+                        showModernToast(
+                            "NỘP BÀI THÀNH CÔNG ✅", 
+                            `Thí sinh <b>${s.name}</b> đã hoàn thành. Điểm: <b class="text-white">${s.score}</b>`, 
+                            "info", 
+                            "page-candidates-manager"
+                        );
                     }
                 }
 
@@ -8308,7 +8388,7 @@ function listenToCandidates() {
                 const isWaiting = s.status === 'ĐÃ TRUY CẬP VÀO ĐỀ';
 
                 html += `
-                <tr id="row-${studentUniqueKey}" class="border-b border-white/5 hover:bg-white/5 transition ${animClass}">
+                <tr id="row-${studentUniqueKey}" class="border-b border-white/5 hover:bg-white/5 transition">
                     <td class="py-3 pl-6">
                         <div class="flex items-center gap-2">
                              <div class="w-1.5 h-1.5 rounded-full ${isDone ? 'bg-slate-600' : 'bg-emerald-500 animate-pulse'}"></div>
@@ -8322,7 +8402,6 @@ function listenToCandidates() {
                         </span>
                     </td>
                     <td class="text-center">
-                        <!-- Ô NÀY PHẢI CÓ ID CHUẨN ĐỂ setInterval NẠP GIỜ VÀO -->
                         <div id="clock-${safeUser}" class="font-mono text-xs ${isWaiting ? 'text-slate-500 italic' : (isDone ? 'text-slate-600' : 'text-indigo-300 font-bold')}">
                             ${isWaiting ? 'ĐANG ĐỢI...' : (isDone ? 'HOÀN THÀNH' : '--:--')}
                         </div>
@@ -8337,17 +8416,15 @@ function listenToCandidates() {
         });
 
         if (body) body.innerHTML = html;
-        candidatesInitialDataLoaded = true;
+        candidatesInitialDataLoaded = true; // Đánh dấu đã load xong đợt đầu, từ giờ ai mới vào sẽ nổ Toast
 
-        // BẮT ĐẦU VÒNG LẶP ĐẾM GIỜ REALTIME
+        // Bộ đếm giờ Realtime
         monitorInterval = setInterval(() => {
             const now = getServerTime();
-            // Lặp qua dữ liệu đã lưu trong cache
             Object.keys(monitorCache).forEach(examCode => {
                 Object.entries(monitorCache[examCode]).forEach(([safeUser, s]) => {
                     const el = document.getElementById(`clock-${safeUser}`);
                     if (!el) return;
-
                     if (s.status === 'ĐANG LÀM BÀI' && s.endTime > 0) {
                         const remain = s.endTime - now;
                         if (remain > 0) {
@@ -8687,6 +8764,351 @@ function showPremiumRejectedAlert() {
     ntBox.classList.add('active');
 }
 
+// Hàm xóa sạch toàn bộ các cuộc hội thoại trên hệ thống (Chỉ dành cho Root)
+async function clearAllChats() {
+    // 1. Kiểm tra quyền
+    if (!currentUser || !currentUser.isRoot) {
+        return sysNotify("Từ chối", "Bạn không có quyền thực hiện hành động này!", "error");
+    }
+
+    // 2. Xác nhận từ Admin
+    const confirmMsg = `
+        <div class="text-left">
+            <b class="text-red-400 text-lg uppercase">⚠️ DỌN DẸP HỘP THƯ</b><br>
+            <p class="text-slate-300 mt-2">Bạn có chắc chắn muốn xóa vĩnh viễn <b>TOÀN BỘ</b> các cuộc hội thoại và lịch sử chat trên hệ thống?</p>
+            <p class="text-[11px] text-orange-400 mt-2 italic">* Lưu ý: Hành động này sẽ làm sạch cơ sở dữ liệu chat và không thể hoàn tác.</p>
+        </div>
+    `;
+
+    if (await sysConfirm(confirmMsg)) {
+        sysNotify("Đang xử lý", "Hệ thống đang xóa dữ liệu máy chủ...", "info");
+
+        try {
+            // 3. Xóa node chats trên Firebase
+            await rdb.ref('system/chats').remove();
+
+            // 4. Reset giao diện hiện tại
+            document.getElementById('admin-chat-messages').innerHTML = "";
+            document.getElementById('admin-chat-header').innerText = "Chọn một admin con để xem";
+            document.getElementById('admin-chat-input-zone').classList.add('hidden');
+            currentActiveChatUser = null;
+
+            // 5. Thông báo thành công
+            showModernToast("THÀNH CÔNG", "Đã dọn dẹp sạch sẽ toàn bộ hộp thư hỗ trợ.", "success");
+            closeNotify();
+
+        } catch (error) {
+            console.error("Lỗi xóa chat:", error);
+            sysNotify("Lỗi hệ thống", "Không thể kết nối máy chủ để xóa tin nhắn!", "error");
+        }
+    }
+}
+
+// HÀM XÓA MỘT TIN NHẮN DUY NHẤT TRÊN SERVER
+async function deleteSpecificMessage(userId, msgId) {
+    // Hiện thông báo xác nhận nhanh
+    const confirmDelete = await sysConfirm("Bạn có chắc chắn muốn xóa tin nhắn này không?");
+    if (!confirmDelete) return;
+
+    try {
+        // Thực hiện xóa trên Firebase
+        await rdb.ref(`system/chats/${userId}/messages/${msgId}`).remove();
+        
+        // Hiện thông báo toast nhỏ ở góc
+        showModernToast("Hệ thống", "Đã xóa 01 tin nhắn.", "info");
+    } catch (err) {
+        console.error("Lỗi xóa tin:", err);
+        showModernToast("Lỗi", "Không thể xóa tin nhắn. Kiểm tra kết nối mạng!", "error");
+    }
+}
+
+// 1. MỞ MENU LỰA CHỌN CHÍNH
+function openMsgMenu(userId, msgId, text) {
+    sysNotify("TÙY CHỌN TIN NHẮN", `
+        <div class="grid grid-cols-1 gap-3 mt-2">
+            <button onclick="forwardMsgMenu('${msgId}', '${text}')" class="w-full py-4 bg-indigo-600/20 text-indigo-400 font-bold rounded-2xl border border-indigo-500/30 hover:bg-indigo-600 hover:text-white transition-all text-sm">
+                ➡️ CHUYỂN TIẾP TIN NHẮN
+            </button>
+            <button onclick="openRecallMenu('${userId}', '${msgId}')" class="w-full py-4 bg-red-600/20 text-red-400 font-bold rounded-2xl border border-red-500/30 hover:bg-red-600 hover:text-white transition-all text-sm">
+                🗑️ THU HỒI / XÓA TIN
+            </button>
+        </div>
+    `, "info");
+    document.getElementById('nt-btn-ok').classList.add('hidden'); // Ẩn nút đồng ý mặc định
+}
+
+// 2. MENU THU HỒI CHI TIẾT
+function openRecallMenu(userId, msgId) {
+    sysNotify("THU HỒI TIN NHẮN", `
+        <div class="text-center space-y-3 mt-2">
+            <p class="text-xs text-slate-400 mb-4">Chọn phương thức thu hồi tin nhắn này:</p>
+            <button onclick="handleRecall('${userId}', '${msgId}', 'me')" class="w-full py-3 bg-slate-700 text-white rounded-xl font-bold text-xs">
+                XÓA Ở PHÍA BẠN
+            </button>
+            <button onclick="handleRecall('${userId}', '${msgId}', 'everyone')" class="w-full py-3 bg-red-600 text-white rounded-xl font-bold text-xs">
+                THU HỒI CHO MỌI NGƯỜI
+            </button>
+        </div>
+    `, "warn");
+}
+
+// HÀM THU HỒI DÀNH CHO ROOT ADMIN
+async function handleRecall(userId, msgId, type) {
+    try {
+        if (type === 'everyone') {
+            // Thay vì .remove(), ta .update() để giữ lại khung tin nhắn
+            await rdb.ref(`system/chats/${userId}/messages/${msgId}`).update({ 
+                text: "Đã thu hồi 1 tin nhắn",
+                recalled: true 
+            });
+            showModernToast("Thành công", "Đã thu hồi tin nhắn với mọi người", "success");
+        } else {
+            // Xóa ở phía Admin (ẩn đi)
+            await rdb.ref(`system/chats/${userId}/messages/${msgId}`).update({ deletedByRoot: true });
+            showModernToast("Hệ thống", "Đã ẩn tin nhắn ở phía bạn", "info");
+        }
+        closeNotify();
+    } catch (err) { 
+        console.error(err);
+        showModernToast("Lỗi", "Không thể thực hiện thu hồi", "error");
+    }
+}
+
+// Trong hàm selectChatUser, cập nhật đoạn lặp msgs.forEach:
+msgs.forEach(([id, m]) => {
+    if (m.deletedByRoot) return; 
+
+    const isMe = m.sender === AD_PHONE;
+    const isRecalled = m.recalled === true; // Biến kiểm tra
+    const partnerAvatar = m.avatar || 'https://ui-avatars.com/api/?name=' + userId;
+    const msgText = m.text.replace(/'/g, "\\'"); 
+
+    fullHtml += `
+        <div class="msg-row ${isMe ? 'right' : 'left'} animate-in fade-in duration-300">
+            ${!isMe ? `<img src="${partnerAvatar}" class="msg-avatar-main shadow-md">` : ''}
+            <div class="msg-content-wrapper relative max-w-[80%]">
+                <span class="msg-sender-name">${isMe ? 'Bạn' : m.name}</span>
+                <div class="flex items-center gap-2 ${isMe ? 'flex-row-reverse' : ''}">
+                    
+                    <div class="msg-bubble shadow-sm ${isRecalled ? 'recalled' : ''}">
+                        ${isRecalled ? "Đã thu hồi 1 tin nhắn" : m.text}
+                        <span class="msg-time">${formatChatTime(m.time)}</span>
+                    </div>
+                    
+                    <!-- Ẩn nút ba chấm nếu tin đã thu hồi -->
+                    ${!isRecalled ? `
+                        <button onclick="openMsgMenu('${userId}', '${id}', '${msgText}')" 
+                                class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-black/20 text-slate-400 hover:text-white transition-all text-[10px] border border-white/5">
+                            •••
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>`;
+});
+
+// HÀM THU HỒI DÀNH CHO USER / ADMIN CON - ĐÃ SỬA LỖI .REMOVE()
+async function handleUserRecall(chatId, msgId, type) {
+    try {
+        if (type === 'everyone') {
+            // SỬA TẠI ĐÂY: Dùng .update thay vì .remove để không bị mất tin nhắn
+            await rdb.ref(`system/chats/${chatId}/messages/${msgId}`).update({ 
+                text: "Đã thu hồi 1 tin nhắn",
+                recalled: true 
+            });
+            showModernToast("Thành công", "Đã thu hồi tin nhắn với mọi người", "success");
+        } else {
+            await rdb.ref(`system/chats/${chatId}/messages/${msgId}`).update({ deletedByUser: true });
+            showModernToast("Hệ thống", "Đã xóa tin nhắn phía bạn", "info");
+        }
+        closeNotify();
+    } catch (err) {
+        showModernToast("Lỗi", "Không thể thực hiện", "error");
+    }
+}
+
+// Trong hàm loadChatMessages, cập nhật đoạn lặp msgs.forEach:
+msgs.forEach(([id, m]) => {
+    if (m.deletedByUser) return;
+
+    const isMe = m.sender === currentUser.user;
+    const isRecalled = m.recalled === true;
+    const msgText = m.text.replace(/'/g, "\\'"); 
+    
+    fullHtml += `
+        <div class="msg-bubble shadow-sm ${isRecalled ? 'recalled' : ''}">
+            ${isRecalled ? "Đã thu hồi 1 tin nhắn" : m.text}
+            <span class="msg-time">${formatChatTime(m.time)}</span>
+        </div>
+        <div class="msg-row ${isMe ? 'right' : 'left'} animate-in fade-in">
+            ${!isMe ? `<img src="${m.avatar || 'https://ui-avatars.com/api/?name=' + m.name}" class="msg-avatar-main shadow-md">` : ''}
+            <div class="msg-content-wrapper relative max-w-[85%]">
+                ${!isMe ? `<span class="msg-sender-name">${m.name}</span>` : ''}
+                <div class="flex items-center gap-2 ${isMe ? 'flex-row-reverse' : ''}">
+                    
+                    <div class="msg-bubble shadow-sm ${isRecalled ? 'recalled' : ''}">
+                        ${isRecalled ? "Đã thu hồi 1 tin nhắn" : m.text}
+                        <span class="msg-time">${formatChatTime(m.time)}</span>
+                    </div>
+                    
+                    ${(!isRecalled) ? `
+                        <button onclick="openUserMsgMenu('${chatId}', '${id}', '${msgText}', ${isMe})" 
+                                class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-black/20 text-slate-400 hover:text-white transition-all text-[10px] border border-white/5">
+                            •••
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>`;
+});
+
+// 4. MENU CHỌN NGƯỜI ĐỂ CHUYỂN TIẾP
+async function forwardMsgMenu(msgId, text) {
+    sysNotify("⏳ ĐANG TẢI...", "Đang lấy danh sách người dùng...", "info");
+    
+    const snap = await rdb.ref('system/chats').once('value');
+    const allChats = snap.val() || {};
+    const userKeys = Object.keys(allChats);
+
+    if (userKeys.length === 0) {
+        return sysNotify("Trống", "Không có ai để chuyển tiếp tin nhắn.", "error");
+    }
+
+    let userListHtml = `<div class="space-y-2 max-h-[300px] overflow-y-auto pr-2">`;
+    userKeys.forEach(uKey => {
+        userListHtml += `
+            <button onclick="executeForward('${uKey}', '${text}')" class="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-left hover:bg-indigo-600 transition-all">
+                <b class="text-white text-xs">${uKey.replace(/_/g, '.')}</b>
+            </button>`;
+    });
+    userListHtml += `</div>`;
+
+    sysNotify("CHUYỂN TIẾP ĐẾN...", userListHtml, "info");
+}
+
+// 5. THỰC HIỆN GỬI TIN NHẮN CHUYỂN TIẾP
+async function executeForward(targetUser, text) {
+    try {
+        const msgData = { 
+            sender: AD_PHONE, 
+            name: "Quản trị viên (Chuyển tiếp)", 
+            text: `[Chuyển tiếp]: ${text}`, 
+            time: Date.now(),
+            avatar: "" 
+        };
+
+        await rdb.ref(`system/chats/${targetUser}/messages`).push(msgData);
+        await rdb.ref(`system/chats/${targetUser}/unreadUser`).transaction(c => (c || 0) + 1);
+
+        showModernToast("Thành công", "Đã chuyển tiếp tin nhắn!", "success");
+        closeNotify();
+    } catch (err) {
+        showModernToast("Lỗi", "Gửi tin thất bại", "error");
+    }
+}
+
+// 1. MỞ MENU TÙY CHỌN CHO ADMIN CON
+function openUserMsgMenu(chatId, msgId, text, isMine) {
+    let menuHtml = `
+        <div class="grid grid-cols-1 gap-3 mt-2">
+            <button onclick="copyMsgText('${text}')" class="w-full py-4 bg-indigo-600/20 text-indigo-400 font-bold rounded-2xl border border-indigo-500/30 hover:bg-indigo-600 hover:text-white transition-all text-sm">
+                📋 SAO CHÉP TIN NHẮN
+            </button>
+    `;
+
+    if (isMine) {
+        // Nếu là tin của mình gửi đi: Có quyền Thu hồi/Xóa 2 lựa chọn
+        menuHtml += `
+            <button onclick="openUserRecallOptions('${chatId}', '${msgId}', true)" class="w-full py-4 bg-red-600/20 text-red-400 font-bold rounded-2xl border border-red-500/30 hover:bg-red-600 hover:text-white transition-all text-sm">
+                🗑️ THU HỒI / XÓA
+            </button>
+        `;
+    } else {
+        // Nếu là tin Admin gốc hoặc Bot: Chỉ có quyền Xóa ở phía bạn
+        menuHtml += `
+            <button onclick="handleUserRecall('${chatId}', '${msgId}', 'me')" class="w-full py-4 bg-slate-600/20 text-slate-400 font-bold rounded-2xl border border-white/10 hover:bg-slate-600 hover:text-white transition-all text-sm">
+                🗑️ XÓA Ở PHÍA BẠN
+            </button>
+        `;
+    }
+
+    menuHtml += `</div>`;
+    sysNotify("TÙY CHỌN", menuHtml, "info");
+    document.getElementById('nt-btn-ok').classList.add('hidden');
+}
+
+// 2. HIỂN THỊ LỰA CHỌN THU HỒI CHI TIẾT (Dành cho tin của chính mình)
+function openUserRecallOptions(chatId, msgId) {
+    sysNotify("THU HỒI TIN NHẮN", `
+        <div class="text-center space-y-3 mt-2">
+            <p class="text-xs text-slate-400 mb-4">Bạn muốn thực hiện hành động nào?</p>
+            <button onclick="handleUserRecall('${chatId}', '${msgId}', 'me')" class="w-full py-3 bg-slate-700 text-white rounded-xl font-bold text-xs shadow-lg">
+                XÓA Ở PHÍA BẠN
+            </button>
+            <button onclick="handleUserRecall('${chatId}', '${msgId}', 'everyone')" class="w-full py-3 bg-red-600 text-white rounded-xl font-bold text-xs shadow-lg">
+                THU HỒI VỚI MỌI NGƯỜI
+            </button>
+        </div>
+    `, "warn");
+}
+
+// 3. XỬ LÝ LOGIC THỰC TẾ - BẢN ĐÃ SỬA LỖI XÓA TIN
+async function handleUserRecall(chatId, msgId, type) {
+    try {
+        if (type === 'everyone') {
+            // TUYỆT ĐỐI KHÔNG DÙNG .remove() tại đây
+            // Dùng .update để ghi đè nội dung thành chữ "Đã thu hồi"
+            await rdb.ref(`system/chats/${chatId}/messages/${msgId}`).update({ 
+                text: "Đã thu hồi 1 tin nhắn",
+                recalled: true 
+            });
+            showModernToast("Thành công", "Đã thu hồi tin nhắn với mọi người", "success");
+        } else {
+            // Chỉ ẩn ở phía người dùng hiện tại (Admin con)
+            await rdb.ref(`system/chats/${chatId}/messages/${msgId}`).update({ deletedByUser: true });
+            showModernToast("Hệ thống", "Đã xóa tin nhắn phía bạn", "info");
+        }
+        closeNotify();
+    } catch (err) {
+        showModernToast("Lỗi", "Không thể thực hiện", "error");
+    }
+}
+
+// 4. HÀM SAO CHÉP VĂN BẢN
+function copyMsgText(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showModernToast("📋 ĐÃ SAO CHÉP", "Nội dung đã được lưu vào bộ nhớ tạm.", "success");
+        closeNotify();
+    }).catch(() => {
+        showModernToast("Lỗi", "Không thể sao chép văn bản.", "error");
+    });
+}
+
+// HÀM XÓA RIÊNG LẺ TỪNG CUỘC HỘI THOẠI
+async function deleteUserChat(userId) {
+    const displayId = userId.replace(/_/g, '.');
+    const confirmMsg = `Bạn muốn xóa vĩnh viễn lịch sử chat của <b>${displayId}</b>?`;
+
+    if (await sysConfirm(confirmMsg)) {
+        try {
+            // Xóa dữ liệu trên Firebase
+            await rdb.ref('system/chats/' + userId).remove();
+            showModernToast("Thành công", `Đã xóa chat của ${displayId}`, "success");
+
+            // Nếu đang mở chính cuộc trò chuyện này, hãy reset khung chat bên phải
+            if (currentActiveChatUser === userId) {
+                document.getElementById('admin-chat-messages').innerHTML = "";
+                document.getElementById('admin-chat-header').innerText = "Chọn một người để xem";
+                document.getElementById('admin-chat-input-zone').classList.add('hidden');
+                currentActiveChatUser = null;
+            }
+            closeNotify();
+        } catch (err) {
+            showModernToast("Lỗi", "Không thể xóa cuộc trò chuyện", "error");
+        }
+    }
+}
+
 </script>
 <!-- GIAO DIỆN CHAT CHO ADMIN CON -->
 <div id="chat-container" class="fixed bottom-[100px] right-6 z-[9999] hidden">
@@ -8716,9 +9138,15 @@ function showPremiumRejectedAlert() {
 <!-- TRANG QUẢN LÝ CHAT DÀNH CHO ADMIN GỐC -->
 <div id="page-chat-admin" class="page hidden">
     <div class="card glass">
-        <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
-            <span class="p-2 bg-indigo-500/20 rounded-lg">💬</span> TIN NHẮN HỖ TRỢ
-        </h3>
+        <!-- PHẦN TIÊU ĐỀ ĐÃ THÊM NÚT XÓA -->
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold flex items-center gap-2">
+                <span class="p-2 bg-indigo-500/20 rounded-lg">💬</span> TIN NHẮN HỖ TRỢ
+            </h3>
+            <button onclick="clearAllChats()" class="btn-danger text-[10px] px-4 py-2 rounded-xl font-bold flex items-center gap-2">
+                🗑️ XÓA TẤT CẢ TIN NHẮN
+            </button>
+        </div>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
             <!-- Danh sách người nhắn -->
             <div id="chat-user-list" class="bg-black/20 rounded-2xl p-4 overflow-y-auto space-y-2 border border-white/5">

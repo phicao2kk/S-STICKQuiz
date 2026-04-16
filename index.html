@@ -2377,7 +2377,6 @@ function saveQuestion() {
         document.getElementById('manual-c').value.trim(),
         document.getElementById('manual-d').value.trim()
     ];
-    // ÉP KIỂU SỐ cho đáp án đúng để Firebase không bị nhầm lẫn
     const correct = parseInt(document.getElementById('manual-correct').value);
 
     if (!qText || optValues.some(o => o === "")) {
@@ -2388,41 +2387,42 @@ function saveQuestion() {
         text: qText, 
         options: optValues, 
         correct: correct,
-        updatedAt: Date.now() // Đánh dấu thời gian cập nhật
+        updatedAt: Date.now() 
     };
     
     const editIdx = parseInt(document.getElementById('edit-index').value);
     const folderQIdx = parseInt(document.getElementById('edit-folder-q-index').value);
 
-    if (folderQIdx !== -1) {
-        // TRƯỜNG HỢP 1: Đang sửa trực tiếp trong Bộ đề
+    // --- LOGIC MỚI: KIỂM TRA NẾU ĐANG SỬA CÂU TẠM (VÙNG MÀU CAM) ---
+    if (currentEditingTempIdx !== -1) {
+        tempQuestions[currentEditingTempIdx] = newQ; // Cập nhật nội dung mới vào mảng tạm
+        showPreviewZone(); // Vẽ lại vùng màu cam để thấy thay đổi
+        showModernToast("Thành công", `Đã cập nhật câu hỏi tạm #${currentEditingTempIdx + 1}`, "success");
+    } 
+    // Trường hợp sửa trong Bộ đề
+    else if (folderQIdx !== -1) {
         foldersDB[currentFolderIdx].questions[folderQIdx] = newQ;
         saveFolders(); 
         renderFolderQuestions();
-        
-        // --- CHÈN DÒNG NÀY VÀO ĐÂY ---
         syncUpdateToFirebaseCodes(currentFolderIdx); 
-
-        showModernToast("Thành công", "Đã cập nhật & đồng bộ mã đề!", "success");
-    } else if (editIdx !== -1) {
-        // TRƯỜNG HỢP 2: Đang sửa trong Ngân hàng chung
+        showModernToast("Thành công", "Đã cập nhật & đồng bộ bộ đề!", "success");
+    } 
+    // Trường hợp sửa trong Ngân hàng chung
+    else if (editIdx !== -1) {
         db[editIdx] = newQ;
         saveDB(); 
         renderAdminPreview();
         showModernToast("Thành công", "Đã cập nhật Ngân hàng câu hỏi!", "success");
-        
-        // Gợi ý: Nếu bạn muốn sửa ở Ngân hàng mà các Bộ đề có câu này cũng đổi theo, 
-        // thì logic sẽ phức tạp hơn. Hiện tại hệ thống của bạn là copy câu hỏi vào bộ đề, 
-        // nên ta chỉ cần đồng bộ khi sửa trực tiếp trong bộ đề.
-    } else {
-        // TRƯỜNG HỢP 3: Thêm mới hoàn toàn
+    } 
+    // Trường hợp thêm mới hoàn toàn
+    else {
         db.push(newQ);
         saveDB();
         renderAdminPreview();
-        showModernToast("Thành công", "Đã thêm câu hỏi mới!", "success");
+        showModernToast("Thành công", "Đã thêm câu hỏi mới vào ngân hàng!", "success");
     }
 
-    cancelEdit(); 
+    cancelEdit(); // Reset form về trạng thái ban đầu
 }
 
 // --- HÀM 1: Kiểm tra nội dung FILE WORD ngay khi chọn ---
@@ -3253,11 +3253,12 @@ function editQ(i) {
 
 // 4. Hàm Hủy (Reset hoàn toàn giao diện)
 function cancelEdit() {
-    // Đưa các ô ẩn về mặc định
+    // Reset tất cả các chỉ số sửa về mặc định
     document.getElementById('edit-index').value = "-1";
     document.getElementById('edit-folder-q-index').value = "-1"; 
+    currentEditingTempIdx = -1; // Reset chỉ số câu tạm
 
-    // Xóa trắng form
+    // Xóa trắng form nhập liệu
     document.getElementById('manual-q').value = "";
     document.getElementById('manual-a').value = "";
     document.getElementById('manual-b').value = "";
@@ -3265,13 +3266,19 @@ function cancelEdit() {
     document.getElementById('manual-d').value = "";
     document.getElementById('manual-correct').value = "0";
 
-    // Khôi phục nút bấm
+    // Khôi phục giao diện nút bấm
     const saveBtn = document.getElementById('btn-save-q');
-    saveBtn.innerText = "LƯU VÀO NGÂN HÀNG";
+    saveBtn.innerText = "LƯU CÂU HỎI";
     saveBtn.className = "btn-success h-[56px] !px-10 !rounded-2xl font-black shadow-lg";
 
     document.getElementById('btn-cancel-edit').classList.add('hidden');
     document.getElementById('label-edit-mode').innerText = "2. Nhập câu hỏi thủ công";
+    
+    // Đưa màu nhãn A B C D về mặc định (Indigo)
+    document.querySelectorAll('.manual-label').forEach(label => {
+        label.classList.remove('bg-orange-500');
+        label.classList.add('bg-indigo-600');
+    });
 }
 
 

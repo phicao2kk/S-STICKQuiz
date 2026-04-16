@@ -2936,6 +2936,7 @@ function syncDataFromServer() {
             document.getElementById('admin-menu-chat').classList.remove('hidden'); 
             document.getElementById('admin-menu-otp').classList.remove('hidden');
             document.getElementById('student-zone').classList.add('hidden');
+            document.getElementById('root-security-panel')?.classList.remove('hidden');
 
             listenForNewUsers();
             listenToTotalUnread(); 
@@ -2963,6 +2964,42 @@ function syncDataFromServer() {
         rdb.ref('system/global_share_map').on('value', (s) => {
             localStorage.setItem('global_share_map', JSON.stringify(s.val() || {}));
         });
+
+        // --- BỘ LẮNG NGHE TRẠNG THÁI PREMIUM REALTIME & OFFLINE ---
+        if (currentUser && !currentUser.isRoot && currentUser.isAdmin) {
+            rdb.ref('system/global_premium_requests').on('value', (snapshot) => {
+                const requests = snapshot.val() || [];
+                
+                // 1. Lọc các yêu cầu của chính User này đã được xử lý (Duyệt hoặc Từ chối)
+                const myProcessedRequests = requests.filter(r => 
+                    r.user === currentUser.user && (r.status === 'approved' || r.status === 'rejected')
+                );
+
+                if (myProcessedRequests.length > 0) {
+                    // 2. Sắp xếp để lấy yêu cầu mới nhất dựa trên thời gian tạo
+                    myProcessedRequests.sort((a, b) => b.createdAt - a.createdAt);
+                    const latestReq = myProcessedRequests[0];
+
+                    // 3. Kiểm tra xem bill này đã được hiện thông báo trên trình duyệt này chưa
+                    const storageKey = `last_premium_noti_${currentUser.user}`;
+                    const lastSeenTS = localStorage.getItem(storageKey);
+                    
+                    // Nếu chưa từng thấy bill này (createdAt mới hơn cái đã lưu)
+                    if (!lastSeenTS || Number(lastSeenTS) < latestReq.createdAt) {
+                        
+                        // HIỆN POPUP TƯƠNG ỨNG
+                        if (latestReq.status === 'approved') {
+                            showPremiumSuccessAlert(); // Nổ pháo hoa + Thông báo duyệt
+                        } else {
+                            showPremiumRejectedAlert(); // Nổ cảnh báo đỏ từ chối
+                        }
+
+                        // 4. Lưu lại mốc thời gian bill này vào máy để không nổ lại khi F5
+                        localStorage.setItem(storageKey, latestReq.createdAt);
+                    }
+                }
+            });
+        }
 
         // --- TIN NHẮN LIVE ---
         if (currentUser.isRoot) {
@@ -3005,6 +3042,15 @@ function syncDataFromServer() {
                         showModernToast("Phản hồi từ Quản trị viên", msg.text, "success", "openChat");
                     }
                 }
+            });
+        }
+
+        if (currentUser.isRoot) {
+            // Lắng nghe trạng thái F12 từ hệ thống để gạt nút cho đúng
+            rdb.ref('system/security_config/f12_status').on('value', (snap) => {
+                isF12EnabledByRoot = snap.val() || false;
+                const toggle = document.getElementById('f12-master-toggle');
+                if (toggle) toggle.checked = isF12EnabledByRoot;
             });
         }
 
@@ -5362,31 +5408,41 @@ function renderPremiumRequests() {
     }
 
     body.innerHTML = [...preDB].reverse().map(r => {
-        // Kiểm tra thực tế trong usersDB để hiển thị trạng thái Realtime
         const isVip = usersDB[r.user] && usersDB[r.user].isPremium;
+        const isRejected = r.status === 'rejected'; // Kiểm tra trạng thái bị từ chối
 
-        const btnBill = r.proofImg ? `<button onclick="viewFullProof('${r.createdAt}')" class="bg-indigo-600 text-white text-[10px] px-2 py-1 rounded font-bold">👁️ BILL</button>` : `<span class="opacity-30 text-[10px]">Ko ảnh</span>`;
+        const btnBill = r.proofImg ? `<button onclick="viewFullProof('${r.createdAt}')" class="bg-indigo-600 text-white text-[10px] px-2 py-1 rounded font-bold transition-all hover:bg-indigo-500">👁️ BILL</button>` : `<span class="opacity-30 text-[10px]">Ko ảnh</span>`;
+
+        // --- XỬ LÝ BADGE TRẠNG THÁI ---
+        let statusBadge = `<span class="text-[9px] px-2 py-0.5 rounded-full font-black bg-amber-500/20 text-amber-400">CHỜ DUYỆT</span>`;
+        if (isVip) statusBadge = `<span class="text-[9px] px-2 py-0.5 rounded-full font-black bg-emerald-500/20 text-emerald-400">ĐÃ CẤP QUYỀN</span>`;
+        if (isRejected) statusBadge = `<span class="text-[9px] px-2 py-0.5 rounded-full font-black bg-red-500/20 text-red-400">BỊ TỪ CHỐI</span>`;
+
+        // --- XỬ LÝ NÚT BẤM THAO TÁC ---
+        let actionButtons = "";
+        if (isVip) {
+            actionButtons = `<button onclick="revokePremiumDirectly('${r.user}')" class="bg-orange-600 hover:bg-orange-500 text-white p-1 px-3 rounded-lg text-[10px] font-bold shadow-lg">GỠ VIP</button>`;
+        } else {
+            // Nếu chưa duyệt, hiện 2 nút Duyệt và Từ chối
+            actionButtons = `
+                <button onclick="approvePremiumByTime('${r.createdAt}')" class="bg-emerald-600 hover:bg-emerald-500 text-white p-1 px-3 rounded-lg text-[10px] font-bold shadow-lg transition-all">DUYỆT</button>
+                <button onclick="rejectPremiumByTime('${r.createdAt}')" class="bg-red-600 hover:bg-red-500 text-white p-1 px-3 rounded-lg text-[10px] font-bold shadow-lg transition-all">TỪ CHỐI</button>
+            `;
+        }
 
         return `
             <tr class="border-b border-white/5 hover:bg-white/5 transition">
-                <td class="py-4 pl-4">
+                <td class="py-4 pl-4 text-left">
                     <div class="font-bold text-white text-sm">${r.fullname}</div>
                     <div class="text-[10px] text-indigo-400 font-mono">${r.user}</div>
                 </td>
                 <td class="text-center">${btnBill}</td>
-                <td class="text-center">
-                    <span class="text-[9px] px-2 py-0.5 rounded-full font-black ${isVip ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}">
-                        ${isVip ? 'ĐÃ CẤP QUYỀN' : 'CHỜ DUYỆT'}
-                    </span>
-                </td>
+                <td class="text-center">${statusBadge}</td>
                 <td class="font-mono text-[10px] text-indigo-300 text-center">${r.code || '---'}</td>
                 <td class="pr-4 text-right">
-                    <div class="flex gap-2 justify-end">
-                        ${isVip 
-                            ? `<button onclick="revokePremiumDirectly('${r.user}')" class="bg-orange-600 hover:bg-orange-500 text-white p-1 px-3 rounded-lg text-[10px] font-bold shadow-lg">GỠ</button>`
-                            : `<button onclick="approvePremiumByTime('${r.createdAt}')" class="bg-emerald-600 hover:bg-emerald-500 text-white p-1 px-3 rounded-lg text-[10px] font-bold shadow-lg">DUYỆT</button>`
-                        }
-                        <button onclick="deletePremiumRequestByTime('${r.createdAt}')" class="text-red-500/40 hover:text-red-500 p-1.5 transition-all">✕</button>
+                    <div class="flex gap-2 justify-end items-center">
+                        ${actionButtons}
+                        <button onclick="deletePremiumRequestByTime('${r.createdAt}')" class="text-white/20 hover:text-red-500 p-1.5 transition-all text-lg" title="Xóa bill này">✕</button>
                     </div>
                 </td>
             </tr>`;
@@ -7296,9 +7352,10 @@ function resetSingleBtn(btnId, text) {
 
 // Hàm tạo hiệu ứng pháo hoa liên tục trong 5 giây
 function launchFireworks() {
-    var duration = 4 * 1000; // Pháo nổ trong 4 giây
+    var duration = 4 * 1000; 
     var animationEnd = Date.now() + duration;
-    var defaults = { startVelocity: 45, spread: 70, ticks: 100, zIndex: 10005, particleCount: 3 };
+    // Tăng zIndex lên cực cao để nó nằm trên cái bảng thông báo
+    var defaults = { startVelocity: 45, spread: 70, ticks: 100, zIndex: 999999, particleCount: 3 };
 
     function randomInRange(min, max) {
         return Math.random() * (max - min) + min;
@@ -7311,20 +7368,18 @@ function launchFireworks() {
             return clearInterval(interval);
         }
 
-        // Bắn từ góc dưới bên trái (Góc 60 độ hướng vào giữa)
         confetti(Object.assign({}, defaults, {
             origin: { x: 0, y: 1 }, 
             angle: 60,
             colors: ['#6366f1', '#10b981', '#fbbf24', '#f472b6', '#ffffff']
         }));
 
-        // Bắn từ góc dưới bên phải (Góc 120 độ hướng vào giữa)
         confetti(Object.assign({}, defaults, {
             origin: { x: 1, y: 1 },
             angle: 120,
             colors: ['#6366f1', '#10b981', '#fbbf24', '#f472b6', '#ffffff']
         }));
-    }, 150); // Tốc độ nổ mỗi đợt pháo
+    }, 150);
 }
 
 // --- HÀM GỬI BILL PREMIUM - ĐÃ THÊM LỆNH ĐÓNG MENU NGAY LẬP TỨC ---
@@ -7387,54 +7442,52 @@ async function handleTransferredRequest() {
 }
 
 function showPremiumSuccessAlert() {
-    // 1. Âm thanh thông báo
+    // 1. Nổ pháo hoa ngay lập tức (Lúc này zIndex đã là 999999 nên sẽ thấy rõ)
+    if (typeof launchFireworks === 'function') {
+        launchFireworks();
+    }
+
+    // 2. Tiếng Ting chúc mừng
     NOTI_SOUND.play().catch(() => {});
 
-    // 2. Bắn pháo hoa (Sử dụng hàm launchFireworks bạn đã có sẵn)
-    launchFireworks();
-
-    // 3. Cấu hình giao diện Popup thông báo
     const ntBox = document.getElementById('notify-container');
     const ntMsg = document.getElementById('nt-msg');
     const ntTitle = document.getElementById('nt-title');
     const ntIcon = document.getElementById('nt-icon');
     const okBtn = document.getElementById('nt-btn-ok');
 
-    // Thiết lập nội dung Popup
     ntIcon.innerText = '💎';
     ntTitle.innerHTML = '<span style="color: #fbbf24; font-weight: 900; letter-spacing: 2px;">PREMIUM ACTIVATED</span>';
     ntMsg.innerHTML = `
         <div style="text-align: center; padding: 10px;">
             <p style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 15px;">Chúc mừng bạn đã trở thành Hội viên Premium!</p>
-            <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 20px; padding: 20px; margin-bottom: 20px;">
-                <ul style="text-align: left; color: #cbd5e1; font-size: 12px; list-style: none; padding: 0; margin: 0; line-height: 2;">
+            <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 20px; padding: 20px; margin-bottom: 20px; text-align: left;">
+                <ul style="color: #cbd5e1; font-size: 11px; list-style: none; padding: 0; margin: 0; line-height: 2;">
                     <li>✨ Không giới hạn số lượng bộ đề</li>
                     <li>✨ Mở khóa toàn bộ Ngân hàng câu hỏi</li>
                     <li>✨ Tốc độ quét ảnh OCR siêu tốc</li>
                     <li>✨ Ưu tiên hỗ trợ từ Quản trị viên</li>
                 </ul>
             </div>
-            <p style="color: #94a3b8; font-size: 11px; font-style: italic;">Hệ thống đã tự động nâng cấp quyền hạn tài khoản của bạn.</p>
+            <p style="color: #94a3b8; font-size: 10px; font-style: italic;">Hệ thống đã tự động nâng cấp quyền hạn tài khoản của bạn.</p>
         </div>
     `;
 
-    // Tùy chỉnh nút bấm "Trải nghiệm"
     okBtn.innerText = 'TRẢI NGHIỆM NGAY';
-    okBtn.className = "w-full py-4 bg-gradient-to-r from-amber-600 to-amber-400 text-black font-black rounded-2xl shadow-[0_0_30px_rgba(251,191,36,0.4)] border-none transition-all hover:scale-105 active:scale-95";
+    okBtn.className = "w-full py-4 bg-gradient-to-r from-amber-600 to-amber-400 text-black font-black rounded-2xl shadow-[0_0_30px_rgba(251,191,36,0.4)] border-none transition-all hover:scale-105";
     
     okBtn.onclick = () => {
         closeNotify();
-        // Chuyển về trang chủ để người dùng thấy sự thay đổi
         showPage('page-home');
-        // Hiện thêm một Toast nhỏ thông báo nhanh
         showModernToast("Premium 💎", "Mọi tính năng cao cấp đã sẵn sàng!", "success");
     };
 
-    // Ẩn nút Hủy
     document.getElementById('nt-btn-cancel').classList.add('hidden');
     
-    // Hiển thị Popup
-    ntBox.classList.add('active');
+    // 3. Hiện bảng thông báo (Trễ 200ms để người dùng thấy pháo nổ trước cho đẹp)
+    setTimeout(() => {
+        ntBox.classList.add('active');
+    }, 200);
 }
 
 // Khóa cử chỉ zoom bằng 2 ngón tay (Pinch to Zoom)
@@ -8536,6 +8589,102 @@ async function revokeFolderCodes(idx) {
             sysNotify("Lỗi", "Không thể thu hồi mã. Vui lòng kiểm tra mạng!", "error");
         }
     }
+}
+
+async function rejectPremiumByTime(timestamp) {
+    const confirmMsg = "Xác nhận TỪ CHỐI yêu cầu này? <br><br> <span class='text-red-400 text-[10px]'>* Hệ thống sẽ gửi thông báo 'Bill không hợp lệ' đến tài khoản người gửi.</span>";
+    
+    if (await sysConfirm(confirmMsg)) {
+        sysNotify("Đang xử lý", "Đang gửi lệnh từ chối...", "info");
+        
+        rdb.ref('system/global_premium_requests').once('value', (snap) => {
+            let requests = snap.val() || [];
+            const idx = requests.findIndex(r => r.createdAt == timestamp);
+            
+            if (idx !== -1) {
+                // Đổi trạng thái sang rejected
+                requests[idx].status = 'rejected';
+                
+                // Cập nhật lên Firebase
+                rdb.ref('system/global_premium_requests').set(requests).then(() => {
+                    closeNotify();
+                    showModernToast("Hệ thống", "Đã từ chối và gửi cảnh báo thành công.", "warn");
+                });
+            }
+        });
+    }
+}
+
+// Hàm xóa sạch toàn bộ danh sách yêu cầu Premium (Bill)
+async function clearAllPremiumRequests() {
+    // 1. Kiểm tra quyền (Chỉ Root Admin mới được xóa sạch)
+    if (!currentUser || !currentUser.isRoot) {
+        return sysNotify("Từ chối", "Chỉ Quản trị viên tối cao mới có quyền dọn dẹp hệ thống!", "error");
+    }
+
+    // 2. Xác nhận từ người dùng
+    const confirmMsg = `
+        <div class="text-left">
+            <b class="text-red-400 text-lg uppercase">⚠️ CẢNH BÁO DỌN DẸP</b><br>
+            <p class="text-slate-300 mt-2">Bạn có chắc chắn muốn xóa toàn bộ danh sách Bill và yêu cầu nâng cấp không?</p>
+            <p class="text-[11px] text-orange-400 mt-2 italic">* Lưu ý: Hành động này sẽ xóa sạch lịch sử đối soát và không thể hoàn tác.</p>
+        </div>
+    `;
+
+    if (await sysConfirm(confirmMsg)) {
+        sysNotify("Đang xử lý", "Hệ thống đang dọn dẹp dữ liệu...", "info");
+
+        try {
+            // 3. Xóa trên Firebase node system/global_premium_requests
+            await rdb.ref('system/global_premium_requests').remove();
+
+            // 4. Cập nhật LocalStorage cho đồng bộ
+            localStorage.setItem('global_premium_requests', JSON.stringify([]));
+
+            // 5. Thông báo thành công
+            showModernToast("THÀNH CÔNG", "Đã dọn sạch toàn bộ danh sách yêu cầu Premium.", "success");
+            
+            // Tự động vẽ lại bảng (Bảng sẽ tự trống vì listener rdb.ref(...).on('value') sẽ nhận diện node bị null)
+            renderPremiumRequests(); 
+            closeNotify();
+
+        } catch (error) {
+            console.error("Lỗi xóa bill:", error);
+            sysNotify("Lỗi hệ thống", "Không thể xóa dữ liệu trên Server. Vui lòng kiểm tra lại mạng!", "error");
+        }
+    }
+}
+
+// Hàm hiển thị thông báo lớn khi bị từ chối Premium
+function showPremiumRejectedAlert() {
+    NOTI_SOUND.play().catch(() => {}); 
+    const ntBox = document.getElementById('notify-container');
+    const ntMsg = document.getElementById('nt-msg');
+    const ntTitle = document.getElementById('nt-title');
+    const ntIcon = document.getElementById('nt-icon');
+    const okBtn = document.getElementById('nt-btn-ok');
+
+    ntIcon.innerText = '⚠️';
+    ntTitle.innerHTML = '<span style="color: #ef4444; font-weight: 900; letter-spacing: 1px;">YÊU CẦU BỊ TỪ CHỐI</span>';
+    ntMsg.innerHTML = `
+        <div style="text-align: center; padding: 10px;">
+            <p style="color: #fff; font-size: 15px; font-weight: 700; margin-bottom: 15px;">Gói Premium của bạn không được phê duyệt!</p>
+            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 20px; padding: 20px; margin-bottom: 20px; text-align: left;">
+                <p style="color: #fca5a5; font-size: 12px; font-weight: bold; margin-bottom: 8px;">Lý do có thể là:</p>
+                <ul style="color: #cbd5e1; font-size: 11px; list-style: none; padding: 0; margin: 0; line-height: 1.8;">
+                    <li>• Hình ảnh bill thanh toán không rõ ràng.</li>
+                    <li>• Nội dung chuyển khoản bị sai hoặc không khớp.</li>
+                    <li>• Số tiền chuyển khoản chưa đúng hạn mức.</li>
+                </ul>
+            </div>
+            <p style="color: #94a3b8; font-size: 10px; font-style: italic;">Vui lòng thực hiện lại yêu cầu và tải ảnh bill chuẩn hơn.</p>
+        </div>
+    `;
+    okBtn.innerText = 'TÔI ĐÃ HIỂU';
+    okBtn.className = "w-full py-4 bg-slate-700 text-white font-bold rounded-2xl transition-all";
+    okBtn.onclick = () => { closeNotify(); };
+    document.getElementById('nt-btn-cancel').classList.add('hidden');
+    ntBox.classList.add('active');
 }
 
 </script>

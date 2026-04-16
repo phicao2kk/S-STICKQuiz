@@ -48,6 +48,24 @@
     }
 }
 
+/* Màu cho câu hỏi đã được đánh dấu cần xem lại */
+.nav-btn.flagged {
+    border-color: #f59e0b !important; /* Màu Amber */
+    color: #f59e0b !important;
+    background: rgba(245, 158, 11, 0.1);
+}
+
+/* Hiệu ứng nháy nhẹ cho câu đang làm để dễ nhận diện hơn */
+.nav-btn.active {
+    animation: nav-pulse 2s infinite;
+}
+
+@keyframes nav-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+
 @keyframes slideInAndPush {
     0% { 
         transform: translateX(-50px); 
@@ -4196,7 +4214,7 @@ function renderFolders() {
             childCodesHtml = `
                 <div class="mt-2 mb-2 p-2 bg-purple-500/10 border border-purple-500/20 rounded-xl">
                     <div class="flex justify-between items-center mb-1">
-                        <span class="text-[9px] text-purple-400 font-bold uppercase">Mã đề con (120p):</span>
+                        <span class="text-[9px] text-purple-400 font-bold uppercase">Mã đề con (45p):</span>
                         <span class="text-[9px] text-amber-400 font-black animate-pulse">⏳ ${timeStr}</span>
                     </div>
                     <div class="flex flex-wrap gap-1">
@@ -4319,7 +4337,7 @@ async function generateChildCodes(idx) {
             });
 
             // --- BƯỚC CẤP MỚI: Tạo dữ liệu cho dải mã mới ---
-            const expiry = Date.now() + (120 * 60 * 1000); // 120 phút
+            const expiry = Date.now() + (45 * 60 * 1000);
             
             for (let code of requestedCodes) {
                 let shuffledQ = JSON.parse(JSON.stringify(folder.questions));
@@ -4573,8 +4591,7 @@ function shareFolder(i) {
     if (!folder) return;
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    // THAY ĐỔI: Đặt hạn 120 phút (120 * 60 * 1000 mili giây)
-    const expiry = Date.now() + (120 * 60 * 1000); 
+    const expiry = Date.now() + (45 * 60 * 1000);
     
     folder.accessCode = code;
     folder.expiresAt = expiry;
@@ -4589,7 +4606,7 @@ function shareFolder(i) {
     
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(code).then(() => {
-            showModernToast("📋 ĐÃ SAO CHÉP MÃ", `Mã <b class="text-white">${code}</b> (Hạn 120p) đã được copy.`, "success");
+            showModernToast("📋 ĐÃ SAO CHÉP MÃ", `Mã <b class="text-white">${code}</b> (Hạn 45p) đã được copy.`, "success");
         });
     }
     renderFolders();
@@ -4869,21 +4886,46 @@ function renderNav() {
     const navPanel = document.getElementById('nav-panel');
     if (!navPanel) return;
 
+    // Sử dụng DocumentFragment để tối ưu hiệu năng render nếu số lượng câu hỏi lớn
     navPanel.innerHTML = activeQuestions.map((ques, i) => {
+        
+        // 1. Logic kiểm tra Đã trả lời (Answered)
         let isAnswered = false;
+        const ans = userAnswers[i];
+        
         if (ques.type === 'tf') {
-            isAnswered = (Array.isArray(userAnswers[i]) && userAnswers[i].length > 0);
+            isAnswered = (Array.isArray(ans) && ans.length > 0);
         } else {
-            isAnswered = (userAnswers[i] !== -1);
+            // Kiểm tra ans không phải mặc định (-1), không rỗng, không null
+            isAnswered = (ans !== -1 && ans !== "" && ans !== null && ans !== undefined);
         }
 
+        // 2. Logic kiểm tra Đánh dấu (Flag/Review) - Nếu bạn có thuộc tính này
+        // Giả sử bạn lưu trạng thái đánh dấu vào mảng userFlags[i] = true/false
+        const isFlagged = (typeof userFlags !== 'undefined' && userFlags[i]);
+
+        // 3. Xây dựng danh sách Class CSS
+        let classList = "nav-btn";
+        if (currentIdx === i) classList += " active";
+        if (isAnswered) classList += " answered";
+        if (isFlagged) classList += " flagged"; // Thêm màu cam/vàng cho câu cần xem lại
+
         return `
-            <button class="nav-btn ${currentIdx === i ? 'active' : ''} ${isAnswered ? 'answered' : ''}" 
-                    onclick="jumpTo(${i})">
+            <button class="${classList}" 
+                    id="nav-item-${i}"
+                    onclick="jumpTo(${i})"
+                    title="Câu ${i + 1}">
                 ${i + 1}
             </button>
         `;
     }).join('');
+
+    // 4. TỰ ĐỘNG CUỘN (Scroll Into View)
+    // Giúp câu đang làm luôn nằm trong tầm mắt thí sinh trên mobile
+    const currentBtn = document.getElementById(`nav-item-${currentIdx}`);
+    if (currentBtn) {
+        currentBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
 }
 
 function jumpTo(idx) { 
@@ -8408,6 +8450,60 @@ function saveQuizBlackBox() {
 function clearQuizBlackBox() {
     if (currentUser) {
         localStorage.removeItem('quiz_save_' + currentUser.user);
+    }
+}
+
+// HÀM THU HỒI TOÀN BỘ MÃ (GỐC + CON) CỦA MỘT BỘ ĐỀ
+async function revokeFolderCodes(idx) {
+    const folder = foldersDB[idx];
+    if (!folder) return;
+
+    // Kiểm tra xem bộ đề có mã nào đang hoạt động không
+    const hasMaster = folder.accessCode && folder.expiresAt > Date.now();
+    const hasChildren = folder.childCodesData && folder.childCodesData.expiresAt > Date.now();
+
+    if (!hasMaster && !hasChildren) {
+        return showModernToast("THÔNG BÁO", "Bộ đề này hiện không có mã nào đang hoạt động.", "info");
+    }
+
+    const confirmMsg = `Bạn muốn <b>THU HỒI TOÀN BỘ</b> mã đề (gốc & con) của bộ đề: <br><span class="text-red-400 uppercase">${folder.name}</span>?<br><br><span class="text-[10px] text-slate-400">* Học sinh sẽ không thể dùng các mã này để vào thi nữa.</span>`;
+
+    if (await sysConfirm(confirmMsg)) {
+        sysNotify("Đang xử lý", "Đang thu hồi mã từ hệ thống...", "info");
+
+        try {
+            const updates = {};
+            
+            // 1. Gom mã gốc
+            if (folder.accessCode) {
+                updates[`system/global_share_map/${folder.accessCode}`] = null;
+            }
+
+            // 2. Gom tất cả mã con
+            if (folder.childCodesData && folder.childCodesData.codes) {
+                folder.childCodesData.codes.forEach(code => {
+                    updates[`system/global_share_map/${code}`] = null;
+                });
+            }
+
+            // 3. Thực hiện xóa trên Firebase
+            await rdb.ref().update(updates);
+
+            // 4. Xóa dữ liệu mã trong local folder
+            delete folder.accessCode;
+            delete folder.expiresAt;
+            delete folder.childCodesData;
+
+            saveFolders(); // Lưu lại folder đã sạch mã
+            renderFolders(); // Vẽ lại danh sách
+            
+            closeNotify();
+            showModernToast("THÀNH CÔNG", "Đã thu hồi toàn bộ mã đề và giải phóng tài nguyên!", "success");
+
+        } catch (err) {
+            console.error("Lỗi thu hồi:", err);
+            sysNotify("Lỗi", "Không thể thu hồi mã. Vui lòng kiểm tra mạng!", "error");
+        }
     }
 }
 

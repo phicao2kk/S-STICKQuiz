@@ -955,8 +955,9 @@ body.scrolling::-webkit-scrollbar-thumb {
 }
 
 button:disabled {
-    opacity: 0.2 !important;
+    opacity: 0.5 !important; /* Tăng từ 0.2 lên 0.5 */
     cursor: not-allowed !important;
+    filter: grayscale(1); /* Thêm hiệu ứng xám để dễ phân biệt */
     pointer-events: none !important;
 }
 
@@ -3005,7 +3006,9 @@ function syncDataFromServer() {
 // 4. HÀM HỆ THỐNG (FULL LOGIC CŨ)
 // ==========================================
 function sysNotify(title, msg, type = 'info') {
-    // ĐẢM BẢO KHÔNG CÓ LỆNH ĐÓNG MODAL Ở ĐÂY
+    const okBtn = document.getElementById('nt-btn-ok');
+    if(okBtn) okBtn.disabled = false; // MỞ KHÓA NÚT NGAY LẬP TỨC
+    
     const icon = { 'info': '🔔', 'success': '✅', 'error': '❌', 'warn': '⚠️' }[type] || '🔔';
     document.getElementById('nt-icon').innerText = icon;
     document.getElementById('nt-title').innerText = title;
@@ -3015,71 +3018,59 @@ function sysNotify(title, msg, type = 'info') {
     document.getElementById('notify-container').classList.add('active');
 }
 
-function sysPrompt(title, msg, placeholder = "", defaultValue = "") {
-    return new Promise(resolve => {
-        // Reset trạng thái nút OK để chắc chắn nó hiện ra
-        const okBtn = document.getElementById('nt-btn-ok');
-        okBtn.innerText = "Đồng ý";
-        okBtn.className = "bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold w-full";
-        okBtn.classList.remove('hidden');
-
-        document.getElementById('nt-icon').innerText = '📝';
-        document.getElementById('nt-title').innerText = title;
-        document.getElementById('nt-msg').innerHTML = msg;
-        
-        const input = document.getElementById('nt-input');
-        input.value = defaultValue; 
-        input.placeholder = placeholder;
-        input.classList.remove('hidden');
-        
-        document.getElementById('nt-btn-cancel').classList.remove('hidden');
-        document.getElementById('notify-container').classList.add('active');
-        
-        // Tự động cuộn khung nhìn xuống input để thấy nút bấm
-        setTimeout(() => input.focus(), 300);
-        
-        notifyResolver = (res) => resolve(res ? input.value : null);
-    });
-}
-
+// Tìm hàm sysConfirm và thêm dòng okBtn.disabled = false
 function sysConfirm(msg) {
     return new Promise(resolve => {
-        // Reset nút về trạng thái chuẩn
         const okBtn = document.getElementById('nt-btn-ok');
-        okBtn.innerText = "Xác nhận";
-        okBtn.className = "bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold w-full";
-        okBtn.classList.remove('hidden');
+        if(okBtn) {
+            okBtn.disabled = false; // MỞ KHÓA NÚT
+            okBtn.innerText = "Xác nhận";
+            okBtn.className = "bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold w-full";
+            okBtn.classList.remove('hidden');
+        }
 
         document.getElementById('nt-icon').innerText = '⚠️';
         document.getElementById('nt-title').innerText = 'Xác nhận';
         document.getElementById('nt-msg').innerHTML = msg;
-        
         document.getElementById('nt-input').classList.add('hidden');
         document.getElementById('nt-btn-cancel').classList.remove('hidden');
         document.getElementById('notify-container').classList.add('active');
-        
         notifyResolver = resolve;
+    });
+}
+
+// Tìm hàm sysPrompt và thêm dòng okBtn.disabled = false
+function sysPrompt(title, msg, placeholder = "", defaultValue = "") {
+    return new Promise(resolve => {
+        const okBtn = document.getElementById('nt-btn-ok');
+        if(okBtn) okBtn.disabled = false; // MỞ KHÓA NÚT
+
+        document.getElementById('nt-icon').innerText = '📝';
+        document.getElementById('nt-title').innerText = title;
+        document.getElementById('nt-msg').innerHTML = msg;
+        const input = document.getElementById('nt-input');
+        input.value = defaultValue; 
+        input.placeholder = placeholder;
+        input.classList.remove('hidden');
+        document.getElementById('nt-btn-cancel').classList.remove('hidden');
+        document.getElementById('notify-container').classList.add('active');
+        notifyResolver = (res) => resolve(res ? input.value : null);
     });
 }
 
 function closeNotify(result = true) {
     document.getElementById('notify-container').classList.remove('active');
     
-    // Đợi 300ms cho hiệu ứng mờ dần kết thúc rồi mới reset bên trong
     setTimeout(() => {
         const okBtn = document.getElementById('nt-btn-ok');
         if (okBtn) {
+            okBtn.disabled = false; // LUÔN MỞ KHÓA KHI ĐÓNG
             okBtn.innerText = "Đồng ý";
-            okBtn.onclick = () => closeNotify(true); // Trả lại hàm mặc định
+            okBtn.onclick = () => closeNotify(true);
             okBtn.className = "bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold w-full";
         }
-        
         document.getElementById('nt-input').classList.add('hidden');
         document.getElementById('nt-btn-cancel').classList.add('hidden');
-        
-        // QUAN TRỌNG: Luôn đảm bảo icon hiện lại cho lần sau
-        document.getElementById('nt-icon').classList.remove('hidden'); 
-        
     }, 300);
 
     if (notifyResolver) { 
@@ -4246,7 +4237,7 @@ async function generateChildCodes(idx) {
     const folder = foldersDB[idx];
     
     if (!folder || !folder.questions || folder.questions.length === 0) {
-        return sysNotify("Lỗi", "Bộ đề này chưa có câu hỏi!", "error");
+        return sysNotify("Lỗi", "Bộ đề này chưa có câu hỏi để tạo mã con!", "error");
     }
 
     const ntBox = document.getElementById('notify-container');
@@ -4258,9 +4249,12 @@ async function generateChildCodes(idx) {
     ntIcon.innerText = '🔢';
     ntTitle.innerText = 'TẠO MÃ ĐỀ CON';
     
-    // Tạo giao diện nhập liệu
     ntMsg.innerHTML = `
         <div class="text-left space-y-4 mt-2">
+            <div class="p-3 bg-amber-500/10 border-l-4 border-amber-500 rounded-r-xl mb-2">
+                <p class="text-[10px] text-amber-200 font-bold uppercase">⚠️ Lưu ý thu hồi:</p>
+                <p class="text-[9px] text-slate-300 italic">Nếu bạn tạo mã mới, các mã đề con cũ của bộ đề này sẽ bị hủy bỏ ngay lập tức để giải phóng tài nguyên.</p>
+            </div>
             <div>
                 <label class="text-[10px] font-extrabold text-indigo-400 uppercase tracking-widest ml-1">1. Số lượng mã đề muốn tạo:</label>
                 <input type="number" id="child-count" class="input-control !mt-1 !py-3" value="4" min="1" max="50">
@@ -4269,14 +4263,12 @@ async function generateChildCodes(idx) {
                 <label class="text-[10px] font-extrabold text-indigo-400 uppercase tracking-widest ml-1">2. Mã đề bắt đầu (Ví dụ: 101):</label>
                 <input type="number" id="child-start-num" class="input-control !mt-1 !py-3" value="101">
             </div>
-            <div class="p-2 bg-purple-500/5 border border-purple-500/10 rounded-xl">
-                <p class="text-[9px] text-purple-300 italic text-center">Hệ thống sẽ tự động xáo trộn câu hỏi & đáp án cho từng mã đề.</p>
-            </div>
         </div>
     `;
 
     document.getElementById('nt-input').classList.add('hidden');
-    okBtn.innerText = "TẠO MÃ NGAY";
+    okBtn.innerText = "XÁC NHẬN & THAY THẾ";
+    okBtn.disabled = false; // Đảm bảo nút không bị khóa từ lần trước
     okBtn.className = "w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-2xl shadow-lg transition-all border-none";
     
     okBtn.onclick = async () => {
@@ -4284,62 +4276,88 @@ async function generateChildCodes(idx) {
         const startNum = parseInt(document.getElementById('child-start-num').value);
         
         if (isNaN(count) || count <= 0 || isNaN(startNum)) {
-            showModernToast("THIẾU THÔNG TIN", "Vui lòng nhập số lượng và mã bắt đầu!", "warn");
+            showModernToast("THIẾU THÔNG TIN", "Vui lòng nhập đủ số lượng và mã bắt đầu!", "warn");
             return;
         }
 
-        // Thay đổi trạng thái nút để người dùng không bấm nhiều lần
-        const originalBtnText = okBtn.innerText;
-        okBtn.innerText = "⏳ ĐANG KIỂM TRA MÃ...";
+        okBtn.innerText = "⏳ ĐANG XỬ LÝ...";
         okBtn.disabled = true;
 
-        let requestedCodes = [];
-        for (let i = 0; i < count; i++) { requestedCodes.push((startNum + i).toString()); }
+        try {
+            const now = getServerTime();
+            const requestedCodes = [];
+            for (let i = 0; i < count; i++) { requestedCodes.push((startNum + i).toString()); }
 
-        // Kiểm tra trùng mã trên Server
-        const shareMapSnap = await rdb.ref('system/global_share_map').once('value');
-        const activeMaps = shareMapSnap.val() || {};
-        const now = getServerTime();
+            // 1. KIỂM TRA TRÙNG MÃ VỚI NGƯỜI KHÁC (Trừ chính mã của bộ đề này sắp bị xóa)
+            const shareMapSnap = await rdb.ref('system/global_share_map').once('value');
+            const activeMaps = shareMapSnap.val() || {};
+            
+            // Lấy danh sách mã cũ của folder này để loại trừ khỏi danh sách báo trùng
+            const myOldCodes = (folder.childCodesData && folder.childCodesData.codes) ? folder.childCodesData.codes : [];
 
-        let conflictedCode = requestedCodes.find(c => activeMaps[c] && activeMaps[c].expiresAt > now);
+            let conflictedCode = requestedCodes.find(c => 
+                activeMaps[c] && 
+                activeMaps[c].expiresAt > now && 
+                !myOldCodes.includes(c) // Nếu mã trùng nằm trong tập mã cũ của chính mình thì cho phép (vì lát nữa sẽ xóa)
+            );
 
-        if (conflictedCode) {
-            // NẾU TRÙNG: Hiện Toast báo lỗi, reset nút và GIỮ NGUYÊN BẢNG NHẬP
-            showModernToast("MÃ ĐÃ CÓ NGƯỜI DÙNG", `Mã <b>${conflictedCode}</b> đang được sử dụng. Vui lòng chọn số khác!`, "error");
-            okBtn.innerText = originalBtnText;
+            if (conflictedCode) {
+                showModernToast("MÃ ĐANG BẬN", `Mã <b>${conflictedCode}</b> đang được dùng bởi bộ đề khác. Hãy chọn số khác!`, "error");
+                okBtn.innerText = "XÁC NHẬN & THAY THẾ";
+                okBtn.disabled = false;
+                return;
+            }
+
+            // 2. BẮT ĐẦU QUÁ TRÌNH THAY THẾ
+            showModernToast("HỆ THỐNG", "Đang thu hồi mã cũ và khởi tạo mã mới...", "info");
+
+            const updates = {};
+
+            // --- BƯỚC THU HỒI: Tạo lệnh xóa các mã cũ trên Firebase ---
+            myOldCodes.forEach(oldC => {
+                updates[`system/global_share_map/${oldC}`] = null;
+            });
+
+            // --- BƯỚC CẤP MỚI: Tạo dữ liệu cho dải mã mới ---
+            const expiry = Date.now() + (120 * 60 * 1000); // 120 phút
+            
+            for (let code of requestedCodes) {
+                let shuffledQ = JSON.parse(JSON.stringify(folder.questions));
+                shuffledQ = shuffleArray(shuffledQ);
+                shuffledQ.forEach(q => {
+                    const correctText = q.options[q.correct];
+                    q.options = shuffleArray(q.options);
+                    q.correct = q.options.indexOf(correctText);
+                });
+
+                updates[`system/global_share_map/${code}`] = {
+                    admin: currentUser.user,
+                    folderIdx: idx,
+                    examName: folder.name + " (Mã " + code + ")",
+                    subject: folder.subject || "Tự do",
+                    fixedQuestions: shuffledQ,
+                    expiresAt: expiry,
+                    isChildCode: true
+                };
+            }
+
+            // 3. ĐẨY TẤT CẢ LÊN FIREBASE TRONG 1 LẦN (Đảm bảo tính đồng bộ)
+            await rdb.ref().update(updates);
+
+            // 4. CẬP NHẬT DỮ LIỆU LOCAL
+            foldersDB[idx].childCodesData = { codes: requestedCodes, expiresAt: expiry };
+            saveFolders();
+            
+            renderFolders();
+            closeNotify();
+            showModernToast("THÀNH CÔNG", `Đã thu hồi mã cũ và cấp ${count} mã mới thành công!`, "success");
+
+        } catch (err) {
+            console.error("Lỗi thay thế mã:", err);
+            showModernToast("LỖI", "Không thể cập nhật mã đề. Vui lòng thử lại!", "error");
+            okBtn.innerText = "XÁC NHẬN & THAY THẾ";
             okBtn.disabled = false;
-            return; // Dừng tại đây, không đóng bảng
         }
-
-        // NẾU HỢP LỆ: Tiến hành đóng bảng và lưu
-        closeNotify(); 
-        showModernToast("HỆ THỐNG", "Đang khởi tạo các mã đề xáo trộn...", "info");
-
-        const expiry = Date.now() + (120 * 60 * 1000); 
-        for (let code of requestedCodes) {
-            let shuffledQ = JSON.parse(JSON.stringify(folder.questions));
-            shuffledQ = shuffleArray(shuffledQ);
-            shuffledQ.forEach(q => {
-                const correctText = q.options[q.correct];
-                q.options = shuffleArray(q.options);
-                q.correct = q.options.indexOf(correctText);
-            });
-
-            rdb.ref('system/global_share_map/' + code).set({
-                admin: currentUser.user,
-                folderIdx: idx,
-                examName: folder.name + " (Mã " + code + ")",
-                subject: folder.subject, 
-                fixedQuestions: shuffledQ,
-                expiresAt: expiry,
-                isChildCode: true
-            });
-        }
-
-        foldersDB[idx].childCodesData = { codes: requestedCodes, expiresAt: expiry };
-        saveFolders();
-        showModernToast("THÀNH CÔNG", `Đã tạo ${count} mã đề con bắt đầu từ ${startNum}`, "success");
-        renderFolders();
     };
 
     const cancelBtn = document.getElementById('nt-btn-cancel');
@@ -4347,7 +4365,7 @@ async function generateChildCodes(idx) {
     cancelBtn.innerText = "Hủy";
     cancelBtn.onclick = () => closeNotify();
 
-    ntBox.classList.add('active');
+    document.getElementById('notify-container').classList.add('active');
     setTimeout(() => { document.getElementById('child-count').focus(); }, 300);
 }
 
@@ -6079,52 +6097,6 @@ function copyPaymentInfo(text, msg) {
 
 function closePremiumModal() { document.getElementById('premium-modal').classList.add('hidden'); }
 
-// HÀM XÓA TẤT CẢ YÊU CẦU PREMIUM VÀ ẢNH BILL
-async function clearAllPremiumRequests() {
-    // 1. Kiểm tra xem có dữ liệu để xóa không
-    const currentReqs = JSON.parse(localStorage.getItem('global_premium_requests') || '[]');
-    if (currentReqs.length === 0) {
-        return sysNotify("Thông báo", "Hiện tại không có yêu cầu nào trong danh sách.", "info");
-    }
-
-    // 2. Xác nhận từ Admin
-    const confirmMsg = `
-        <div class="text-left">
-            <b class="text-red-500 uppercase text-lg">⚠️ XÁC NHẬN XÓA SẠCH BILL</b><br>
-            <p class="text-slate-300 mt-2">Hành động này sẽ xóa vĩnh viễn <b>tất cả ảnh minh chứng</b> và lịch sử yêu cầu trên Server.</p>
-            <p class="text-[10px] text-red-400 mt-2 font-bold">* Lưu ý: Thao tác này không thể hoàn tác!</p>
-        </div>
-    `;
-
-    if (await sysConfirm(confirmMsg)) {
-        sysNotify("Đang xử lý...", "Đang dọn dẹp kho ảnh bill trên database...", "info");
-
-        try {
-            // 3. Xóa trên Firebase (Xóa toàn bộ node)
-            await rdb.ref('system/global_premium_requests').remove();
-
-            // 4. Xóa trong bộ nhớ tạm (Local)
-            localStorage.setItem('global_premium_requests', JSON.stringify([]));
-
-            // 5. Cập nhật Badge thông báo trên Sidebar về 0
-            const pBadge = document.getElementById('sidebar-premium-badge');
-            if (pBadge) {
-                pBadge.innerText = "0";
-                pBadge.classList.add('hidden');
-            }
-            updateGlobalMenuDot(); // Cập nhật chấm đỏ ngoài Menu chính
-
-            // 6. Vẽ lại bảng (lúc này sẽ hiện "Chưa có yêu cầu nào")
-            renderPremiumRequests();
-
-            sysNotify("Thành công", "Đã dọn sạch toàn bộ yêu cầu và giải phóng dung lượng ảnh bill!", "success");
-
-        } catch (error) {
-            console.error("Lỗi khi xóa dữ liệu Premium:", error);
-            sysNotify("Lỗi hệ thống", "Không thể xóa dữ liệu trên database. Vui lòng kiểm tra lại!", "error");
-        }
-    }
-}
 
 // Khởi chạy khi tải trang
 window.onload = () => {

@@ -55,6 +55,78 @@
     background: rgba(245, 158, 11, 0.1);
 }
 
+/* Custom Seek Bar Luxury - Hiện lại khối tròn */
+input[type=range].media-seek {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    /* Nền mặc định cho toàn thanh */
+    background: rgba(255, 255, 255, 0.1); 
+    border-radius: 10px;
+    outline: none;
+    cursor: pointer;
+}
+
+/* KHỐI TRÒN KÉO (Thumb) - Hiện lại ở đây */
+input[type=range].media-seek::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #ffffff; /* Màu trắng sáng */
+    border: 3px solid #6366f1; /* Viền tím Indigo */
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+    transition: all 0.2s ease;
+}
+
+input[type=range].media-seek::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    background: #6366f1;
+    border-color: #ffffff;
+}
+
+.time-label { font-size: 10px; font-family: monospace; color: #94a3b8; font-weight: bold; }
+
+/* Giao diện điều khiển Media */
+.media-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    justify-content: center;
+}
+
+.btn-media {
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 11px; /* Chữ nhỏ lại cho tinh tế */
+    font-weight: 800;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    color: white;
+}
+
+.btn-play { background: #10b981 !important; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+.btn-pause { background: #f59e0b !important; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
+.btn-stop { background: #ef4444 !important; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+
+.btn-media:hover { transform: translateY(-2px); filter: brightness(1.1); }
+.btn-media:active { transform: translateY(0); }
+
+/* Riêng cho Video */
+#quiz-video-container {
+    position: relative;
+    background: #000;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
 /* Bong bóng chat khi bị thu hồi */
 .msg-bubble.recalled {
     opacity: 0.4;
@@ -1530,6 +1602,21 @@ button:disabled {
     <div id="manual-editor-container" class="space-y-4 bg-black/20 p-5 rounded-[24px] border border-white/5 shadow-inner transition-all duration-500">
         <textarea id="manual-q" class="input-control min-h-[80px]" placeholder="Nội dung câu hỏi..."></textarea>
 
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+    <div class="space-y-1">
+        <label class="text-[10px] font-bold text-indigo-400 uppercase ml-1">🖼️ Link Hình ảnh (imgbb.com)</label>
+        <input type="text" id="manual-img" class="input-control !m-0" placeholder="https://i.ibb.co/...">
+    </div>
+    <div class="space-y-1">
+        <label class="text-[10px] font-bold text-emerald-400 uppercase ml-1">🔊 Link Âm thanh (catbox.moe)</label>
+        <input type="text" id="manual-audio" class="input-control !m-0" placeholder="https://files.catbox.moe/....mp3">
+    </div>
+    <div class="space-y-1">
+        <label class="text-[10px] font-bold text-rose-400 uppercase ml-1">🎬 Link Video (catbox.moe)</label>
+        <input type="text" id="manual-video" class="input-control !m-0" placeholder="https://files.catbox.moe/....mp4">
+    </div>
+</div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
             <div class="flex items-center group">
                 <div class="manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5">A</div>
@@ -2026,6 +2113,8 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const rdb = firebase.database();
+window.currentAudio = null;
+window.currentQuizAudio = null;
 
 // --- BỘ LỌC TỰ ĐỘNG LÀM MỚI 2 LẦN KHI ĐĂNG NHẬP ---
 (function() {
@@ -2069,6 +2158,8 @@ const AD_EMAIL = "cnhphi25@pdu.edu.vn", AD_PHONE = "0978877125", AD_PASS_ = "040
 const SECRET_KEY = "04082007"; 
 
 let db = [], foldersDB = [], quizHistory = [];
+let currentAudio = null;
+let currentQuizAudio = null;
 let quizActualStartTime = 0; // Biến này sẽ lưu thời gian bắt đầu thực tế để tính kết quả
 let usersDB = JSON.parse(localStorage.getItem('users_db') || '{}');
 let currentUser = JSON.parse(localStorage.getItem('sys_logged_user') || 'null');
@@ -2125,7 +2216,9 @@ rdb.ref(".info/serverTimeOffset").on("value", (snap) => {
 });
 
 function getServerTime() {
-    return Date.now() + serverOffset; // Trả về giờ chuẩn quốc tế của Firebase
+    // Nếu Firebase chưa trả về độ lệch thời gian, dùng tạm Date.now() của máy
+    const offset = (typeof serverOffset === 'number' && !isNaN(serverOffset)) ? serverOffset : 0;
+    return Date.now() + offset;
 }
 
     let isCheckingPremiumFirstTime = true; // Cờ đánh dấu lần đầu load dữ liệu
@@ -2384,7 +2477,6 @@ function editFolderQ(i) {
     const container = document.getElementById('inline-folder-editor-container');
     const content = document.getElementById('inline-folder-editor-content');
 
-    // Tạo giao diện sửa câu hỏi chuyên nghiệp
     content.innerHTML = `
         <div class="card glass shadow-2xl border-indigo-500/30">
             <h4 class="text-indigo-400 font-black mb-6 flex items-center gap-2 uppercase tracking-widest text-sm">
@@ -2393,7 +2485,15 @@ function editFolderQ(i) {
             
             <textarea id="inline-q" class="input-control min-h-[80px] mb-4" placeholder="Nội dung câu hỏi...">${q.text}</textarea>
 
+            <!-- Cấu trúc Media Inline -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                <input type="text" id="inline-img" class="input-control text-xs" placeholder="Link ảnh (imgbb)" value="${q.image || ''}">
+                <input type="text" id="inline-audio" class="input-control text-xs" placeholder="Link nhạc (catbox)" value="${q.audio || ''}">
+                <input type="text" id="inline-video" class="input-control text-xs" placeholder="Link video (catbox)" value="${q.video || ''}">
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                <!-- (Giữ nguyên các ô A, B, C, D của bạn) -->
                 <div class="flex items-center"><div class="bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black">A</div><input type="text" id="inline-a" class="input-control !m-0 !rounded-l-none" value="${q.options[0]}"></div>
                 <div class="flex items-center"><div class="bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black">B</div><input type="text" id="inline-b" class="input-control !m-0 !rounded-l-none" value="${q.options[1]}"></div>
                 <div class="flex items-center"><div class="bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black">C</div><input type="text" id="inline-c" class="input-control !m-0 !rounded-l-none" value="${q.options[2]}"></div>
@@ -2418,8 +2518,8 @@ function editFolderQ(i) {
         </div>
     `;
 
-    // Hiển thị và nhảy tới
     container.classList.remove('hidden');
+    content.firstElementChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
     
     // Hiệu ứng nhảy vào giữa màn hình
     setTimeout(() => {
@@ -2440,26 +2540,30 @@ function saveInlineFolderEdit(idx) {
         document.getElementById('inline-d').value.trim()
     ];
     const correct = parseInt(document.getElementById('inline-correct').value);
+    
+    // Lấy link media mới
+    const qImg = document.getElementById('inline-img').value.trim();
+    const qAudio = document.getElementById('inline-audio').value.trim();
+    const qVideo = document.getElementById('inline-video').value.trim();
 
     if (!qText || opts.some(o => o === "")) {
         return sysNotify("Lỗi", "Vui lòng nhập đầy đủ thông tin!", "warn");
     }
 
-    // Cập nhật Database
     foldersDB[currentFolderIdx].questions[idx] = {
         text: qText,
         options: opts,
-        correct: correct
+        correct: correct,
+        image: qImg,
+        audio: qAudio,
+        video: qVideo
     };
 
-    saveFolders(); // Lưu lên Firebase
-    renderFolderQuestions(); // Vẽ lại giao diện
-    closeInlineEditor(); // Đóng ô sửa
-    
-    // --- CHÈN DÒNG NÀY VÀO ĐÂY ---
+    saveFolders(); 
+    renderFolderQuestions(); 
+    closeInlineEditor(); 
     syncUpdateToFirebaseCodes(currentFolderIdx); 
-
-    showModernToast("Thành công", "Đã cập nhật & đồng bộ mã đề!", "success");
+    showModernToast("Thành công", "Đã cập nhật nội dung & media!", "success");
 }
 
 // 3. Hàm đóng editor
@@ -2639,6 +2743,11 @@ function saveQuestion() {
         document.getElementById('manual-d').value.trim()
     ];
     const correct = parseInt(document.getElementById('manual-correct').value);
+    
+    // Lấy thêm link media
+    const qImg = document.getElementById('manual-img').value.trim();
+    const qAudio = document.getElementById('manual-audio').value.trim();
+    const qVideo = document.getElementById('manual-video').value.trim();
 
     if (!qText || optValues.some(o => o === "")) {
         return sysNotify("Lỗi", "Vui lòng nhập đủ nội dung và 4 đáp án!", "warn");
@@ -2648,6 +2757,9 @@ function saveQuestion() {
         text: qText, 
         options: optValues, 
         correct: correct,
+        image: qImg,      // Thêm vào object
+        audio: qAudio,    // Thêm vào object
+        video: qVideo,    // Thêm vào object
         updatedAt: Date.now() 
     };
     
@@ -3554,32 +3666,24 @@ function loginSuccess() {
             showPage('page-home');
         }
 
+// ... bên trong loginSuccess()
 } else {
-        // --- LOGIC CHO THÍ SINH ---
-        if (pwSection) pwSection.classList.add('hidden'); 
-        if (profileMenu) profileMenu.innerHTML = "👤 Hồ sơ cá nhân"; 
-        if (adminZone) adminZone.classList.add('hidden');
-        
-        // --- BỔ SUNG ĐOẠN NÀY ĐỂ FIX LỖI "ĐANG TẢI..." ---
-        if (currentUser.examName) {
-            document.getElementById('display-exam-name').innerText = currentUser.examName;
-        }
-        if (currentUser.subject) {
-            document.getElementById('display-exam-subject').innerText = "MÔN HỌC: " + currentUser.subject.toUpperCase();
-        }
-        // ----------------------------------------------
+    // LOGIC CHO THÍ SINH
+    if (pwSection) pwSection.classList.add('hidden'); 
+    if (profileMenu) profileMenu.innerHTML = "👤 Hồ sơ cá nhân"; 
+    if (adminZone) adminZone.classList.add('hidden');
+    if (studentZone) studentZone.classList.remove('hidden');
 
-        if (studentZone) studentZone.classList.remove('hidden');
-
-        // BƯỚC QUAN TRỌNG: Kiểm tra khôi phục
-        const hasQuizDangling = restoreQuizProgress(); 
-        
-        // Nếu ĐÃ KHÔI PHỤC THÀNH CÔNG -> Dừng lại luôn, không cho showPage('page-home') chạy nữa
-        if (hasQuizDangling) return; 
-
-        // Nếu KHÔNG có bài thi dở mới hiện trang chủ chờ thi
-        showPage('page-home'); 
+    // Kiểm tra xem có bài thi đang làm dở không
+    const savedQuiz = localStorage.getItem('quiz_save_' + currentUser.user);
+    if (savedQuiz) {
+        // Nếu có hộp đen, tự động kích hoạt chế độ vào thi lại luôn
+        startQuizFromCode(); 
+        return; 
     }
+    
+    showPage('page-home'); 
+}
 }
 
 // 3. Tự động nhảy giao diện khi sửa (✏️)
@@ -3594,6 +3698,11 @@ function editQ(i) {
     document.getElementById('manual-d').value = q.options[3] || "";
     document.getElementById('manual-correct').value = q.correct;
     
+    // Đổ link media vào ô nhập
+    document.getElementById('manual-img').value = q.image || "";
+    document.getElementById('manual-audio').value = q.audio || "";
+    document.getElementById('manual-video').value = q.video || "";
+
     document.getElementById('edit-index').value = i;
     document.getElementById('edit-folder-q-index').value = "-1";
 
@@ -4300,7 +4409,7 @@ function renderFolders() {
         return `
         <div class="bg-white/5 border border-white/10 p-4 rounded-2xl relative flex flex-col justify-between">
             <div>
-                <h4 class="text-md font-bold truncate text-indigo-100">${f.name}</h4>
+                <h4 class="text-md font-bold truncate text-indigo-100">${f.name} &nbsp; (Môn: ${f.subject || "Tự do"})</h4>
                 ${childCodesHtml}
                 <p class="text-[10px] text-slate-500 uppercase mt-1">${f.questions ? f.questions.length : 0} câu hỏi</p>
                 ${codeBadge}
@@ -4731,15 +4840,16 @@ function handleJoinQuiz() {
 
             // LƯU THÔNG TIN VÀO MÁY THÍ SINH - QUAN TRỌNG: Bốc endTime từ sData nếu có
             currentUser = { 
-                name: name, 
-                user: safeUser, 
-                isAdmin: false, 
-                adminSource: data.admin, 
-                examCode: code, 
-                examName: data.examName || "Bài thi",
-                subject: data.subject || "TỰ DO",
-                endTimeMs: sData ? sData.endTime : 0 // Nếu F5, lấy lại mốc giờ cũ từ Giám sát
-            };
+            name: name, 
+            user: safeUser, 
+            isAdmin: false, 
+            adminSource: data.admin, // Đây là email/sdt của admin tạo đề
+            examCode: code, 
+            examName: data.examName || "Bài thi",
+            subject: data.subject || "TỰ DO",
+            endTimeMs: 0 
+        };
+        localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
 
             // Tải câu hỏi (Logic cũ)
             if (data.isChildCode && data.fixedQuestions) {
@@ -4760,66 +4870,99 @@ function handleJoinQuiz() {
 }
 
 async function startQuizFromCode() {
-    const adminKey = currentUser.adminSource.replace(/\./g, '_');
-    const sessionRef = rdb.ref(`system/active_sessions/${adminKey}/${currentUser.examCode}/${currentUser.user}`);
+    if (!currentUser) {
+        currentUser = JSON.parse(localStorage.getItem('sys_logged_user'));
+    }
 
-    // HIỆN THÔNG BÁO CHỜ ĐỒNG BỘ
-    sysNotify("⏳ ĐỒNG BỘ GIỜ", "Đang lấy thời gian chuẩn từ giáo viên...", "info");
+    if (!currentUser || !currentUser.examCode) {
+        return sysNotify("Lỗi", "Không tìm thấy phiên thi. Vui lòng quay lại nhập mã đề!", "error");
+    }
+
+    const examCode = currentUser.examCode;
+    sysNotify("⏳ ĐANG ĐỒNG BỘ", "Đang lấy giờ thi từ máy chủ giám sát...", "info");
 
     try {
-        // BƯỚC 1: HỎI FIREBASE XEM GIÁO VIÊN ĐANG THẤY GIỜ CỦA MÀY LÀ BAO NHIÊU
+        const mapSnap = await rdb.ref(`system/global_share_map/${examCode}`).once('value');
+        const mapData = mapSnap.val();
+        
+        if (!mapData) {
+            closeNotify();
+            return sysNotify("Lỗi", "Mã đề không tồn tại hoặc đã hết hạn!", "error");
+        }
+
+        // Tạo Key chuẩn Firebase
+        const rawAdmin = currentUser.adminSource || mapData.admin || "admin";
+        const adminKey = rawAdmin.replace(/[.#$\[\]]/g, "_");
+        const studentKey = currentUser.user.replace(/[.#$\[\]]/g, "_");
+
+        // 1. Lấy dữ liệu từ Giám sát (Radar) trước
+        const sessionRef = rdb.ref(`system/active_sessions/${adminKey}/${examCode}/${studentKey}`);
         const snap = await sessionRef.once('value');
-        const serverData = snap.val();
-        const now = getServerTime(); 
+        const sData = snap.val();
 
-        if (serverData && serverData.endTime && serverData.endTime > now) {
-            // TRƯỜNG HỢP F5: Bốc mốc giờ chết (endTime) từ Giám sát về dùng luôn
-            currentUser.endTimeMs = serverData.endTime;
-            // Tính lại timeLeft để đồng hồ không bị nhảy số 45:00 bậy bạ
-            timeLeft = Math.floor((serverData.endTime - now) / 1000);
-            console.log("=> ĐÃ KHÔI PHỤC GIỜ TỪ GIÁM SÁT:", timeLeft);
+        const now = getServerTime();
+        let endMs = 0;
+
+        // 2. LOGIC LẤY GIỜ CHUẨN:
+        if (sData && sData.endTime && sData.endTime > now) {
+            // Nếu trên radar đã có giờ kết thúc (đang làm dở và F5)
+            endMs = sData.endTime;
+            console.log("⏱️ Khôi phục giờ thi từ Giám sát:", new Date(endMs).toLocaleTimeString());
         } else {
-            // TRƯỜNG HỢP VÀO THI LẦN ĐẦU: Tạo mốc 45 phút mới
-            const durationMs = 45 * 60 * 1000;
-            currentUser.endTimeMs = now + durationMs;
-            timeLeft = 45 * 60;
-
-            // ĐẨY MỐC NÀY LÊN GIÁM SÁT ĐỂ GIÁO VIÊN VÀ HỌC SINH KHÓA CHUNG 1 GIỜ
+            // Nếu là lần đầu tiên bấm "Bắt đầu thi" (hoặc giờ cũ đã hết)
+            endMs = now + (45 * 60 * 1000); 
             await sessionRef.update({
                 status: 'ĐANG LÀM BÀI',
                 startTime: now,
-                endTime: currentUser.endTimeMs 
+                endTime: endMs,
+                name: currentUser.name,
+                examName: currentUser.examName || mapData.examName || "Bài thi"
             });
-            console.log("=> ĐÃ TẠO GIỜ MỚI VÀ ĐỒNG BỘ LÊN GIÁM SÁT");
+            console.log("⏱️ Thiết lập giờ thi mới.");
         }
 
-        // BƯỚC 2: KHÔI PHỤC ĐÁP ÁN (HỘP ĐEN)
-        const saved = localStorage.getItem('quiz_save_' + currentUser.user);
-        if (saved) {
-            const backup = JSON.parse(saved);
-            userAnswers = backup.userAnswers || [];
-            currentIdx = backup.currentIdx || 0;
-            // Nếu mất câu hỏi do F5 thì bốc lại từ backup
-            if (!activeQuestions || activeQuestions.length === 0) activeQuestions = backup.activeQuestions || [];
-        }
-        if (!userAnswers || userAnswers.length === 0) {
-            userAnswers = activeQuestions.map(q => (q.type === 'tf' ? [] : -1));
+        // 3. Cập nhật vào biến hệ thống
+        currentUser.endTimeMs = endMs;
+        timeLeft = Math.floor((endMs - now) / 1000); // Cập nhật lại timeLeft cho startTimer
+
+        // 4. Khôi phục câu hỏi & đáp án (BlackBox)
+        if (!activeQuestions || activeQuestions.length === 0) {
+            if (mapData.isChildCode && mapData.fixedQuestions) {
+                activeQuestions = mapData.fixedQuestions;
+            } else {
+                const fSnap = await rdb.ref(`users_data/${adminKey}/quiz_folders/${mapData.folderIdx}`).once('value');
+                const fVal = fSnap.val();
+                activeQuestions = (fVal && fVal.isShuffle) ? shuffleArray([...fVal.questions]) : fVal.questions;
+            }
         }
 
-        // BƯỚC 3: HIỂN THỊ VÀ CHẠY ĐỒNG HỒ
-        closeNotify(); // Tắt loading
-        const studentZone = document.getElementById('student-zone');
-        if(studentZone) studentZone.classList.add('hidden');
+        const savedBlackBox = localStorage.getItem('quiz_save_' + currentUser.user);
+        if (savedBlackBox) {
+            const data = JSON.parse(savedBlackBox);
+            if (data.examCode === examCode && data.userAnswers) {
+                userAnswers = data.userAnswers;
+                currentIdx = data.currentIdx || 0;
+            } else {
+                userAnswers = activeQuestions.map(() => -1);
+            }
+        } else {
+            userAnswers = activeQuestions.map(() => -1);
+        }
+
+        // 5. Lưu lại thông tin đã đồng bộ
+        localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
         
+        closeNotify();
+        document.getElementById('student-zone')?.classList.add('hidden');
         showPage('page-quiz-view');
-        renderQuestion();
         
-        startTimer(); // Bắt đầu tính dựa trên hiệu số (TUYỆT ĐỐI KHÔNG RESET)
-        saveQuizBlackBox(); 
+        renderQuestion();
+        startTimer();
 
     } catch (err) {
-        console.error("Lỗi đồng bộ:", err);
-        sysNotify("Lỗi kết nối", "Không thể lấy giờ từ Giám sát. Hãy nhấn F5!", "error");
+        console.error("Lỗi đồng bộ thời gian:", err);
+        closeNotify();
+        sysNotify("Lỗi kết nối", "Không thể lấy giờ thi. Vui lòng kiểm tra mạng!", "error");
     }
 }
 
@@ -4854,29 +4997,31 @@ function startTimer() {
     
     quizInterval = setInterval(() => {
         const now = getServerTime(); 
-        const diff = currentUser.endTimeMs - now; // Khoảng cách thực tế đến lúc nộp bài
+        // Tính toán lại khoảng cách thực tế mỗi giây
+        const diff = (currentUser.endTimeMs || 0) - now; 
         
         if (diff <= 0) {
             clearInterval(quizInterval);
             document.getElementById('timer-box').innerText = "00:00";
             timeLeft = 0;
             clearQuizBlackBox(); 
-            submitQuiz(); // Tự nộp khi hết giờ
+            submitQuiz(); 
             return;
         }
 
-        // Cập nhật biến timeLeft thực tế mỗi giây
         timeLeft = Math.floor(diff / 1000); 
 
         const m = Math.floor(timeLeft / 60);
         const s = timeLeft % 60;
         
-        document.getElementById('timer-box').innerText = 
-            `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        const timerBox = document.getElementById('timer-box');
+        if(timerBox) {
+            timerBox.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            // Đổi màu đỏ nếu còn dưới 5 phút
+            if (timeLeft < 300) timerBox.style.color = "#ef4444";
+        }
         
-        // Lưu hộp đen mỗi 2 giây
-        if (timeLeft % 2 === 0) saveQuizBlackBox(); 
-        
+        if (timeLeft % 5 === 0) saveQuizBlackBox(); 
     }, 1000);
 }
 
@@ -4902,24 +5047,81 @@ function startFolderQuiz(i) {
 
 function renderQuestion() {
     const q = activeQuestions[currentIdx];
-    if (!q) {
-        console.error("Không tìm thấy câu hỏi ở chỉ số:", currentIdx);
-        return;
+    if (!q) return;
+
+    stopAllMedia(); // Dừng media câu trước đó
+
+    let mediaHtml = "";
+    
+    // --- 1. KHỐI VIDEO (Đã thêm cập nhật màu khi kéo) ---
+    if (q.video) {
+        mediaHtml += `
+            <div class="mb-6 p-5 bg-indigo-500/5 border border-indigo-500/20 rounded-[24px]">
+                <p class="text-[10px] text-indigo-300 font-bold text-center mb-4 uppercase tracking-widest">🎬 VIDEO BÀI TẬP</p>
+                <div id="quiz-video-container" class="rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
+                    <video id="quiz-video" src="${q.video}" class="w-full max-h-[350px]" 
+                        ontimeupdate="updateMediaProgress('video')" onloadedmetadata="initMediaTotal('video')"></video>
+                </div>
+                <!-- Thanh tua Video -->
+                <div class="mt-4 px-2">
+                    <input type="range" id="video-progress" class="media-seek" value="0" step="0.1" 
+                        oninput="seekMedia('video', this.value); updateMediaProgress('video')">
+                    <div class="flex justify-between mt-1"><span id="video-current" class="time-label">00:00</span><span id="video-total" class="time-label">00:00</span></div>
+                </div>
+                <div class="media-controls mt-2">
+                    <button onclick="skipMedia('video', -10)" class="btn-media bg-slate-700">⏪ 10s</button>
+                    <button onclick="controlVideo('play')" class="btn-media btn-play">▶️ PHÁT</button>
+                    <button onclick="controlVideo('pause')" class="btn-media btn-pause">⏸️ DỪNG</button>
+                    <button onclick="skipMedia('video', 10)" class="btn-media bg-slate-700">⏩ 10s</button>
+                </div>
+            </div>`;
+    }
+    
+    // --- 2. KHỐI HÌNH ẢNH (Bản phóng to nội bộ) ---
+    if (q.image) {
+        mediaHtml += `
+            <div class="mb-6 p-5 bg-indigo-500/5 border border-indigo-500/20 rounded-[24px] shadow-inner">
+                <p class="text-[10px] text-indigo-300 font-bold text-center mb-4 uppercase tracking-widest">🖼️ HÌNH ẢNH MINH HỌA</p>
+                <div class="rounded-xl overflow-hidden border border-white/10 bg-white/5 shadow-2xl transition-all hover:scale-[1.01] cursor-zoom-in" 
+                     onclick="showImageModal('${q.image}')">
+                    <img src="${q.image}" class="w-full h-auto object-contain max-h-[400px]" alt="Quiz Image">
+                </div>
+                <p class="text-[9px] text-slate-500 text-center mt-3 italic">Bấm vào ảnh để phóng to</p>
+            </div>`;
     }
 
-    // 1. Vẽ nội dung câu hỏi
-    let options = q.options || [];
-    let contentHtml = `<div class="grid grid-cols-1 gap-3">`;
-    options.forEach((opt, i) => {
+    // --- 3. KHỐI AUDIO (Đã thêm cập nhật màu khi kéo) ---
+    if (q.audio) {
+        mediaHtml += `
+            <div class="mb-6 p-5 bg-indigo-500/5 border border-indigo-500/20 rounded-[24px]">
+                <p class="text-[10px] text-indigo-300 font-bold text-center mb-4 uppercase tracking-widest">🎧 ÂM THANH BÀI TẬP</p>
+                <!-- Thanh tua Audio -->
+                <div class="px-2 mb-4">
+                    <input type="range" id="audio-progress" class="media-seek" value="0" step="0.1" 
+                        oninput="seekMedia('audio', this.value); updateMediaProgress('audio')">
+                    <div class="flex justify-between mt-1"><span id="audio-current" class="time-label">00:00</span><span id="audio-total" class="time-label">00:00</span></div>
+                </div>
+                <div class="media-controls">
+                    <button onclick="skipMedia('audio', -10)" class="btn-media bg-slate-700">⏪ 10s</button>
+                    <button onclick="controlAudio('play', '${q.audio}')" class="btn-media btn-play">▶️ PHÁT</button>
+                    <button onclick="controlAudio('pause')" class="btn-media btn-pause">⏸️ DỪNG</button>
+                    <button onclick="skipMedia('audio', 10)" class="btn-media bg-slate-700">⏩ 10s</button>
+                </div>
+            </div>`;
+    }
+
+    // Vẽ nội dung câu hỏi (giữ nguyên phần còn lại của bạn)
+    let optionsHtml = `<div class="grid grid-cols-1 gap-3">`;
+    (q.options || []).forEach((opt, i) => {
         if (!opt || opt === "...") return;
         const isSelected = (userAnswers[currentIdx] === i);
-        contentHtml += `
+        optionsHtml += `
             <div class="quiz-opt ${isSelected ? 'active-selected' : ''}" onclick="selectOption(${i})">
                 <div class="opt-circle">${String.fromCharCode(65 + i)}</div>
                 <span class="text-md leading-snug break-words">${opt}</span>
             </div>`;
     });
-    contentHtml += `</div>`;
+    optionsHtml += `</div>`;
 
     document.getElementById('current-q-box').innerHTML = `
         <div class="mb-4">
@@ -4928,69 +5130,29 @@ function renderQuestion() {
             </span>
         </div>
         <p class="text-xl font-bold mb-6 text-white leading-relaxed">${q.text}</p>
-        <div class="w-full">${contentHtml}</div>`;
+        ${mediaHtml}
+        <div class="w-full">${optionsHtml}</div>`;
 
-    // 2. KHÓA CỨNG NÚT BẰNG THUỘC TÍNH VÀ CLASS
     const prevBtn = document.getElementById('btn-prev');
     const nextBtn = document.getElementById('btn-next');
+    if(prevBtn) prevBtn.disabled = (currentIdx === 0);
+    if(nextBtn) nextBtn.disabled = (currentIdx === activeQuestions.length - 1);
 
-    // Nút Trước
-    if (currentIdx === 0) {
-        prevBtn.disabled = true;
-        prevBtn.classList.add('opacity-20', 'pointer-events-none');
-    } else {
-        prevBtn.disabled = false;
-        prevBtn.classList.remove('opacity-20', 'pointer-events-none');
-    }
-
-    // Nút Sau
-    if (currentIdx === activeQuestions.length - 1) {
-        nextBtn.disabled = true;
-        nextBtn.classList.add('opacity-20', 'pointer-events-none');
-    } else {
-        nextBtn.disabled = false;
-        nextBtn.classList.remove('opacity-20', 'pointer-events-none');
-    }
-
-    renderNav(); // Cập nhật bảng số bên phải
+    renderNav();
 }
 
 function renderNav() {
     const navPanel = document.getElementById('nav-panel');
     if (!navPanel) return;
 
-    // Sử dụng DocumentFragment để tối ưu hiệu năng render nếu số lượng câu hỏi lớn
     navPanel.innerHTML = activeQuestions.map((ques, i) => {
+        let isAnswered = (userAnswers[i] !== -1 && userAnswers[i] !== undefined);
         
-        // 1. Logic kiểm tra Đã trả lời (Answered)
-        let isAnswered = false;
-        const ans = userAnswers[i];
-        
-        if (ques.type === 'tf') {
-            isAnswered = (Array.isArray(ans) && ans.length > 0);
-        } else {
-            // Kiểm tra ans không phải mặc định (-1), không rỗng, không null
-            isAnswered = (ans !== -1 && ans !== "" && ans !== null && ans !== undefined);
-        }
-
-        // 2. Logic kiểm tra Đánh dấu (Flag/Review) - Nếu bạn có thuộc tính này
-        // Giả sử bạn lưu trạng thái đánh dấu vào mảng userFlags[i] = true/false
-        const isFlagged = (typeof userFlags !== 'undefined' && userFlags[i]);
-
-        // 3. Xây dựng danh sách Class CSS
         let classList = "nav-btn";
         if (currentIdx === i) classList += " active";
         if (isAnswered) classList += " answered";
-        if (isFlagged) classList += " flagged"; // Thêm màu cam/vàng cho câu cần xem lại
 
-        return `
-            <button class="${classList}" 
-                    id="nav-item-${i}"
-                    onclick="jumpTo(${i})"
-                    title="Câu ${i + 1}">
-                ${i + 1}
-            </button>
-        `;
+        return `<button class="${classList}" onclick="jumpTo(${i})">${i + 1}</button>`;
     }).join('');
 
     // 4. TỰ ĐỘNG CUỘN (Scroll Into View)
@@ -5008,6 +5170,7 @@ function jumpTo(idx) {
 }
 
 function moveQ(step) { 
+    stopAllMedia(); // Dừng ngay video/nhạc cũ
     // Ép kiểu số cho chắc chắn
     let next = parseInt(currentIdx) + parseInt(step); 
     
@@ -5049,15 +5212,14 @@ function restoreQuizProgress() {
         const data = JSON.parse(saved);
         const now = getServerTime();
 
-        // 1. Nếu bài thi đã hết hạn thì xóa luôn
+        // Nếu bài thi đã quá giờ kết thúc thì xóa hộp đen
         if (data.endTimeMs < now) {
             localStorage.removeItem('quiz_save_' + currentUser.user);
             return false;
         }
 
-        // 2. Chuyển hướng sang hàm Đồng bộ Firebase để lấy giờ chuẩn từ Giám sát
+        // Nếu vẫn còn trong thời gian làm bài, tiến hành vào thi lại
         startQuizFromCode(); 
-
         return true; 
     } catch (e) {
         return false;
@@ -7901,7 +8063,7 @@ function exportFolderToWord(idx) {
                 border-collapse: collapse; 
                 border: none; 
             }
-            .q-item { margin-top: 12pt; margin-bottom: 2pt; }
+            .q-item { margin-top: 12pt; margin-bottom: 0pt; }  
         </style>
     </head>
     <body>
@@ -7979,34 +8141,37 @@ function exportFolderToWord(idx) {
 }
 
 function exportFolderScoresToWord(idx) {
-    // 1. Kiểm tra bộ đề có tồn tại không
     if (typeof foldersDB === 'undefined' || !foldersDB[idx]) {
         sysNotify("Lỗi", "Không tìm thấy dữ liệu bộ đề!", "error");
         return;
     }
 
-    // 2. Lấy dữ liệu folder trước để lấy Tên và Môn học (Fix lỗi ReferenceError)
     const folder = foldersDB[idx]; 
     const subjectName = folder.subject || "Chưa rõ";
     const folderName = (folder.name || "Bo_de").trim();
     
-    // 3. Lọc danh sách thí sinh làm bài CHỈ thuộc bộ đề này (bao gồm cả mã đề con)
     const matches = (quizHistory || []).filter(h => {
         if (!h || !h.examName) return false;
         const hName = h.examName.trim().toLowerCase();
         const fName = folderName.toLowerCase();
-        // Khớp tên đề gốc hoặc mã đề con (Ví dụ: "Toán 12 (Mã 101)")
         return hName === fName || hName.startsWith(fName + " (mã");
     });
 
-    // 4. KIỂM TRA NẾU BỘ ĐỀ CHƯA CÓ AI LÀM BÀI (Yêu cầu của bạn)
     if (matches.length === 0) {
         return sysNotify("Thông báo", `Bộ đề <b>${folder.name}</b> này hiện chưa có thí sinh làm bài.`, "warn");
     }
 
-    showModernToast("Đang xử lý", "Đang sắp xếp ABC và căn chỉnh thời gian...", "info");
+    // --- LOGIC: CHỈ LẤY NGÀY/THÁNG/NĂM (XÓA SẠCH GIỜ) ---
+    let examDate = "...................."; 
+    if (matches[0] && matches[0].time) {
+        let dateFound = matches[0].time.match(/\d{1,2}\/\d{1,2}\/\d{4}/);
+        if (dateFound) {
+            examDate = dateFound[0]; 
+        }
+    }
 
-    // 5. Gom nhóm thí sinh theo từng mã đề để xuất bảng rõ ràng
+    showModernToast("Đang xử lý", "Đang ép phông Times New Roman và thu hẹp dãn dòng...", "info");
+
     const groupedByCode = matches.reduce((acc, h) => {
         const code = h.examCode || "GỐC";
         if (!acc[code]) acc[code] = [];
@@ -8014,93 +8179,70 @@ function exportFolderScoresToWord(idx) {
         return acc;
     }, {});
 
-    // 6. SẮP XẾP DANH SÁCH THEO TÊN ABC TRONG TỪNG MÃ ĐỀ (Yêu cầu của bạn)
     Object.keys(groupedByCode).forEach(code => {
         sortArrayByVietnameseName(groupedByCode[code], 'fullname');
     });
 
-    const exportDate = new Date().toLocaleDateString('vi-VN') + " - " + new Date().toLocaleTimeString('vi-VN');
-
-    // 7. NỘI DUNG HTML VỚI PHÔNG TIMES NEW ROMAN
     let contentHtml = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
     <head>
         <meta charset="utf-8">
         <style>
-            /* ÉP PHÔNG CHỮ TOÀN BỘ FILE */
+            /* ÉP PHÔNG TIMES NEW ROMAN TOÀN DIỆN */
             @font-face { font-family: "Times New Roman"; }
-            * { font-family: "Times New Roman", Times, serif !important; }
-
-            body { 
-                font-family: "Times New Roman", serif !important;
+            
+            body, div, p, table, tr, td, th, span, b, h2 {
+                font-family: "Times New Roman", Times, serif !important;
                 mso-ascii-font-family: "Times New Roman";
                 mso-hansi-font-family: "Times New Roman";
                 mso-bidi-font-family: "Times New Roman";
-                font-size: 13pt; 
+                color: black;
             }
+
+            body { font-size: 13pt; }
 
             /* TIÊU ĐỀ CHÍNH */
             h2 { 
-                font-family: "Times New Roman", serif !important;
                 text-align: center; 
                 text-transform: uppercase; 
                 font-weight: bold; 
-                font-size: 16pt;
-                margin-bottom: 20pt; 
-                line-height: 1.2;
+                font-size: 16pt; 
+                margin-bottom: 15pt; 
             }
+            
+            /* PHẦN THÔNG TIN (MÔN HỌC, NGÀY KIỂM TRA, TỔNG SỐ) */
+            .info-header { margin-bottom: 10pt; }
 
-            /* HEADER THÔNG TIN */
-            .info-header { margin-bottom: 1pt; }
             .info-header p { 
-                font-family: "Times New Roman", serif !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                line-height: 1.3 !important; 
-                font-size: 13pt;
+                /* --- CHỖ CHỈNH DÃN DÒNG --- */
+                margin-top: 0px !important;      /* Khoảng cách phía trên dòng */
+                margin-bottom: 0pt !important;   /* CHỈNH TẠI ĐÂY: Khoảng cách giữa các dòng (càng nhỏ càng sát) */
+                line-height: 1.2 !important;     /* CHỈNH TẠI ĐÂY: Độ dãn bản thân dòng (1.0 là sát nhất) */
+                padding: 0px !important;
             }
 
-            table { 
-                width: 100%; 
-                border-collapse: collapse; 
-                font-family: "Times New Roman", serif !important;
-            }
-
-            th, td { 
-                border: 0.5pt solid black; 
-                padding: 6pt; 
-                text-align: center; 
-                font-size: 12pt; 
-            }
-
+            /* BẢNG ĐIỂM */
+            table { width: 100%; border-collapse: collapse; margin-top: 10pt; border: 0.5pt solid black; }
+            th, td { border: 0.5pt solid black; padding: 5pt; text-align: center; font-size: 12pt; }
             th { background-color: #E2E2E2; font-weight: bold; }
 
             .code-box { 
-                font-family: "Times New Roman", serif !important;
-                font-weight: bold; 
-                font-size: 14pt;
-                padding: 5pt; 
-                background-color: #F0F0F0; 
-                border: 0.5pt solid black; 
-                margin-top: 15pt;
-                text-align: left;
+                font-weight: bold; font-size: 14pt; padding: 4pt; 
+                background-color: #F0F0F0; border: 0.5pt solid black; 
+                margin-top: 12pt; text-align: left; 
             }
 
-            .footer-text { 
-                margin-top: 40pt; 
-                text-align: right; 
-                font-style: italic; 
-                font-size: 11pt; 
-            }
+            .footer-text { margin-top: 30pt; text-align: right; font-style: italic; font-size: 11pt; }
         </style>
     </head>
-<body>
-    <h2>BẢNG ĐIỂM CHI TIẾT: ${folderName.toUpperCase()}</h2>
-    <div class="info-header">
-        <p><b>Môn học:</b> ${subjectName.toUpperCase()}</p>
-        <p><b>Ngày xuất:</b> ${exportDate}</p>
-        <p><b>Tổng số thí sinh:</b> ${matches.length}</p>
-    </div>
+    <body>
+        <h2>BẢNG ĐIỂM CHI TIẾT: ${folderName.toUpperCase()}</h2>
+        
+        <div class="info-header">
+            <p><b>Môn học:</b> ${subjectName.toUpperCase()}</p>
+            <p><b>Ngày kiểm tra:</b> ${examDate}</p>
+            <p><b>Tổng số thí sinh:</b> ${matches.length}</p>
+        </div>
 
         ${Object.keys(groupedByCode).sort().map(code => `
             <div class="code-box">MÃ ĐỀ: ${code} (${groupedByCode[code].length} thí sinh)</div>
@@ -8108,10 +8250,10 @@ function exportFolderScoresToWord(idx) {
                 <thead>
                     <tr>
                         <th style="width: 10%">STT</th>
-                        <th style="width: 40%; text-align: left;">Họ và Tên thí sinh</th>
+                        <th style="width: 45%; text-align: left;">Họ và Tên thí sinh</th>
                         <th style="width: 15%">Câu đúng</th>
-                        <th style="width: 15%">Điểm</th>
-                        <th style="width: 20%">TG hoàn thành</th> 
+                        <th style="width: 10%">Điểm</th>
+                        <th style="width: 20%">TG làm bài</th> 
                     </tr>
                 </thead>
                 <tbody>
@@ -8129,31 +8271,23 @@ function exportFolderScoresToWord(idx) {
         `).join('')}
 
         <p class="footer-text">
-            Tài liệu xuất tự động từ hệ thống quản lý S-STICK Quiz v5.0<br>
-            Người xuất: ${currentUser.name || "Admin"}
+            Tài liệu được xuất từ hệ thống S-STICK Quiz<br>
+            Ngày xuất file: ${new Date().toLocaleDateString('vi-VN')}
         </p>
     </body>
     </html>`;
 
-    // 8. TIẾN HÀNH TẢI FILE
     try {
         const converted = htmlDocx.asBlob(contentHtml);
-        const safeName = folderName.replace(/[/\\?%*:|"<>]/g, '-');
-        const fileName = `BANG_DIEM_${safeName}.docx`;
-
+        const fileName = `BANG_DIEM_${folderName.replace(/\s+/g, '_')}.docx`;
         const url = URL.createObjectURL(converted);
         const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
+        link.href = url; link.download = fileName;
         document.body.appendChild(link);
         link.click();
-        setTimeout(() => {
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-        }, 100);
-        showModernToast("Thành công", "Đã xuất bảng điểm ABC thành công!", "success");
+        setTimeout(() => { document.body.removeChild(link); window.URL.revokeObjectURL(url); }, 100);
+        showModernToast("Thành công", "Đã xuất file chuẩn phông và thu hẹp dãn dòng", "success");
     } catch (e) {
-        console.error("Lỗi:", e);
         sysNotify("Lỗi", "Không thể tạo file Word!", "error");
     }
 }
@@ -8226,9 +8360,6 @@ window.addEventListener('online', () => {
         }, 2000);
     }
 });
-
-// Biến toàn cục để quản lý âm thanh
-let currentQuizAudio = null;
 
 async function playQuizAudio(url, btnEl) {
     if (currentQuizAudio) {
@@ -9109,6 +9240,183 @@ async function deleteUserChat(userId) {
     }
 }
 
+// HÀM ĐIỀU KHIỂN VIDEO
+function controlVideo(action) {
+    const video = document.getElementById('quiz-video');
+    if (!video) return;
+    try {
+        if (action === 'play') video.play();
+        else if (action === 'pause') video.pause();
+        else {
+            video.pause();
+            video.currentTime = 0;
+        }
+    } catch (e) { console.warn("Video chưa sẵn sàng"); }
+}
+
+// HÀM ĐIỀU KHIỂN ÂM THANH (Bản sửa lỗi initialization)
+function controlAudio(action, url) {
+    try {
+        if (!currentAudio && action === 'play' && url) {
+            currentAudio = new Audio(url);
+            currentAudio.onended = () => { currentAudio = null; };
+        }
+        
+        if (!currentAudio) return;
+
+        if (action === 'play') currentAudio.play();
+        else if (action === 'pause') currentAudio.pause();
+        else {
+            currentAudio.pause();
+            currentAudio = null; 
+        }
+    } catch (e) { console.error("Lỗi âm thanh:", e); }
+}
+
+// Dừng tất cả khi chuyển câu - Hàm này hay gây lỗi nếu không kiểm tra kỹ
+function stopAllMedia() {
+    // 1. Dừng video nếu có
+    try {
+        const video = document.getElementById('quiz-video');
+        if (video) {
+            video.pause();
+            video.currentTime = 0;
+        }
+    } catch (e) { }
+
+    // 2. Dừng âm thanh hệ thống
+    try {
+        if (window.currentAudio) {
+            window.currentAudio.pause();
+            window.currentAudio = null;
+        }
+    } catch (e) { }
+
+    // 3. Dừng âm thanh bài tập
+    try {
+        if (window.currentQuizAudio) {
+            window.currentQuizAudio.pause();
+            window.currentQuizAudio = null;
+        }
+    } catch (e) { }
+}
+
+// Hàm định dạng giây thành 00:00
+function formatMediaTime(secs) {
+    if (isNaN(secs)) return "00:00";
+    let m = Math.floor(secs / 60), s = Math.floor(secs % 60);
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+// Cập nhật Progress Bar liên tục
+function updateMediaProgress(type) {
+    let media = (type === 'video') ? document.getElementById('quiz-video') : window.currentAudio;
+    let slider = document.getElementById(type + '-progress');
+    let currentText = document.getElementById(type + '-current');
+
+    if (media && slider && currentText) {
+        slider.value = media.currentTime;
+        currentText.innerText = formatMediaTime(media.currentTime);
+
+        // --- LOGIC TÔ MÀU NỀN THEO TIẾN ĐỘ ---
+        let percentage = (media.currentTime / media.duration) * 100;
+        if(isNaN(percentage)) percentage = 0;
+        
+        // Tô màu Indigo cho đoạn đã xem (0% -> percentage)
+        // Và màu tối cho đoạn chưa xem (percentage -> 100%)
+        slider.style.background = `linear-gradient(to right, #6366f1 0%, #6366f1 ${percentage}%, rgba(255,255,255,0.1) ${percentage}%, rgba(255,255,255,0.1) 100%)`;
+    }
+}
+
+// Khởi tạo tổng thời gian khi file load xong
+function initMediaTotal(type) {
+    let media = (type === 'video') ? document.getElementById('quiz-video') : window.currentAudio;
+    let slider = document.getElementById(type + '-progress');
+    let totalText = document.getElementById(type + '-total');
+
+    if (media && slider && totalText) {
+        slider.max = media.duration;
+        totalText.innerText = formatMediaTime(media.duration);
+    }
+}
+
+function seekMedia(type, value) {
+    let media = (type === 'video') ? document.getElementById('quiz-video') : window.currentAudio;
+    if (media) {
+        media.currentTime = value;
+        // Cập nhật dải màu ngay lập tức khi kéo
+        updateMediaProgress(type); 
+    }
+}
+
+function skipMedia(type, step) {
+    let media = (type === 'video') ? document.getElementById('quiz-video') : window.currentAudio;
+    if (media) {
+        media.currentTime = Math.min(media.duration, Math.max(0, media.currentTime + step));
+        // Cập nhật dải màu ngay lập tức khi tua 10s
+        updateMediaProgress(type);
+    }
+}
+
+// Sửa lại hàm controlAudio để bắt sự kiện cho Progress Bar
+function controlAudio(action, url) {
+    try {
+        if (!window.currentAudio && action === 'play' && url) {
+            window.currentAudio = new Audio(url);
+            window.currentAudio.onended = () => { window.currentAudio = null; };
+            // Lắng nghe để cập nhật thanh trượt audio
+            window.currentAudio.ontimeupdate = () => updateMediaProgress('audio');
+            window.currentAudio.onloadedmetadata = () => initMediaTotal('audio');
+        }
+        
+        if (!window.currentAudio) return;
+
+        if (action === 'play') window.currentAudio.play();
+        else if (action === 'pause') window.currentAudio.pause();
+        else {
+            window.currentAudio.pause();
+            window.currentAudio = null; 
+        }
+    } catch (e) { console.error("Lỗi âm thanh:", e); }
+}
+
+// Hàm hiển thị ảnh phóng to
+function showImageModal(url) {
+    const modal = document.getElementById('image-modal');
+    const modalImg = document.getElementById('modal-img-content');
+    
+    if (modal && modalImg) {
+        modalImg.src = url;
+        modal.classList.remove('hidden');
+        
+        // Hiệu ứng phóng to nhẹ khi hiện ra
+        setTimeout(() => {
+            modalImg.classList.remove('scale-95');
+            modalImg.classList.add('scale-100');
+        }, 10);
+
+        // Chặn cuộn trang web khi đang xem ảnh
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// Hàm đóng ảnh phóng to
+function closeImageModal() {
+    const modal = document.getElementById('image-modal');
+    const modalImg = document.getElementById('modal-img-content');
+    
+    if (modal) {
+        modalImg.classList.remove('scale-100');
+        modalImg.classList.add('scale-95');
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            // Cho phép cuộn trang lại bình thường
+            document.body.style.overflow = 'auto';
+        }, 200);
+    }
+}
+
 </script>
 <!-- GIAO DIỆN CHAT CHO ADMIN CON -->
 <div id="chat-container" class="fixed bottom-[100px] right-6 z-[9999] hidden">
@@ -9164,5 +9472,12 @@ async function deleteUserChat(userId) {
         </div>
     </div>
 </div>
+
+<div id="image-modal" class="fixed inset-0 z-[10001] flex items-center justify-center bg-black/90 backdrop-blur-md hidden" onclick="closeImageModal()">
+    <div class="absolute top-6 right-6 text-white text-3xl cursor-pointer hover:text-red-500 transition-all">✕</div>
+    <img id="modal-img-content" class="max-w-[95%] max-h-[90vh] object-contain rounded-xl shadow-2xl transition-transform duration-300 scale-95" src="">
+    <p class="absolute bottom-6 text-slate-400 text-xs">Chạm vào vùng trống để đóng</p>
+</div>
+
 </body>
 </html>

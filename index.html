@@ -1658,15 +1658,15 @@ input[type=number] {
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
             <div class="space-y-1">
                 <label class="text-[10px] font-bold text-indigo-300 uppercase ml-1">🖼️ LINK ẢNH (IMGBB)</label>
-                <input type="text" id="manual-img" class="input-control !m-0" placeholder="Dán link ảnh (.jpg, .png)...">
+                <input type="text" id="manual-img" class="input-control !m-0" placeholder="Dán link i.ibb.co vào đây...">
             </div>
             <div class="space-y-1">
                 <label class="text-[10px] font-bold text-emerald-400 uppercase ml-1">🔊 LINK NHẠC (CATBOX)</label>
-                <input type="text" id="manual-audio" class="input-control !m-0" placeholder="Dán link nhạc (.mp3)...">
+                <input type="text" id="manual-audio" class="input-control !m-0" placeholder="Dán link .mp3 vào đây...">
             </div>
             <div class="space-y-1">
                 <label class="text-[10px] font-bold text-rose-400 uppercase ml-1">🎬 LINK VIDEO (CATBOX)</label>
-                <input type="text" id="manual-video" class="input-control !m-0" placeholder="Dán link video (.mp4)...">
+                <input type="text" id="manual-video" class="input-control !m-0" placeholder="Dán link .mp4 vào đây...">
             </div>
         </div>
 
@@ -1892,7 +1892,6 @@ input[type=number] {
             <div class="absolute top-0 left-0 w-full h-2 bg-indigo-500"></div>
             <h2 id="rs-exam-name-display" class="text-3xl font-black mb-1 uppercase">KẾT QUẢ BÀI THI</h2>
             <p id="rs-subject-display" class="text-indigo-400 font-bold mb-10 uppercase small-caps tracking-widest">MÔN HỌC: ...</p>
-            <p id="rs-subject-display" class="text-indigo-400 font-bold mb-10 uppercase"></p>
             <p class="text-slate-400 text-sm mb-10">Hệ thống đã ghi nhận bài làm của bạn</p>
 
             <div class="result-circle" id="rs-circle" style="--deg: 0deg">
@@ -1988,7 +1987,7 @@ input[type=number] {
         <!-- Cột bên phải (Timer/Nav) giữ nguyên -->
 
             <div class="lg:col-span-4 space-y-4">
-                <div id="timer-box" class="glass font-mono">Bắt đầu đếm giờ</div>
+                <div id="timer-box" class="glass font-mono">START</div>
                 <div class="card glass">
                     <h4 class="text-center font-bold text-slate-400 mb-6 uppercase tracking-widest text-xs">Tiến trình làm bài</h4>
                     <div id="nav-panel" class="nav-panel"></div>
@@ -4513,45 +4512,73 @@ function renderFolders() {
         }
 
         return `
-        <div class="bg-white/5 border border-white/10 p-4 rounded-2xl relative flex flex-col justify-between">
-            <div>
-                <div class="flex justify-between items-start gap-2 mb-1">
-                    <h4 class="text-md font-bold truncate text-indigo-100 flex-1">
-                        ${f.name} <span class="text-[11px] opacity-60 font-normal ml-1">(Môn: ${f.subject || "Tons"})</span>
-                    </h4>
-                    
-                    <!-- Ô NHẬP THỜI GIAN FIX LỖI MẤT CHỮ -->
-                    <div class="flex items-center gap-1 bg-black/40 rounded-lg border border-white/10 px-1 py-1 shrink-0" onclick="event.stopPropagation()">
-                        <input type="text" id="time-input-${i}" 
-                            value="${f.duration || ''}" 
-                            placeholder="Phút..." 
-                            inputmode="numeric"
-                            oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                            class="no-spin w-10 bg-transparent text-[10px] text-white outline-none text-center" 
-                            title="Nhập số phút làm bài">
-                        <button onclick="saveFolderDuration(${i})" 
-                            class="bg-indigo-600 hover:bg-indigo-400 text-white p-1 rounded transition-all">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l6-6a1 1 0 00-1.414-1.414l-5 5-1.586-1.586z" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                ${childCodesHtml}
-                <p class="text-[10px] text-slate-500 uppercase mt-1">
-                    ${f.questions ? f.questions.length : 0} câu hỏi | 
-                    <b class="text-indigo-400" id="duration-label-${i}">${f.duration ? f.duration + ' Phút' : 'Chưa đặt giờ'}</b>
-                </p>
-                ${codeBadge}
+<div class="bg-white/5 border border-white/10 p-5 rounded-[24px] relative flex flex-col justify-between hover:border-indigo-500/30 transition-all duration-300 group">
+    <div>
+        <!-- PHẦN TIÊU ĐỀ & MÔN HỌC -->
+        <div class="mb-4">
+            <h4 class="text-base font-black text-white truncate leading-tight mb-1 group-hover:text-indigo-400 transition-colors">
+                ${f.name}
+            </h4>
+            <div class="flex items-center gap-2">
+                <span class="text-[11px] text-slate-400 font-medium tracking-wide">
+                    Môn: <b class="text-slate-200">${f.subject || "Chưa rõ"}</b>
+                </span>
+                <!-- NÚT BÚT CHÌ NHỎ GỌN, CĂN GIỮA DÒNG CHỮ -->
+                <button onclick="event.stopPropagation(); editFolderInfo(${i})" 
+                    class="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all transform hover:scale-110 shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                </button>
             </div>
-            <div class="grid grid-cols-2 gap-2 mt-4">
-                <button class="col-span-2 py-2.5 bg-indigo-600 text-white rounded-xl text-[11px] font-bold" onclick="openFolder(${i})">🔍 CHI TIẾT</button>
-                <button class="py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-bold" onclick="shareFolder(${i})">🔗 MÃ GỐC</button>
-                <button class="py-2 bg-purple-600 text-white rounded-xl text-[10px] font-bold" onclick="generateChildCodes(${i})">🔢 MÃ CON</button>
-                <button class="py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold" onclick="exportFolderScoresToWord(${i})">📄 XUẤT ĐIỂM</button>
-                <button class="py-2 bg-slate-800 text-slate-300 rounded-xl text-[10px] font-bold" onclick="showQuizAnalytics(${i})">📊 THỐNG KÊ</button>
-                <button class="col-span-2 py-1.5 bg-red-500/10 text-red-500 text-[9px]" onclick="deleteFolder(${i})">🗑️ XÓA BỘ ĐỀ</button>
+        </div>
+
+        ${childCodesHtml}
+
+        <!-- HÀNG THÔNG SỐ: CÂU HỎI | THỜI GIAN -->
+        <div class="flex items-center gap-3 py-2 px-3 bg-black/20 rounded-xl border border-white/5 w-fit">
+            <!-- SỐ CÂU HỎI -->
+            <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">${f.questions ? f.questions.length : 0}</span>
+                <span class="text-[9px] font-bold text-slate-500 uppercase">Câu hỏi</span>
+            </div>
+
+            <!-- VẠCH NGĂN CÁCH MẢNH -->
+            <div class="w-[1px] h-3 bg-white/10"></div>
+
+            <!-- Ô NHẬP THỜI GIAN MINI -->
+            <div class="flex items-center gap-1.5">
+                <div class="relative flex items-center bg-white/5 rounded-md border border-white/10 px-1 focus-within:border-indigo-500 transition-all">
+                    <input type="text" id="time-input-${i}" 
+                        value="${f.duration || ''}" 
+                        placeholder="..." 
+                        inputmode="numeric"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                        class="no-spin w-7 bg-transparent text-[11px] text-white outline-none text-center font-bold py-0.5" 
+                        title="Nhập số phút">
+                    
+                    <button onclick="saveFolderDuration(${i})" 
+                        class="text-emerald-400 hover:text-emerald-300 transition-colors p-0.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest" id="duration-label-${i}">Phút</span>
+            </div>
+        </div>
+
+        ${codeBadge}
+    </div>
+
+    <!-- HÀNG NÚT THAO TÁC GIỮ NGUYÊN HOẶC TINH CHỈNH GRID -->
+    <div class="grid grid-cols-2 gap-2 mt-5">
+        <button class="col-span-2 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all shadow-lg active:scale-95" onclick="openFolder(${i})">🔍 CHI TIẾT ĐỀ</button>
+        <button class="py-2 bg-white/5 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 rounded-xl text-[10px] font-bold transition-all" onclick="shareFolder(${i})">🔗 MÃ GỐC</button>
+        <button class="py-2 bg-white/5 hover:bg-purple-600/20 text-purple-400 border border-purple-500/20 rounded-xl text-[10px] font-bold transition-all" onclick="generateChildCodes(${i})">🔢 MÃ CON</button>
+        <button class="py-2 bg-white/5 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-xl text-[10px] font-bold transition-all" onclick="exportFolderScoresToWord(${i})">📄 XUẤT ĐIỂM</button>
+        <button class="py-2 bg-white/5 hover:bg-slate-600/20 text-slate-400 border border-white/10 rounded-xl text-[10px] font-bold transition-all" onclick="showQuizAnalytics(${i})">📊 THỐNG KÊ</button>
+        <button class="col-span-2 py-1.5 text-red-500/40 hover:text-red-500 text-[9px] font-bold uppercase tracking-[2px] transition-all" onclick="deleteFolder(${i})">🗑️ XÓA BỘ ĐỀ</button>
             </div>
         </div>`;
     });
@@ -4559,22 +4586,81 @@ function renderFolders() {
     container.innerHTML = htmlFolders.reverse().join('');
 }
 
+// Hàm hiển thị giao diện sửa Tên và Môn học
+function editFolderInfo(idx) {
+    const folder = foldersDB[idx];
+    if (!folder) return;
+
+    const ntBox = document.getElementById('notify-container');
+    const ntMsg = document.getElementById('nt-msg');
+    const ntTitle = document.getElementById('nt-title');
+    const ntIcon = document.getElementById('nt-icon');
+    const okBtn = document.getElementById('nt-btn-ok');
+
+    ntIcon.innerText = '✏️';
+    ntTitle.innerText = 'CHỈNH SỬA THÔNG TIN';
+    
+    ntMsg.innerHTML = `
+        <div class="text-left space-y-4 mt-2">
+            <div>
+                <label class="text-[10px] font-extrabold text-indigo-400 uppercase tracking-widest ml-1">Tên bài thi mới:</label>
+                <input type="text" id="edit-folder-name" class="input-control !mt-1 !py-3" value="${folder.name}">
+            </div>
+            <div>
+                <label class="text-[10px] font-extrabold text-indigo-400 uppercase tracking-widest ml-1">Môn học mới:</label>
+                <input type="text" id="edit-folder-subject" class="input-control !mt-1 !py-3" value="${folder.subject || ''}">
+            </div>
+        </div>
+    `;
+
+    document.getElementById('nt-input').classList.add('hidden');
+    okBtn.innerText = "LƯU THAY ĐỔI";
+    okBtn.className = "w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-lg border-none";
+    
+    okBtn.onclick = async () => {
+        const newName = document.getElementById('edit-folder-name').value.trim();
+        const newSubject = document.getElementById('edit-folder-subject').value.trim();
+        
+        if (!newName || !newSubject) {
+            showModernToast("LỖI", "Vui lòng không để trống!", "warn");
+            return;
+        }
+
+        foldersDB[idx].name = newName;
+        foldersDB[idx].subject = newSubject;
+        saveFolders(); 
+        renderFolders(); 
+        syncUpdateToFirebaseCodes(idx);
+        closeNotify();
+        showModernToast("THÀNH CÔNG", "Đã cập nhật thông tin!", "success");
+    };
+
+    document.getElementById('nt-btn-cancel').classList.remove('hidden');
+    ntBox.classList.add('active');
+}
+
 function saveFolderDuration(idx) {
     const input = document.getElementById(`time-input-${idx}`);
     const minutes = parseInt(input.value);
     
     if (!input.value || isNaN(minutes) || minutes <= 0) {
-        return showModernToast("Lỗi", "Nhập số phút thi!", "warn");
+        return showModernToast("Lỗi", "Nhập số phút thi hợp lệ!", "warn");
     }
     
+    // 1. Cập nhật vào bộ đề local
     foldersDB[idx].duration = minutes;
+    
+    // 2. Lưu bộ đề lên Firebase cá nhân
     saveFolders(); 
     
-    // Cập nhật nhãn hiển thị mà không cần render lại toàn bộ trang
+    // 3. ĐỒNG BỘ NGAY LẬP TỨC: Cập nhật thời gian cho các mã đề (Gốc & Con) đang chạy
+    syncUpdateToFirebaseCodes(idx);
+    
+    // 4. Cập nhật nhãn hiển thị trên giao diện quản lý
     const label = document.getElementById(`duration-label-${idx}`);
     if (label) label.innerText = minutes + " Phút";
     
-    showModernToast("Đã lưu", `Đề này sẽ thi trong ${minutes} phút.`, "success");
+    showModernToast("ĐÃ ĐỒNG BỘ", `Đã cập nhật thời gian ${minutes} phút làm bài của thí sinh cho tất cả mã đề thuộc bộ đề này.`, "success");
 }
 
 async function generateChildCodes(idx) {
@@ -5208,15 +5294,16 @@ function startFolderQuiz(i) {
     const now = getServerTime();
     currentUser.adminSource = currentUser.user; 
     currentUser.examName = folder.name; 
+    currentUser.subject = folder.subject; // BỔ SUNG DÒNG NÀY
     currentUser.examCode = folder.accessCode || "ADMIN_TEST";
-    currentUser.endTimeMs = now + (45 * 60 * 1000); // Gán mốc kết thúc 45p
+    currentUser.endTimeMs = now + (45 * 60 * 1000); 
 
     currentIdx = 0; 
     userAnswers = activeQuestions.map(q => -1);
     
     showPage('page-quiz-view'); 
     renderQuestion(); 
-    startTimer(); // Hàm startTimer mới sẽ tự động tính từ endTimeMs
+    startTimer();
 }
 
 function renderQuestion() {
@@ -5412,6 +5499,10 @@ function restoreQuizProgress() {
 function submitQuiz() {
     if (quizInterval) clearInterval(quizInterval);
     clearQuizBlackBox(); 
+
+    // --- THÊM 2 DÒNG NÀY ĐỂ HIỂN THỊ TÊN VÀ MÔN ---
+    document.getElementById('rs-exam-name-display').innerText = currentUser.examName || "KẾT QUẢ BÀI THI";
+    document.getElementById('rs-subject-display').innerText = "MÔN HỌC: " + (currentUser.subject || "TỰ DO");
 
     // 1. TÍNH THỜI GIAN LÀM BÀI THỰC TẾ
     const totalAllowedMins = currentUser.quizDuration || 45; 
@@ -8860,59 +8951,54 @@ async function syncUpdateToFirebaseCodes(folderIdx) {
     if (folderIdx === -1) return;
     
     const folder = foldersDB[folderIdx];
-    const safeAdmin = currentUser.user.replace(/\./g, '_');
     const now = Date.now();
-
-    // Hiện thông báo đang xử lý ngầm
-    showModernToast("ĐANG ĐỒNG BỘ", "Đang cập nhật thay đổi ra các mã đề đang hoạt động...", "info");
+    const newDuration = parseInt(folder.duration) || 45;
+    // Tính lại thời gian hết hạn mới = thời điểm hiện tại + số phút mới
+    const newExpiry = now + (newDuration * 60 * 1000);
 
     try {
-        // 1. Lấy toàn bộ bản đồ mã đề trên Server
+        // Lấy toàn bộ bản đồ mã đề trên Server
         const snapshot = await rdb.ref('system/global_share_map').once('value');
         const allActiveMaps = snapshot.val() || {};
         
         const updates = {};
         let count = 0;
 
-        // 2. Tìm các mã đề thuộc về Folder này của chính Admin này
+        // Duyệt tìm các mã đề liên quan
         for (const code in allActiveMaps) {
             const mapData = allActiveMaps[code];
             
-            // Điều kiện: Đúng Admin + Đúng Folder Index + Mã còn hạn dùng
-            if (mapData.admin === currentUser.user && 
-                mapData.folderIdx === folderIdx && 
-                mapData.expiresAt > now) {
+            // Nếu đúng là mã của Admin này và thuộc bộ đề này
+            if (mapData.admin === currentUser.user && mapData.folderIdx === folderIdx) {
                 
                 count++;
                 
-                // Nếu là mã đề con (đã xáo trộn sẵn)
-                if (mapData.isChildCode) {
-                    // Tạo bản sao mới từ câu hỏi đã sửa của Folder
-                    let freshQuestions = JSON.parse(JSON.stringify(folder.questions));
-                    
-                    // Xáo trộn lại một lần nữa để đảm bảo tính minh bạch của mã con
-                    freshQuestions = shuffleArray(freshQuestions);
-                    freshQuestions.forEach(q => {
-                        const correctText = q.options[q.correct];
-                        q.options = shuffleArray(q.options);
-                        q.correct = q.options.indexOf(correctText);
-                    });
-                    
-                    updates[`system/global_share_map/${code}/fixedQuestions`] = freshQuestions;
-                }
+                // Cập nhật thời gian làm bài mới
+                updates[`system/global_share_map/${code}/duration`] = newDuration;
                 
-                // Luôn cập nhật tên bài thi nếu bạn có lỡ đổi tên Folder
-                updates[`system/global_share_map/${code}/examName`] = folder.name + (mapData.isChildCode ? ` (Mã ${code})` : "");
+                // Cập nhật thời gian hết hạn mới (giúp mã đề không bị đóng sớm)
+                updates[`system/global_share_map/${code}/expiresAt`] = newExpiry;
+
+                // Nếu là mã đề con, cập nhật thêm tên nếu cần
+                if (mapData.isChildCode) {
+                    updates[`system/global_share_map/${code}/examName`] = folder.name + ` (Mã ${code})`;
+                }
             }
         }
 
-        // 3. Đẩy tất cả cập nhật lên Firebase cùng một lúc (Multi-path update)
+        // Đẩy tất cả cập nhật lên Firebase trong 1 lần duy nhất
         if (Object.keys(updates).length > 0) {
             await rdb.ref().update(updates);
-            showModernToast("THÀNH CÔNG", `Đã cập nhật dữ liệu cho ${count} mã đề đang chạy!`, "success");
+            
+            // Cập nhật lại thời gian hết hạn trong folder local để đồng bộ giao diện đếm ngược
+            if (folder.accessCode) folder.expiresAt = newExpiry;
+            if (folder.childCodesData) folder.childCodesData.expiresAt = newExpiry;
+            saveFolders();
+            
+            console.log(`✅ Đã đồng bộ thời gian cho ${count} mã đề.`);
         }
     } catch (err) {
-        console.error("Lỗi đồng bộ:", err);
+        console.error("Lỗi đồng bộ thời gian:", err);
     }
 }
 

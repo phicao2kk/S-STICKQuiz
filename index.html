@@ -1254,6 +1254,18 @@ button:disabled {
     75% { transform: translateX(-5px); }
 }
 
+/* Xóa bỏ nút tăng giảm trên Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Xóa bỏ nút tăng giảm trên Firefox */
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
     </style>
 </head>
 <body>
@@ -1746,8 +1758,9 @@ button:disabled {
                 <h2 class="text-4xl font-black mb-4 class="page-title"">SẴN SÀNG CHƯA?</h2>
                 <p id="display-exam-name" class="text-slate-400 mb-10 text-lg font-semibold text-indigo-300">Đang tải tên bài thi...</p>
                 <p id="display-exam-subject" class="text-indigo-400 font-black mb-10 uppercase tracking-widest text-xs">MÔN HỌC: Đang tải...</p>
-                <p class="text-slate-400 mb-10 text-sm"><span class="text-indigo-400">45 Phút | Tự động chấm điểm</span></p>
-                
+                <p class="text-slate-400 mb-10 text-sm">
+                    <span id="display-exam-time" class="text-indigo-400">-- Phút</span> | Tự động chấm điểm
+                </p>
                 <!-- THAY ĐỔI: startQuiz() thành startQuizFromCode() để kích hoạt chống F5 và kiểm tra 1 lần làm -->
                 <button onclick="startQuizFromCode()" class="text-xl py-5 px-12 rounded-2xl shadow-indigo-500/20 shadow-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all">
                     BẮT ĐẦU THI NGAY
@@ -1975,7 +1988,7 @@ button:disabled {
         <!-- Cột bên phải (Timer/Nav) giữ nguyên -->
 
             <div class="lg:col-span-4 space-y-4">
-                <div id="timer-box" class="glass font-mono">45:00</div>
+                <div id="timer-box" class="glass font-mono">Bắt đầu đếm giờ</div>
                 <div class="card glass">
                     <h4 class="text-center font-bold text-slate-400 mb-6 uppercase tracking-widest text-xs">Tiến trình làm bài</h4>
                     <div id="nav-panel" class="nav-panel"></div>
@@ -4478,17 +4491,13 @@ function renderFolders() {
         let codeBadge = "";
         let childCodesHtml = "";
         
+        // Phần mã con
         if(f.childCodesData && f.childCodesData.expiresAt > now) {
-            const diff = f.childCodesData.expiresAt - now;
-            const mins = Math.floor(diff / 60000);
-            const secs = Math.floor((diff % 60000) / 1000);
-            const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
-
             childCodesHtml = `
                 <div class="mt-2 mb-2 p-2 bg-purple-500/10 border border-purple-500/20 rounded-xl">
                     <div class="flex justify-between items-center mb-1">
-                        <span class="text-[9px] text-purple-400 font-bold uppercase">Mã đề con (45p):</span>
-                        <span class="text-[9px] text-amber-400 font-black animate-pulse">⏳ ${timeStr}</span>
+                        <span class="text-[9px] text-purple-400 font-bold uppercase">Mã đề con:</span>
+                        <span id="timer-child-${i}" class="text-[9px] text-amber-400 font-black animate-pulse">⏳ Đang tính...</span>
                     </div>
                     <div class="flex flex-wrap gap-1">
                         ${f.childCodesData.codes.map(c => `<span class="bg-purple-500/20 text-purple-300 text-[10px] px-1.5 py-0.5 rounded border border-purple-500/30 font-mono font-bold">${c}</span>`).join('')}
@@ -4496,18 +4505,44 @@ function renderFolders() {
                 </div>`;
         }
 
+        // Phần mã gốc
         if(f.accessCode && f.expiresAt > now) {
-            const diff = f.expiresAt - now;
-            const mins = Math.floor(diff / 60000);
-            codeBadge = `<div class="mt-2 p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[11px] text-emerald-400 font-bold">🔑 Mã gốc: <b class="text-white">${f.accessCode}</b> (Còn ${mins}p)</div>`;
+            codeBadge = `<div class="mt-2 p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[11px] text-emerald-400 font-bold">
+                🔑 Mã gốc: <b class="text-white">${f.accessCode}</b> (<span id="timer-master-${i}">...</span>)
+            </div>`;
         }
 
         return `
         <div class="bg-white/5 border border-white/10 p-4 rounded-2xl relative flex flex-col justify-between">
             <div>
-                <h4 class="text-md font-bold truncate text-indigo-100">${f.name} &nbsp; (Môn: ${f.subject || "Tự do"})</h4>
+                <div class="flex justify-between items-start gap-2 mb-1">
+                    <h4 class="text-md font-bold truncate text-indigo-100 flex-1">
+                        ${f.name} <span class="text-[11px] opacity-60 font-normal ml-1">(Môn: ${f.subject || "Tons"})</span>
+                    </h4>
+                    
+                    <!-- Ô NHẬP THỜI GIAN FIX LỖI MẤT CHỮ -->
+                    <div class="flex items-center gap-1 bg-black/40 rounded-lg border border-white/10 px-1 py-1 shrink-0" onclick="event.stopPropagation()">
+                        <input type="text" id="time-input-${i}" 
+                            value="${f.duration || ''}" 
+                            placeholder="Phút..." 
+                            inputmode="numeric"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                            class="no-spin w-10 bg-transparent text-[10px] text-white outline-none text-center" 
+                            title="Nhập số phút làm bài">
+                        <button onclick="saveFolderDuration(${i})" 
+                            class="bg-indigo-600 hover:bg-indigo-400 text-white p-1 rounded transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l6-6a1 1 0 00-1.414-1.414l-5 5-1.586-1.586z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
                 ${childCodesHtml}
-                <p class="text-[10px] text-slate-500 uppercase mt-1">${f.questions ? f.questions.length : 0} câu hỏi</p>
+                <p class="text-[10px] text-slate-500 uppercase mt-1">
+                    ${f.questions ? f.questions.length : 0} câu hỏi | 
+                    <b class="text-indigo-400" id="duration-label-${i}">${f.duration ? f.duration + ' Phút' : 'Chưa đặt giờ'}</b>
+                </p>
                 ${codeBadge}
             </div>
             <div class="grid grid-cols-2 gap-2 mt-4">
@@ -4522,6 +4557,24 @@ function renderFolders() {
     });
 
     container.innerHTML = htmlFolders.reverse().join('');
+}
+
+function saveFolderDuration(idx) {
+    const input = document.getElementById(`time-input-${idx}`);
+    const minutes = parseInt(input.value);
+    
+    if (!input.value || isNaN(minutes) || minutes <= 0) {
+        return showModernToast("Lỗi", "Nhập số phút thi!", "warn");
+    }
+    
+    foldersDB[idx].duration = minutes;
+    saveFolders(); 
+    
+    // Cập nhật nhãn hiển thị mà không cần render lại toàn bộ trang
+    const label = document.getElementById(`duration-label-${idx}`);
+    if (label) label.innerText = minutes + " Phút";
+    
+    showModernToast("Đã lưu", `Đề này sẽ thi trong ${minutes} phút.`, "success");
 }
 
 async function generateChildCodes(idx) {
@@ -4600,17 +4653,11 @@ async function generateChildCodes(idx) {
             }
 
             // 2. BẮT ĐẦU QUÁ TRÌNH THAY THẾ
-            showModernToast("HỆ THỐNG", "Đang thu hồi mã cũ và khởi tạo mã mới...", "info");
+            showModernToast("HỆ THỐNG", "Đang khởi tạo mã mới...", "info");
 
             const updates = {};
-
-            // --- BƯỚC THU HỒI: Tạo lệnh xóa các mã cũ trên Firebase ---
-            myOldCodes.forEach(oldC => {
-                updates[`system/global_share_map/${oldC}`] = null;
-            });
-
-            // --- BƯỚC CẤP MỚI: Tạo dữ liệu cho dải mã mới ---
-            const expiry = Date.now() + (45 * 60 * 1000);
+            const duration = parseInt(folder.duration) || 45; // Ép kiểu số
+            const expiry = Date.now() + (duration * 60 * 1000);
             
             for (let code of requestedCodes) {
                 let shuffledQ = JSON.parse(JSON.stringify(folder.questions));
@@ -4621,18 +4668,20 @@ async function generateChildCodes(idx) {
                     q.correct = q.options.indexOf(correctText);
                 });
 
+                // ĐẢM BẢO MỌI TRƯỜNG DỮ LIỆU ĐỀU CÓ GIÁ TRỊ DỰ PHÒNG
                 updates[`system/global_share_map/${code}`] = {
-                    admin: currentUser.user,
+                    admin: currentUser.user || "admin",
                     folderIdx: idx,
-                    examName: folder.name + " (Mã " + code + ")",
-                    subject: folder.subject || "Tự do",
+                    examName: (folder.name || "Bài thi") + " (Mã " + code + ")",
+                    subject: folder.subject || "Tự do", // Fallback ở đây
+                    duration: duration,
                     fixedQuestions: shuffledQ,
                     expiresAt: expiry,
                     isChildCode: true
                 };
             }
 
-            // 3. ĐẨY TẤT CẢ LÊN FIREBASE TRONG 1 LẦN (Đảm bảo tính đồng bộ)
+            // Đẩy cập nhật
             await rdb.ref().update(updates);
 
             // 4. CẬP NHẬT DỮ LIỆU LOCAL
@@ -4866,26 +4915,39 @@ function shareFolder(i) {
     const folder = foldersDB[i]; 
     if (!folder) return;
 
+    // Tạo mã ngẫu nhiên
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiry = Date.now() + (45 * 60 * 1000);
+    
+    // Kiểm tra và ép kiểu số cho duration để tránh lỗi NaN
+    const duration = parseInt(folder.duration) || 45; 
+    const expiry = Date.now() + (duration * 60 * 1000);
     
     folder.accessCode = code;
     folder.expiresAt = expiry;
     saveFolders();
     
-    rdb.ref('system/global_share_map/' + code).set({ 
-        admin: currentUser.user, 
+    // DÙNG CÁCH NÀY ĐỂ ĐẢM BẢO KHÔNG CÓ GIÁ TRỊ UNDEFINED
+    const shareData = { 
+        admin: currentUser.user || "admin", 
         folderIdx: i,
-        subject: folder.subject, // THÊM DÒNG NÀY
+        subject: folder.subject || "Tự do", // Dự phòng nếu môn học trống
+        duration: duration,
         expiresAt: expiry 
+    };
+
+    rdb.ref('system/global_share_map/' + code).set(shareData)
+    .then(() => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).then(() => {
+                showModernToast("📋 ĐÃ SAO CHÉP MÃ", `Mã <b class="text-white">${code}</b> (Hạn ${duration}p) đã được copy.`, "success");
+            });
+        }
+        renderFolders();
+    })
+    .catch(err => {
+        console.error("Lỗi Firebase:", err);
+        sysNotify("Lỗi hệ thống", "Không thể đẩy mã lên máy chủ. Kiểm tra kết nối!", "error");
     });
-    
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(code).then(() => {
-            showModernToast("📋 ĐÃ SAO CHÉP MÃ", `Mã <b class="text-white">${code}</b> (Hạn 45p) đã được copy.`, "success");
-        });
-    }
-    renderFolders();
 }
 
 let currentExamCode = ""; // Biến lưu mã đề hiện tại
@@ -4904,8 +4966,16 @@ function handleJoinQuiz() {
             return sysNotify("Lỗi", "Mã đề không tồn tại hoặc hết hạn!", "error");
         }
 
+        // --- CẬP NHẬT GIAO DIỆN CHỜ THI ---
         document.getElementById('display-exam-name').innerText = data.examName || "Bài thi " + code;
         document.getElementById('display-exam-subject').innerText = "MÔN HỌC: " + (data.subject || "TỰ DO").toUpperCase();
+        
+        // CẬP NHẬT THỜI GIAN THI THỰC TẾ (Nếu bạn đã đặt ID cho thẻ HTML ở bước trước)
+        const durationDisplay = document.getElementById('display-exam-time');
+        if (durationDisplay) {
+            durationDisplay.innerText = (data.duration || 45) + " Phút";
+        }
+
         const safeUser = name.replace(/[.$#[\]]/g, "_") + "_" + code; 
         const safeAdmin = data.admin.replace(/\./g, '_');
         currentExamCode = code;
@@ -4915,16 +4985,15 @@ function handleJoinQuiz() {
         const snapSession = await sessionRef.once('value');
         const sData = snapSession.val();
 
-        // CHỈ .SET NẾU LÀ LẦN ĐẦU TIÊN VÀO PHÒNG. CÓ DỮ LIỆU RỒI THÌ ĐỂ IM ĐÓ.
         if (!sData) {
             await sessionRef.update({
-            name: name,
-            startTime: getServerTime(),
-            status: 'ĐÃ TRUY CẬP VÀO ĐỀ', 
-            score: '---',
-            examName: data.examName || "Đề thi " + code,
-            lastActive: getServerTime() // Thêm mốc thời gian để radar bắt được sự thay đổi
-        });
+                name: name,
+                startTime: getServerTime(),
+                status: 'ĐÃ TRUY CẬP VÀO ĐỀ', 
+                score: '---',
+                examName: data.examName || "Đề thi " + code,
+                lastActive: getServerTime() 
+            });
         }
 
         // BƯỚC 2: KIỂM TRA XEM ĐÃ NỘP BÀI CHƯA (Ổ KHÓA)
@@ -4934,31 +5003,32 @@ function handleJoinQuiz() {
                 return sysNotify("Từ chối", "Bạn đã hoàn thành bài này trước đó rồi!", "error");
             }
 
-            // LƯU THÔNG TIN VÀO MÁY THÍ SINH - QUAN TRỌNG: Bốc endTime từ sData nếu có
+            // LƯU THÔNG TIN VÀO MÁY THÍ SINH
             currentUser = { 
-            name: name, 
-            user: safeUser, 
-            isAdmin: false, 
-            adminSource: data.admin, // Đây là email/sdt của admin tạo đề
-            examCode: code, 
-            examName: data.examName || "Bài thi",
-            subject: data.subject || "TỰ DO",
-            endTimeMs: 0 
-        };
-        localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
+                name: name, 
+                user: safeUser, 
+                isAdmin: false, 
+                adminSource: data.admin,
+                examCode: code, 
+                examName: data.examName || "Bài thi",
+                subject: data.subject || "TỰ DO",
+                quizDuration: data.duration || 45, // LƯU SỐ PHÚT VÀO PHIÊN ĐĂNG NHẬP
+                endTimeMs: 0 
+            };
+            localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
 
-            // Tải câu hỏi (Logic cũ)
+            // Tải câu hỏi
             if (data.isChildCode && data.fixedQuestions) {
                 activeQuestions = data.fixedQuestions;
             } else {
                 rdb.ref('users_data/' + data.admin + '/quiz_folders/' + data.folderIdx).once('value', (fSnap) => {
                     const fVal = fSnap.val();
-                    activeQuestions = fVal.isShuffle ? shuffleArray([...fVal.questions]) : fVal.questions;
+                    activeQuestions = (fVal && fVal.isShuffle) ? shuffleArray([...fVal.questions]) : (fVal ? fVal.questions : []);
                 });
             }
 
             setTimeout(() => {
-                loginSuccess(); // Hàm này sẽ tự sút vào bài thi nếu endTimeMs > 0
+                loginSuccess(); 
                 closeNotify();
             }, 500);
         });
@@ -4997,23 +5067,24 @@ async function startQuizFromCode() {
         const sData = snap.val();
 
         const now = getServerTime();
-        let endMs = 0;
+    let endMs = 0;
 
-        // 2. LOGIC LẤY GIỜ CHUẨN:
-        if (sData && sData.endTime && sData.endTime > now) {
-            // Nếu trên radar đã có giờ kết thúc (đang làm dở và F5)
-            endMs = sData.endTime;
-            console.log("⏱️ Khôi phục giờ thi từ Giám sát:", new Date(endMs).toLocaleTimeString());
-        } else {
-            // Nếu là lần đầu tiên bấm "Bắt đầu thi" (hoặc giờ cũ đã hết)
-            endMs = now + (45 * 60 * 1000); 
-            await sessionRef.update({
-                status: 'ĐANG LÀM BÀI',
-                startTime: now,
-                endTime: endMs,
-                name: currentUser.name,
-                examName: currentUser.examName || mapData.examName || "Bài thi"
-            });
+    // LOGIC LẤY GIỜ CHUẨN:
+    if (sData && sData.endTime && sData.endTime > now) {
+        endMs = sData.endTime;
+    } else {
+        // --- SỬA TẠI ĐÂY ---
+        // Lấy số phút từ thông tin đã lưu thay vì số 45
+        const quizMins = currentUser.quizDuration || 45; 
+        endMs = now + (quizMins * 60 * 1000); 
+
+        await sessionRef.update({
+            status: 'ĐANG LÀM BÀI',
+            startTime: now,
+            endTime: endMs, // Gửi thời gian kết thúc chuẩn lên Radar
+            name: currentUser.name,
+            examName: currentUser.examName || mapData.examName || "Bài thi"
+        });
             console.log("⏱️ Thiết lập giờ thi mới.");
         }
 
@@ -5093,18 +5164,24 @@ function startTimer() {
     
     quizInterval = setInterval(() => {
         const now = getServerTime(); 
-        // Tính toán lại khoảng cách thực tế mỗi giây
         const diff = (currentUser.endTimeMs || 0) - now; 
         
+        // NẾU GIỜ KẾT THÚC ĐÃ QUA (DIFF <= 0)
         if (diff <= 0) {
             clearInterval(quizInterval);
-            document.getElementById('timer-box').innerText = "00:00";
             timeLeft = 0;
-            clearQuizBlackBox(); 
-            submitQuiz(); 
+            const timerBox = document.getElementById('timer-box');
+            if(timerBox) {
+                timerBox.innerText = "00:00";
+                timerBox.style.color = "#ef4444";
+            }
+            
+            clearQuizBlackBox(); // Xóa hộp đen cứu hộ
+            submitQuiz();        // Tự động nộp bài
             return;
         }
 
+        // Cập nhật biến timeLeft toàn cục để dùng cho submitQuiz
         timeLeft = Math.floor(diff / 1000); 
 
         const m = Math.floor(timeLeft / 60);
@@ -5117,6 +5194,7 @@ function startTimer() {
             if (timeLeft < 300) timerBox.style.color = "#ef4444";
         }
         
+        // Lưu tiến độ mỗi 5 giây
         if (timeLeft % 5 === 0) saveQuizBlackBox(); 
     }, 1000);
 }
@@ -5333,20 +5411,17 @@ function restoreQuizProgress() {
 
 function submitQuiz() {
     if (quizInterval) clearInterval(quizInterval);
-    clearQuizBlackBox(); // <-- XÓA HỘP ĐEN KHI NỘP XONG
+    clearQuizBlackBox(); 
 
-
-    // 1. TÍNH TOÁN THỜI GIAN LÀM BÀI
-    const totalAllowedSeconds = 45 * 60; // 2700 giây
-    const remainingSeconds = (typeof timeLeft === 'number') ? timeLeft : 0;
+    // 1. TÍNH THỜI GIAN LÀM BÀI THỰC TẾ
+    const totalAllowedMins = currentUser.quizDuration || 45; 
+    const totalAllowedSeconds = totalAllowedMins * 60;
+    const remainingSeconds = Math.max(0, timeLeft); 
     const totalSecondsSpent = totalAllowedSeconds - remainingSeconds;
 
-    const mins = Math.floor(totalSecondsSpent / 60);
-    const secs = totalSecondsSpent % 60;
-    const timeTakenStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-
-    // Xóa tiến độ làm bài trong máy
-    localStorage.removeItem('progress_' + currentUser.user);
+    const spentMins = Math.floor(totalSecondsSpent / 60);
+    const spentSecs = totalSecondsSpent % 60;
+    const timeTakenStr = `${spentMins.toString().padStart(2, '0')}:${spentSecs.toString().padStart(2, '0')}`;
 
     // 2. CHẤM ĐIỂM
     let totalQuestions = activeQuestions.length; 
@@ -5354,10 +5429,8 @@ function submitQuiz() {
     let details = [];
 
     activeQuestions.forEach((q, i) => {
-        // Ép kiểu về Number để so sánh chính xác tuyệt đối
         let isCorrect = (Number(userAnswers[i]) === Number(q.correct));
         if (isCorrect) correctCount++;
-
         details.push({
             text: q.text,
             options: [...(q.options || [])],
@@ -5367,11 +5440,10 @@ function submitQuiz() {
         });
     });
 
-    // --- ĐỒNG BỘ ĐIỂM SỐ: LÀM TRÒN 1 CHỮ SỐ (VÍ DỤ: 1.7) ---
     const pointNum = parseFloat(((correctCount / totalQuestions) * 10).toFixed(1));
     const percent = Math.round((correctCount / totalQuestions) * 100);
 
-    // --- XẾP LOẠI ---
+    // --- 3. LOGIC XẾP LOẠI (ĐÃ KHÔI PHỤC) ---
     let gradeText = "";
     let gradeColor = "";
     if (pointNum === 10) { gradeText = "XUẤT SẮC 🏆"; gradeColor = "#fbbf24"; }
@@ -5380,64 +5452,37 @@ function submitQuiz() {
     else if (pointNum >= 5.0) { gradeText = "TRUNG BÌNH 😐"; gradeColor = "#f59e0b"; }
     else { gradeText = "YẾU 📚"; gradeColor = "#ef4444"; }
 
-    // 3. CẬP NHẬT GIAO DIỆN KẾT QUẢ (UI)
-    // Hiển thị tên bài thi (Tên bộ đề)
-    // --- LÀM ĐẸP TIÊU ĐỀ KẾT QUẢ ---
-    const rsExamTitle = document.getElementById('rs-exam-name-display');
-    if(rsExamTitle) {
-        // Làm sạch tên bài thi (bỏ phần Mã nếu có)
-        const rawName = currentUser.examName || "BÀI THI";
-        const examNameClean = rawName.replace(/\(Mã.*\)/gi, "").trim();
-        
-        rsExamTitle.innerHTML = `
-            <div class="exam-info-container">
-                <h2 class="exam-header-title text-2xl">KẾT QUẢ: ${examNameClean}</h2>
-                <div class="mb-4"><span class="badge-code">MÃ ĐỀ: ${currentUser.examCode || 'GỐC'}</span></div>
-            </div>
-        `;
-    }
-
-    // --- LÀM ĐẸP HIỂN THỊ MÔN HỌC ---
-    const rsSubjectEl = document.getElementById('rs-subject-display');
-    if(rsSubjectEl) {
-        rsSubjectEl.innerHTML = `
-            <div class="badge-subject">
-                <span class="mr-2">📚</span> MÔN HỌC: ${currentUser.subject || "TỰ DO"}
-            </div>
-        `;
-    }
-
-    // --- GIỮ NGUYÊN CÁC PHẦN LOGIC ĐIỂM SỐ BÊN DƯỚI ---
+    // 4. CẬP NHẬT GIAO DIỆN KẾT QUẢ
     document.getElementById('rs-percent').innerText = percent + "%";
     document.getElementById('rs-circle').style.setProperty('--deg', (percent * 3.6) + 'deg');
     document.getElementById('rs-circle').style.setProperty('--primary', pointNum >= 5 ? "#10b981" : "#ef4444");
     document.getElementById('rs-correct').innerText = correctCount + " / " + totalQuestions;
-    
     document.getElementById('rs-point').innerText = pointNum.toFixed(1);
     document.getElementById('rs-time').innerText = timeTakenStr; 
 
+    // Hiển thị chữ xếp loại lên màn hình
     const gradeEl = document.getElementById('rs-grade');
     if (gradeEl) {
         gradeEl.innerText = `XẾP LOẠI: ${gradeText}`;
         gradeEl.style.color = gradeColor;
     }
 
-    showPage('page-result');
-
+    // Nổ pháo hoa nếu điểm cao
     if (pointNum >= 8.0) {
         setTimeout(() => { if (typeof launchFireworks === 'function') launchFireworks(); }, 500);
     }
 
-    
-    // 4. LƯU LÊN FIREBASE (ĐÃ ĐỒNG BỘ MÔN HỌC VÀ ĐIỂM 1.7)
+    showPage('page-result');
+
+    // 5. LƯU LÊN FIREBASE
     const hi = { 
         user: currentUser.user, 
         fullname: currentUser.name, 
         score: correctCount, 
         total: totalQuestions, 
-        point: pointNum.toFixed(1), // Lưu 1.7 vào Lịch sử
+        point: pointNum.toFixed(1),
         percent: percent, 
-        subject: currentUser.subject || "TỰ DO", // Lưu môn học vào lịch sử
+        grade: gradeText, // Lưu cả xếp loại vào lịch sử
         examName: currentUser.examName,
         examCode: currentUser.examCode, 
         time: new Date().toLocaleString(), 
@@ -5447,19 +5492,12 @@ function submitQuiz() {
     
     if (currentUser.adminSource) {
         const adminKey = currentUser.adminSource.replace(/\./g, '_');
-       
-        // A. Cập nhật bảng GIÁM SÁT (Realtime) - Đồng bộ điểm 1.7
         rdb.ref(`system/active_sessions/${adminKey}/${currentUser.examCode}/${currentUser.user}`).update({
             status: 'ĐÃ NỘP BÀI',
             score: pointNum.toFixed(1),      
-            submitTime: Date.now(),
-            endTime: 0 
+            submitTime: Date.now()
         });
-
-        // B. Lưu lịch sử cho Admin
         rdb.ref('users_data/' + adminKey + '/quiz_history').push(hi);
-
-        // C. Khóa thí sinh không cho thi lại mã này - Đồng bộ điểm 1.7
         rdb.ref(`system/submissions/${adminKey}/${currentUser.examCode}/${currentUser.user}`).set({
             submittedAt: Date.now(),
             score: pointNum.toFixed(1)
@@ -7973,10 +8011,30 @@ window.addEventListener('touchstart', function(e) {
 // Cứ mỗi 1 giây sẽ vẽ lại danh sách bộ đề để cập nhật đồng hồ đếm ngược
 setInterval(() => {
     const foldersPage = document.getElementById('page-folders-manager');
-    // Chỉ cập nhật khi Admin đang mở trang "Quản lý bộ đề"
-    if (foldersPage && !foldersPage.classList.contains('hidden')) {
-        renderFolders();
-    }
+    if (!foldersPage || foldersPage.classList.contains('hidden')) return;
+
+    const now = Date.now();
+    foldersDB.forEach((f, i) => {
+        // Cập nhật đếm ngược mã con
+        if (f.childCodesData && f.childCodesData.expiresAt > now) {
+            const el = document.getElementById(`timer-child-${i}`);
+            if (el) {
+                const diff = f.childCodesData.expiresAt - now;
+                const mins = Math.floor(diff / 60000);
+                const secs = Math.floor((diff % 60000) / 1000);
+                el.innerText = `⏳ ${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+        }
+        // Cập nhật đếm ngược mã gốc
+        if (f.accessCode && f.expiresAt > now) {
+            const el = document.getElementById(`timer-master-${i}`);
+            if (el) {
+                const diff = f.expiresAt - now;
+                const mins = Math.floor(diff / 60000);
+                el.innerText = `Còn ${mins}p`;
+            }
+        }
+    });
 }, 1000);
 
 let myChart = null; // Biến toàn cục để quản lý biểu đồ
@@ -8683,18 +8741,29 @@ function listenToCandidates() {
                 Object.entries(monitorCache[examCode]).forEach(([safeUser, s]) => {
                     const el = document.getElementById(`clock-${safeUser}`);
                     if (!el) return;
+
+                    // Nếu thí sinh đang làm bài và có mốc thời gian kết thúc
                     if (s.status === 'ĐANG LÀM BÀI' && s.endTime > 0) {
                         const remain = s.endTime - now;
-                        if (remain > 0) {
+
+                        if (remain <= 0) {
+                            // Nếu hiệu số <= 0, ép hiển thị HẾT GIỜ ngay lập tức
+                            el.innerText = "HẾT GIỜ";
+                            el.className = "text-red-500 font-black text-xs animate-pulse";
+                        } else {
+                            // Chỉ tính toán khi remain là số dương
                             const m = Math.floor(remain / 60000);
                             const sec = Math.floor((remain % 60000) / 1000);
                             el.innerText = `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
-                        } else {
-                            el.innerText = "HẾT GIỜ";
-                            el.className = "text-red-500 font-black text-xs";
+                            el.classList.remove('text-red-500', 'animate-pulse');
+                            el.classList.add('text-indigo-300');
                         }
                     } else if (s.status === 'ĐÃ NỘP BÀI') {
                         el.innerText = "HOÀN TẤT";
+                        el.className = "text-slate-500 text-[10px] font-bold";
+                    } else {
+                        el.innerText = "ĐANG ĐỢI...";
+                        el.className = "text-slate-500 italic text-[10px]";
                     }
                 });
             });

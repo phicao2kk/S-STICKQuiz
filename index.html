@@ -127,6 +127,19 @@ input[type=range].media-seek::-webkit-slider-thumb:hover {
     border: 1px solid rgba(255,255,255,0.1);
 }
 
+#quiz-video-container video {
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-perspective: 1000;
+    perspective: 1000;
+    transform: translate3d(0, 0, 0); /* Ép dùng GPU */
+}
+
+/* Hiệu ứng loading mượt hơn cho thanh trượt */
+.media-seek {
+    transition: opacity 0.3s ease;
+}
+
 /* Bong bóng chat khi bị thu hồi */
 .msg-bubble.recalled {
     opacity: 0.4;
@@ -1591,7 +1604,7 @@ button:disabled {
                         </div>
                     </div>
 
-<div class="pt-6" id="manual-editor-section"> <!-- Thêm ID vào đây -->
+<div class="pt-6" id="manual-editor-section">
     <div class="flex items-center justify-between mb-4">
         <label class="text-sm font-extrabold text-indigo-400 uppercase tracking-widest flex items-center gap-2" id="label-edit-mode">
             <span class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-lg">✍️</span> 
@@ -1599,40 +1612,81 @@ button:disabled {
         </label>
     </div>
 
+    <!-- KHỐI GỢI Ý TẠO LINK (ĐỂ RIÊNG BÊN NGOÀI ĐỂ TRÁNH XUNG ĐỘT) -->
+    <div class="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl mb-4">
+        <h5 class="text-[11px] font-black text-indigo-300 uppercase mb-2 flex items-center gap-2">
+            🚀 Hướng dẫn lấy link Media nhanh
+        </h5>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="flex items-start gap-2">
+                <span class="bg-indigo-500 text-white text-[10px] px-1.5 rounded-full">1</span>
+                <p class="text-[10px] text-slate-300">
+                    <b class="text-white">Ảnh:</b> <a href="https://imgbb.com" target="_blank" class="text-indigo-400 underline font-bold">imgbb.com</a> -> Upload -> Chọn <b>"Liên kết trực tiếp"</b>.
+                </p>
+            </div>
+            <div class="flex items-start gap-2">
+                <span class="bg-emerald-500 text-white text-[10px] px-1.5 rounded-full">2</span>
+                <p class="text-[10px] text-slate-300">
+                    <b class="text-white">Nhạc/Video:</b> <a href="https://catbox.moe" target="_blank" class="text-emerald-400 underline font-bold">catbox.moe</a> -> Tải file -> Copy link xanh (.mp3/.mp4).
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- KHUNG NHẬP LIỆU CHÍNH (CHỈ DÙNG 1 ID DUY NHẤT) -->
     <div id="manual-editor-container" class="space-y-4 bg-black/20 p-5 rounded-[24px] border border-white/5 shadow-inner transition-all duration-500">
-        <textarea id="manual-q" class="input-control min-h-[80px]" placeholder="Nội dung câu hỏi..."></textarea>
+        
+        <!-- Ô NHẬP ĐỀ -->
+        <div class="space-y-1">
+            <label class="text-[11px] font-bold text-indigo-400 uppercase ml-2">📝 NỘI DUNG ĐỀ THI</label>
+            <textarea id="manual-q" class="input-control min-h-[100px] !m-0" placeholder="Nhập câu hỏi tại đây..."></textarea>
+        </div>
 
+        <!-- Ô NHẬP LINK MEDIA (CÓ TIÊU ĐỀ CỤ THỂ) -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-    <div class="space-y-1">
-        <label class="text-[10px] font-bold text-indigo-400 uppercase ml-1">🖼️ Link Hình ảnh (imgbb.com)</label>
-        <input type="text" id="manual-img" class="input-control !m-0" placeholder="https://i.ibb.co/...">
-    </div>
-    <div class="space-y-1">
-        <label class="text-[10px] font-bold text-emerald-400 uppercase ml-1">🔊 Link Âm thanh (catbox.moe)</label>
-        <input type="text" id="manual-audio" class="input-control !m-0" placeholder="https://files.catbox.moe/....mp3">
-    </div>
-    <div class="space-y-1">
-        <label class="text-[10px] font-bold text-rose-400 uppercase ml-1">🎬 Link Video (catbox.moe)</label>
-        <input type="text" id="manual-video" class="input-control !m-0" placeholder="https://files.catbox.moe/....mp4">
-    </div>
-</div>
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-indigo-300 uppercase ml-1">🖼️ LINK ẢNH (IMGBB)</label>
+                <input type="text" id="manual-img" class="input-control !m-0" placeholder="Dán link ảnh (.jpg, .png)...">
+            </div>
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-emerald-400 uppercase ml-1">🔊 LINK NHẠC (CATBOX)</label>
+                <input type="text" id="manual-audio" class="input-control !m-0" placeholder="Dán link nhạc (.mp3)...">
+            </div>
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-rose-400 uppercase ml-1">🎬 LINK VIDEO (CATBOX)</label>
+                <input type="text" id="manual-video" class="input-control !m-0" placeholder="Dán link video (.mp4)...">
+            </div>
+        </div>
 
+        <!-- Ô NHẬP ĐÁP ÁN -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-            <div class="flex items-center group">
-                <div class="manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5">A</div>
-                <input type="text" id="manual-a" class="input-control !m-0 !rounded-l-none" placeholder="Đáp án A">
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-slate-500 uppercase ml-2">✍️ ĐÁP ÁN A</label>
+                <div class="flex items-center group">
+                    <div class="manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5">A</div>
+                    <input type="text" id="manual-a" class="input-control !m-0 !rounded-l-none" placeholder="Nội dung đáp án A">
+                </div>
             </div>
-            <div class="flex items-center group">
-                <div class="manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5">B</div>
-                <input type="text" id="manual-b" class="input-control !m-0 !rounded-l-none" placeholder="Đáp án B">
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-slate-500 uppercase ml-2">✍️ ĐÁP ÁN B</label>
+                <div class="flex items-center group">
+                    <div class="manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5">B</div>
+                    <input type="text" id="manual-b" class="input-control !m-0 !rounded-l-none" placeholder="Nội dung đáp án B">
+                </div>
             </div>
-            <div class="flex items-center group">
-                <div class="manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5">C</div>
-                <input type="text" id="manual-c" class="input-control !m-0 !rounded-l-none" placeholder="Đáp án C">
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-slate-500 uppercase ml-2">✍️ ĐÁP ÁN C</label>
+                <div class="flex items-center group">
+                    <div class="manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5">C</div>
+                    <input type="text" id="manual-c" class="input-control !m-0 !rounded-l-none" placeholder="Nội dung đáp án C">
+                </div>
             </div>
-            <div class="flex items-center group">
-                <div class="manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5">D</div>
-                <input type="text" id="manual-d" class="input-control !m-0 !rounded-l-none" placeholder="Đáp án D">
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-slate-500 uppercase ml-2">✍️ ĐÁP ÁN D</label>
+                <div class="flex items-center group">
+                    <div class="manual-label bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black border-y border-l border-white/5">D</div>
+                    <input type="text" id="manual-d" class="input-control !m-0 !rounded-l-none" placeholder="Nội dung đáp án D">
+                </div>
             </div>
         </div>
 
@@ -2231,23 +2285,24 @@ function getServerTime() {
     // Hàm sắp xếp mảng theo Tên (từ cuối cùng) chuẩn tiếng Việt
 function sortArrayByVietnameseName(array, fullNameKey) {
     return array.sort((a, b) => {
-        const getFirstName = (str) => {
-            if (!str) return "";
-            const parts = str.trim().split(" ");
-            return parts.length > 1 ? parts.pop() : str;
-        };
+        const strA = (fullNameKey ? a[fullNameKey] : a).trim();
+        const strB = (fullNameKey ? b[fullNameKey] : b).trim();
 
-        const nameA = getFirstName(fullNameKey ? a[fullNameKey] : a);
-        const nameB = getFirstName(fullNameKey ? b[fullNameKey] : b);
+        // 1. Tách tên chính (từ cuối cùng)
+        const partsA = strA.split(" ");
+        const partsB = strB.split(" ");
+        const nameA = partsA.pop(); // Lấy từ cuối
+        const nameB = partsB.pop(); // Lấy từ cuối
 
-        // So sánh Tên trước
-        const compareName = nameA.localeCompare(nameB, 'vi', { sensitivity: 'base' });
+        // 2. So sánh Tên chính trước (có numeric để xử lý số 2 < 12)
+        const compareName = nameA.localeCompare(nameB, 'vi', { numeric: true, sensitivity: 'accent' });
         
-        // Nếu tên giống hệt nhau (ví dụ 2 bạn cùng tên Tiên) thì so sánh cả Họ tên đệm
-        if (compareName === 0) {
-            return (fullNameKey ? a[fullNameKey] : a).localeCompare(fullNameKey ? b[fullNameKey] : b, 'vi');
+        if (compareName !== 0) {
+            return compareName;
         }
-        return compareName;
+
+        // 3. Nếu tên giống hệt nhau (ví dụ cùng là "An"), so sánh tiếp Họ và Tên đệm
+        return strA.localeCompare(strB, 'vi', { numeric: true, sensitivity: 'accent' });
     });
 }
 
@@ -2482,22 +2537,63 @@ function editFolderQ(i) {
             <h4 class="text-indigo-400 font-black mb-6 flex items-center gap-2 uppercase tracking-widest text-sm">
                 <span class="p-2 bg-indigo-500/20 rounded-lg">🛠️</span> Đang sửa câu hỏi #${i+1}
             </h4>
+
+            <!-- KHỐI HƯỚNG DẪN MEDIA NHANH MỚI THÊM -->
+            <div class="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl mb-4">
+                <h5 class="text-[10px] font-black text-indigo-300 uppercase mb-2 flex items-center gap-2">
+                    🚀 Hướng dẫn lấy link Media nhanh
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-start gap-2">
+                        <span class="bg-indigo-500 text-white text-[9px] px-1.5 rounded-full">1</span>
+                        <p class="text-[9px] text-slate-300 leading-tight">
+                            <b>Ảnh:</b> <a href="https://imgbb.com" target="_blank" class="text-indigo-400 underline font-bold">imgbb.com</a> -> Upload -> Chọn <b>"Liên kết trực tiếp"</b>.
+                        </p>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="bg-emerald-500 text-white text-[9px] px-1.5 rounded-full">2</span>
+                        <p class="text-[9px] text-slate-300 leading-tight">
+                            <b>Nhạc/Video:</b> <a href="https://catbox.moe" target="_blank" class="text-emerald-400 underline font-bold">catbox.moe</a> -> Tải file -> Copy link xanh (.mp3/.mp4).
+                        </p>
+                    </div>
+                </div>
+            </div>
             
+            <label class="text-[10px] font-bold text-indigo-400 uppercase ml-2">📝 NỘI DUNG CÂU HỎI (SỬA ĐỀ TẠI ĐÂY)</label>
             <textarea id="inline-q" class="input-control min-h-[80px] mb-4" placeholder="Nội dung câu hỏi...">${q.text}</textarea>
 
-            <!-- Cấu trúc Media Inline -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                <input type="text" id="inline-img" class="input-control text-xs" placeholder="Link ảnh (imgbb)" value="${q.image || ''}">
-                <input type="text" id="inline-audio" class="input-control text-xs" placeholder="Link nhạc (catbox)" value="${q.audio || ''}">
-                <input type="text" id="inline-video" class="input-control text-xs" placeholder="Link video (catbox)" value="${q.video || ''}">
+                <div class="space-y-1">
+                    <label class="text-[9px] font-bold text-indigo-300 uppercase ml-1">🖼️ LINK ẢNH (IMGBB)</label>
+                    <input type="text" id="inline-img" class="input-control text-xs !m-0" placeholder="Dán link i.ibb.co vào đây..." value="${q.image || ''}">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[9px] font-bold text-emerald-400 uppercase ml-1">🔊 LINK NHẠC (CATBOX)</label>
+                    <input type="text" id="inline-audio" class="input-control text-xs !m-0" placeholder="Dán link .mp3 vào đây..." value="${q.audio || ''}">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[9px] font-bold text-rose-400 uppercase ml-1">🎬 LINK VIDEO (CATBOX)</label>
+                    <input type="text" id="inline-video" class="input-control text-xs !m-0" placeholder="Dán link .mp4 vào đây..." value="${q.video || ''}">
+                </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-                <!-- (Giữ nguyên các ô A, B, C, D của bạn) -->
-                <div class="flex items-center"><div class="bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black">A</div><input type="text" id="inline-a" class="input-control !m-0 !rounded-l-none" value="${q.options[0]}"></div>
-                <div class="flex items-center"><div class="bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black">B</div><input type="text" id="inline-b" class="input-control !m-0 !rounded-l-none" value="${q.options[1]}"></div>
-                <div class="flex items-center"><div class="bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black">C</div><input type="text" id="inline-c" class="input-control !m-0 !rounded-l-none" value="${q.options[2]}"></div>
-                <div class="flex items-center"><div class="bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black">D</div><input type="text" id="inline-d" class="input-control !m-0 !rounded-l-none" value="${q.options[3]}"></div>
+                <div class="space-y-1">
+                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">✍️ ĐÁP ÁN A</label>
+                    <div class="flex items-center"><div class="bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black">A</div><input type="text" id="inline-a" class="input-control !m-0 !rounded-l-none" value="${q.options[0]}"></div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">✍️ ĐÁP ÁN B</label>
+                    <div class="flex items-center"><div class="bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black">B</div><input type="text" id="inline-b" class="input-control !m-0 !rounded-l-none" value="${q.options[1]}"></div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">✍️ ĐÁP ÁN C</label>
+                    <div class="flex items-center"><div class="bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black">C</div><input type="text" id="inline-c" class="input-control !m-0 !rounded-l-none" value="${q.options[2]}"></div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">✍️ ĐÁP ÁN D</label>
+                    <div class="flex items-center"><div class="bg-indigo-600/20 text-indigo-400 px-4 py-3 rounded-l-2xl font-black">D</div><input type="text" id="inline-d" class="input-control !m-0 !rounded-l-none" value="${q.options[3]}"></div>
+                </div>
             </div>
 
             <div class="flex flex-col md:flex-row gap-4 items-end bg-black/20 p-4 rounded-3xl border border-white/5">
@@ -2519,8 +2615,6 @@ function editFolderQ(i) {
     `;
 
     container.classList.remove('hidden');
-    content.firstElementChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
     // Hiệu ứng nhảy vào giữa màn hình
     setTimeout(() => {
         const editorCard = content.firstElementChild;
@@ -3657,6 +3751,8 @@ function loginSuccess() {
         renderAdminPreview();
         renderFolders();
         updateFolderDropdowns();
+        // Kích hoạt radar giám sát ngay lập tức (chạy ngầm)
+        listenToCandidates();
 
         // Admin khôi phục trang cuối cùng đang xem
         const savedPage = localStorage.getItem('last_active_page');
@@ -4821,14 +4917,14 @@ function handleJoinQuiz() {
 
         // CHỈ .SET NẾU LÀ LẦN ĐẦU TIÊN VÀO PHÒNG. CÓ DỮ LIỆU RỒI THÌ ĐỂ IM ĐÓ.
         if (!sData) {
-            await sessionRef.set({
-                name: name,
-                startTime: getServerTime(),
-                endTime: 0, 
-                status: 'ĐÃ TRUY CẬP VÀO ĐỀ', 
-                score: '---',
-                examName: data.examName || "Đề thi " + code
-            });
+            await sessionRef.update({
+            name: name,
+            startTime: getServerTime(),
+            status: 'ĐÃ TRUY CẬP VÀO ĐỀ', 
+            score: '---',
+            examName: data.examName || "Đề thi " + code,
+            lastActive: getServerTime() // Thêm mốc thời gian để radar bắt được sự thay đổi
+        });
         }
 
         // BƯỚC 2: KIỂM TRA XEM ĐÃ NỘP BÀI CHƯA (Ổ KHÓA)
@@ -5055,33 +5151,42 @@ function renderQuestion() {
     
     // --- 1. KHỐI VIDEO (Đã thêm cập nhật màu khi kéo) ---
     if (q.video) {
-        mediaHtml += `
-            <div class="mb-6 p-5 bg-indigo-500/5 border border-indigo-500/20 rounded-[24px]">
-                <p class="text-[10px] text-indigo-300 font-bold text-center mb-4 uppercase tracking-widest">🎬 VIDEO BÀI TẬP</p>
-                <div id="quiz-video-container" class="rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
-                    <video id="quiz-video" src="${q.video}" class="w-full max-h-[350px]" 
-                        ontimeupdate="updateMediaProgress('video')" onloadedmetadata="initMediaTotal('video')"></video>
+    mediaHtml += `
+        <div class="mb-6 p-5 bg-indigo-500/5 border border-indigo-500/20 rounded-[24px] overflow-hidden" style="transform: translateZ(0);">
+            <p class="text-[10px] text-indigo-300 font-bold text-center mb-4 uppercase tracking-widest">🎬 VIDEO</p>
+            <div id="quiz-video-container" class="rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl">
+                <video id="quiz-video" 
+                    src="${q.video}" 
+                    class="w-full max-h-[350px]" 
+                    preload="metadata" 
+                    playsinline
+                    ontimeupdate="updateMediaProgress('video')" 
+                    onloadedmetadata="initMediaTotal('video')">
+                </video>
+            </div>
+            <!-- Thanh tua Video -->
+            <div class="mt-4 px-2">
+                <input type="range" id="video-progress" class="media-seek" value="0" step="0.1" 
+                    oninput="seekMedia('video', this.value); updateMediaProgress('video')">
+                <div class="flex justify-between mt-1">
+                    <span id="video-current" class="time-label">00:00</span>
+                    <span id="video-total" class="time-label">00:00</span>
                 </div>
-                <!-- Thanh tua Video -->
-                <div class="mt-4 px-2">
-                    <input type="range" id="video-progress" class="media-seek" value="0" step="0.1" 
-                        oninput="seekMedia('video', this.value); updateMediaProgress('video')">
-                    <div class="flex justify-between mt-1"><span id="video-current" class="time-label">00:00</span><span id="video-total" class="time-label">00:00</span></div>
-                </div>
-                <div class="media-controls mt-2">
-                    <button onclick="skipMedia('video', -10)" class="btn-media bg-slate-700">⏪ 10s</button>
-                    <button onclick="controlVideo('play')" class="btn-media btn-play">▶️ PHÁT</button>
-                    <button onclick="controlVideo('pause')" class="btn-media btn-pause">⏸️ DỪNG</button>
-                    <button onclick="skipMedia('video', 10)" class="btn-media bg-slate-700">⏩ 10s</button>
-                </div>
-            </div>`;
-    }
+            </div>
+            <div class="media-controls mt-2">
+                <button onclick="skipMedia('video', -10)" class="btn-media bg-slate-700">⏪ 10s</button>
+                <button onclick="controlVideo('play')" class="btn-media btn-play">▶️ PHÁT</button>
+                <button onclick="controlVideo('pause')" class="btn-media btn-pause">⏸️ DỪNG</button>
+                <button onclick="skipMedia('video', 10)" class="btn-media bg-slate-700">⏩ 10s</button>
+            </div>
+        </div>`;
+}
     
     // --- 2. KHỐI HÌNH ẢNH (Bản phóng to nội bộ) ---
     if (q.image) {
         mediaHtml += `
             <div class="mb-6 p-5 bg-indigo-500/5 border border-indigo-500/20 rounded-[24px] shadow-inner">
-                <p class="text-[10px] text-indigo-300 font-bold text-center mb-4 uppercase tracking-widest">🖼️ HÌNH ẢNH MINH HỌA</p>
+                <p class="text-[10px] text-indigo-300 font-bold text-center mb-4 uppercase tracking-widest">🖼️ HÌNH ẢNH</p>
                 <div class="rounded-xl overflow-hidden border border-white/10 bg-white/5 shadow-2xl transition-all hover:scale-[1.01] cursor-zoom-in" 
                      onclick="showImageModal('${q.image}')">
                     <img src="${q.image}" class="w-full h-auto object-contain max-h-[400px]" alt="Quiz Image">
@@ -8482,8 +8587,30 @@ function listenToCandidates() {
                     </td>
                 </tr>`;
             
-            const studentsEntries = Object.entries(data[examCode]);
-            studentsEntries.sort((a, b) => a[1].name.localeCompare(b[1].name, 'vi'));
+    const studentsEntries = Object.entries(data[examCode]);
+
+    studentsEntries.sort((a, b) => {
+        // Lấy tên đầy đủ và dọn dẹp khoảng trắng
+        const fullA = (a[1].name || "").trim();
+        const fullB = (b[1].name || "").trim();
+
+        // Tách các từ trong tên
+        const partsA = fullA.split(" ");
+        const partsB = fullB.split(" ");
+
+        // Lấy từ cuối cùng (Tên chính hoặc Số)
+        const nameA = partsA.pop();
+        const nameB = partsB.pop();
+
+        // So sánh Tên chính trước
+        // numeric: true giúp xếp số 2 đứng trước số 12
+        // sensitivity: 'accent' để phân biệt chữ có dấu
+        const cmp = nameA.localeCompare(nameB, 'vi', { numeric: true, sensitivity: 'accent' });
+
+        // Nếu tên chính giống hệt nhau (ví dụ cùng tên "Phi"), so sánh tiếp toàn bộ họ tên
+        if (cmp !== 0) return cmp;
+        return fullA.localeCompare(fullB, 'vi', { numeric: true, sensitivity: 'accent' });
+    });
 
             studentsEntries.forEach(([safeUser, s]) => {
                 const studentUniqueKey = `${examCode}_${safeUser}`;
@@ -9275,12 +9402,13 @@ function controlAudio(action, url) {
 
 // Dừng tất cả khi chuyển câu - Hàm này hay gây lỗi nếu không kiểm tra kỹ
 function stopAllMedia() {
-    // 1. Dừng video nếu có
+    // 1. Dừng video và ép giải phóng kết nối ngầm
     try {
         const video = document.getElementById('quiz-video');
         if (video) {
             video.pause();
-            video.currentTime = 0;
+            video.removeAttribute('src'); // Quan trọng: Xóa link để dừng tải ngầm
+            video.load(); // Ép trình duyệt reset buffer
         }
     } catch (e) { }
 
@@ -9288,6 +9416,7 @@ function stopAllMedia() {
     try {
         if (window.currentAudio) {
             window.currentAudio.pause();
+            window.currentAudio.src = ""; 
             window.currentAudio = null;
         }
     } catch (e) { }
@@ -9296,6 +9425,7 @@ function stopAllMedia() {
     try {
         if (window.currentQuizAudio) {
             window.currentQuizAudio.pause();
+            window.currentQuizAudio.src = "";
             window.currentQuizAudio = null;
         }
     } catch (e) { }

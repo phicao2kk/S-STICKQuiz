@@ -4867,17 +4867,19 @@ function renderFolders() {
 
         ${childCodesHtml}
 
-        <div class="flex items-center gap-3 py-2 px-3 bg-black/20 rounded-xl border border-white/5 w-fit">
-            <!-- SỐ CÂU HỎI -->
+        <!-- Thay đổi class ở dòng dưới đây: thêm w-full, justify-between cho mobile -->
+        <div class="flex items-center justify-between md:justify-start gap-3 py-2 px-4 bg-black/20 rounded-xl border border-white/5 w-full md:w-fit">
+            
+            <!-- KHỐI SỐ CÂU HỎI -->
             <div class="flex items-center gap-1.5">
                 <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">${f.questions ? f.questions.length : 0}</span>
                 <span class="text-[9px] font-bold text-slate-500 uppercase">Câu hỏi</span>
             </div>
 
-            <!-- VẠCH NGĂN CÁCH MẢNH -->
-            <div class="w-[1px] h-3 bg-white/10"></div>
+            <!-- VẠCH NGĂN CÁCH (Ẩn trên mobile nếu bạn muốn thoáng hơn, hoặc giữ nguyên) -->
+            <div class="w-[1px] h-3 bg-white/10 mx-auto md:mx-0"></div>
 
-            <!-- Ô NHẬP THỜI GIAN MINI -->
+            <!-- KHỐI NHẬP PHÚT -->
             <div class="flex items-center gap-1.5">
                 <div class="flex items-center bg-white/5 rounded-lg border border-white/10 p-0.5 focus-within:border-emerald-500 transition-all">
                     <input type="text" id="time-input-${i}" 

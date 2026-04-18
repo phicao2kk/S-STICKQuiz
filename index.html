@@ -8286,47 +8286,35 @@ function exportFolderToWord(idx) {
     const questions = folder.questions;
     const randomCode = Math.floor(100 + Math.random() * 899);
 
-    let html = `
+    let htmlString = `
+        <!DOCTYPE html>
         <html>
         <head><meta charset="utf-8"></head>
-        <body style="font-family: 'Times New Roman';">
+        <body style="font-family: 'Times New Roman', serif;">
             <table style="width: 100%; border: none;">
                 <tr>
-                    <td style="width: 40%; text-align: center; font-size: 12pt;">
-                        SỞ GIÁO DỤC VÀ ĐÀO TẠO<br><b>TRƯỜNG ...........................</b>
-                    </td>
-                    <td style="width: 60%; text-align: center;">
-                        <b style="font-size: 14pt;">ĐỀ THI TRẮC NGHIỆM</b><br>
-                        <b>Môn: ${examName}</b><br>
-                        <i>Thời gian: 45 phút - Mã đề: ${randomCode}</i>
-                    </td>
+                    <td width="40%" align="center">SỞ GIÁO DỤC VÀ ĐÀO TẠO<br><b>TRƯỜNG ...................</b></td>
+                    <td width="60%" align="center"><b>ĐỀ THI TRẮC NGHIỆM</b><br><b>Môn: ${examName}</b><br><i>Mã đề: ${randomCode}</i></td>
                 </tr>
             </table>
-            <p style="margin-top: 15pt;"><b>Họ và tên:</b> ........................................................... <b>SBD:</b> .................</p>
-            <div style="border-top: 1px solid black; margin: 10pt 0;"></div>
+            <p style="margin-top: 20px;"><b>Họ và tên:</b> ........................................................... <b>SBD:</b> .................</p>
+            <hr>
     `;
 
     questions.forEach((q, i) => {
-        html += `
-            <div style="margin-bottom: 15pt;">
+        htmlString += `
+            <div style="margin-bottom: 15px;">
                 <p><b>Câu ${i + 1}:</b> ${q.text}</p>
-                <table style="width: 100%; border: none;">
-                    <tr>
-                        <td width="25%"><b>A.</b> ${q.options[0]}</td>
-                        <td width="25%"><b>B.</b> ${q.options[1]}</td>
-                        <td width="25%"><b>C.</b> ${q.options[2]}</td>
-                        <td width="25%"><b>D.</b> ${q.options[3]}</td>
-                    </tr>
-                </table>
+                <p>A. ${q.options[0]}&nbsp;&nbsp;&nbsp;&nbsp;B. ${q.options[1]}&nbsp;&nbsp;&nbsp;&nbsp;C. ${q.options[2]}&nbsp;&nbsp;&nbsp;&nbsp;D. ${q.options[3]}</p>
             </div>`;
     });
 
-    html += `
+    htmlString += `
         <br style="page-break-before: always;">
-        <p style="text-align: center; font-size: 16pt; font-weight: bold;">ĐÁP ÁN MÃ ĐỀ: ${randomCode}</p>
-        <table border="1" style="width: 100%; border-collapse: collapse; text-align: center;">
-            <tr style="background-color: #eee;">
-                ${questions.map((_, i) => `<td style="font-weight:bold;">${i + 1}</td>`).join('')}
+        <h3 style="text-align: center;">ĐÁP ÁN MÃ ĐỀ: ${randomCode}</h3>
+        <table border="1" cellspacing="0" style="width: 100%; border-collapse: collapse; text-align: center;">
+            <tr style="background-color: #eeeeee;">
+                ${questions.map((_, i) => `<td><b>${i + 1}</b></td>`).join('')}
             </tr>
             <tr>
                 ${questions.map(q => `<td>${String.fromCharCode(65 + q.correct)}</td>`).join('')}
@@ -8334,7 +8322,7 @@ function exportFolderToWord(idx) {
         </table>
     </body></html>`;
 
-    saveAsDocxBinary(html, `DE_THI_${examName.replace(/\s+/g, '_')}`);
+    saveAsDocxBinary(htmlString, `DE_THI_${examName.replace(/\s+/g, '_')}`);
 }
 
 function exportFolderScoresToWord(idx) {
@@ -8353,31 +8341,21 @@ function exportFolderScoresToWord(idx) {
 
     if (matches.length === 0) return sysNotify("Thông báo", "Chưa có dữ liệu thí sinh.", "warn");
 
-    showModernToast("Đang xử lý", "Đang tạo file Word chuẩn cho iPhone/Android...", "info");
+    showModernToast("Đang xử lý", "Đang tạo file bảng điểm .docx...", "info");
 
-    let html = `
+    // Tạo HTML đơn giản để thư viện dễ chuyển đổi
+    let htmlContent = `
         <!DOCTYPE html>
         <html>
-        <head>
-            <meta charset="utf-8">
-            <style>
-                body { font-family: 'Times New Roman', Times, serif; line-height: 1.4; }
-                .centered { text-align: center; }
-                .bold { font-weight: bold; }
-                .title { font-size: 18pt; margin-bottom: 5pt; }
-                .subtitle { font-size: 14pt; margin-bottom: 20pt; }
-                table { width: 100%; border-collapse: collapse; margin-top: 10pt; }
-                th, td { border: 1px solid black; padding: 6px; text-align: center; font-size: 11pt; }
-                .t-left { text-align: left; }
-                .footer { margin-top: 30pt; text-align: right; font-style: italic; font-size: 10pt; }
-            </style>
-        </head>
-        <body>
-            <div class="centered bold title">BẢNG ĐIỂM CHI TIẾT</div>
-            <div class="centered bold subtitle">${folderName.toUpperCase()}</div>
-            <p><span class="bold">Môn học:</span> ${subjectName}</p>
-            <p><span class="bold">Ngày xuất:</span> ${new Date().toLocaleDateString('vi-VN')}</p>
-            <p><span class="bold">Tổng số lượt thi:</span> ${matches.length}</p>
+        <head><meta charset="utf-8"></head>
+        <body style="font-family: 'Times New Roman', serif;">
+            <div style="text-align: center;">
+                <h2 style="margin-bottom: 0;">BẢNG ĐIỂM CHI TIẾT</h2>
+                <h3 style="margin-top: 5px; text-transform: uppercase;">${folderName}</h3>
+            </div>
+            <p><b>Môn học:</b> ${subjectName}</p>
+            <p><b>Ngày xuất:</b> ${new Date().toLocaleDateString('vi-VN')}</p>
+            <p><b>Tổng số thí sinh:</b> ${matches.length}</p>
     `;
 
     const grouped = matches.reduce((acc, h) => {
@@ -8389,35 +8367,31 @@ function exportFolderScoresToWord(idx) {
 
     Object.keys(grouped).sort().forEach(code => {
         const students = sortArrayByVietnameseName(grouped[code], 'fullname');
-        html += `
-            <p style="margin-top: 15pt;"><span class="bold">MÃ ĐỀ: ${code}</span> (${students.length} thí sinh)</p>
-            <table>
-                <thead>
-                    <tr style="background-color: #f2f2f2;">
-                        <th width="8%">STT</th>
-                        <th width="42%">Họ và Tên</th>
-                        <th width="15%">Câu đúng</th>
-                        <th width="15%">Điểm số</th>
-                        <th width="20%">Thời gian làm</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${students.map((s, i) => `
-                        <tr>
-                            <td>${i + 1}</td>
-                            <td class="t-left">${s.fullname || "N/A"}</td>
-                            <td>${s.score}/${s.total}</td>
-                            <td class="bold">${s.point}</td>
-                            <td>${s.duration || "---"}</td>
-                        </tr>`).join('')}
-                </tbody>
+        htmlContent += `
+            <p style="margin-top: 20px;"><b>MÃ ĐỀ: ${code}</b> (${students.length} thí sinh)</p>
+            <table border="1" cellspacing="0" cellpadding="5" style="width: 100%; border-collapse: collapse;">
+                <tr style="background-color: #f2f2f2; font-weight: bold; text-align: center;">
+                    <td width="10%">STT</td>
+                    <td width="40%">Họ và Tên</td>
+                    <td width="15%">Câu đúng</td>
+                    <td width="15%">Điểm</td>
+                    <td width="20%">Thời gian</td>
+                </tr>
+                ${students.map((s, i) => `
+                    <tr>
+                        <td align="center">${i + 1}</td>
+                        <td>${s.fullname || "N/A"}</td>
+                        <td align="center">${s.score}/${s.total}</td>
+                        <td align="center"><b>${s.point}</b></td>
+                        <td align="center">${s.duration || "---"}</td>
+                    </tr>`).join('')}
             </table>
         `;
     });
 
-    html += `<div class="footer">Tài liệu xuất từ hệ thống S-STICK Quiz</div></body></html>`;
+    htmlContent += `<p style="text-align: right; margin-top: 40px; font-style: italic;">Xuất từ hệ thống S-STICK Quiz</p></body></html>`;
 
-    saveAsDocxBinary(html, `BANG_DIEM_${folderName.replace(/\s+/g, '_')}`);
+    saveAsDocxBinary(htmlContent, `BANG_DIEM_${folderName.replace(/\s+/g, '_')}`);
 
     // 2. ĐÓNG GÓI CHUẨN ĐỊNH DẠNG WORD XML (Dùng .doc để tương thích cao nhất)
     const header = `
@@ -8483,19 +8457,19 @@ function exportFolderScoresToWord(idx) {
 
 function saveAsDocxBinary(htmlContent, fileName) {
     try {
-        // Chuyển đổi HTML thành Blob Docx binary (Đây là chìa khóa để iPhone mở được)
+        // Sử dụng thư viện htmlDocx để nén HTML thành file binary thật sự
         const converted = htmlDocx.asBlob(htmlContent);
         const url = window.URL.createObjectURL(converted);
         
         const link = document.createElement('a');
         link.href = url;
-        link.download = fileName + ".docx"; // Luôn dùng đuôi .docx
+        link.download = fileName + ".docx";
         
-        // Buộc phải thêm vào document để Safari iOS kích hoạt lệnh tải
+        // Buộc phải thêm vào body để Safari iPhone nhận lệnh
         document.body.appendChild(link);
         link.click();
         
-        // Xóa dấu vết sau khi tải
+        // Dọn dẹp bộ nhớ ngay sau khi tải (Tránh lỗi rò rỉ bộ nhớ trên mobile)
         setTimeout(() => {
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
@@ -8503,7 +8477,7 @@ function saveAsDocxBinary(htmlContent, fileName) {
 
         showModernToast("Thành công", "Đã tải file .docx thành công!", "success");
     } catch (e) {
-        console.error("Lỗi chuyển đổi Docx:", e);
+        console.error("Lỗi chuyển đổi:", e);
         alert("Thiết bị này không hỗ trợ chuyển đổi file: " + e.message);
     }
 }

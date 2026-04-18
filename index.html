@@ -8560,51 +8560,31 @@ async function generatePDFScore(idx) {
         return hName === fName || hName.startsWith(fName + " (mã");
     });
 
-    showModernToast("Hệ thống", "Đang tạo bản in PDF...", "info");
+    showModernToast("Hệ thống", "Đang xử lý PDF cho di động...", "info");
 
+    // TẠO ELEMENT TẠM THỜI
     const element = document.createElement('div');
-    element.style.width = "700px"; 
-    element.style.padding = "35px";
-    element.style.background = "#ffffff";
+    element.style.position = 'absolute';
+    element.style.left = '-9999px'; // Đẩy ra khỏi màn hình thay vì ẩn
+    element.style.top = '0';
+    element.style.width = '750px'; // Độ rộng chuẩn A4
+    element.style.padding = '40px';
+    element.style.backgroundColor = '#ffffff';
+    element.style.color = '#000000'; // ÉP CHỮ MÀU ĐEN
     element.style.fontFamily = "'Times New Roman', serif";
 
-    // Lấy ngày từ thí sinh đầu tiên (Trích xuất phần ngày từ chuỗi "HH:mm:ss DD/MM/YYYY")
     let testDate = matches.length > 0 ? matches[0].time.split(' ').pop() : new Date().toLocaleDateString('vi-VN');
 
     let html = `
-        <style>
-            .pdf-table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
-            .pdf-table th, .pdf-table td { border: 1.5px solid #000 !important; padding: 10px 5px; text-align: center; font-size: 13px; color: #000 !important; }
-            .pdf-table th { background-color: #f0f0f0 !important; font-weight: bold; }
-            .text-left { text-align: left !important; padding-left: 10px !important; }
+        <div style="color: black !important; background: white !important;">
+            <h1 style="text-align: center; text-transform: uppercase; margin-bottom: 5px; font-size: 22px;">Bảng Điểm Chi Tiết</h1>
+            <h2 style="text-align: center; text-transform: uppercase; margin-top: 0; margin-bottom: 20px; font-size: 18px;">${folder.name}</h2>
             
-            /* Style cho tiêu đề lớn */
-            .pdf-title-main { 
-                text-align: center; 
-                margin-bottom: 5px; 
-                color: #000 !important; 
-                font-weight: 900 !important; 
-                font-size: 24px !important; /* Tăng cỡ chữ tiêu đề chính */
-                text-transform: uppercase;
-            }
-            .pdf-title-sub { 
-                text-align: center; 
-                margin-top: 0; 
-                margin-bottom: 20px;
-                color: #000 !important; 
-                font-weight: 800 !important; 
-                font-size: 18px !important; /* Tăng cỡ chữ tên bài thi */
-                text-transform: uppercase;
-            }
-        </style>
-        
-        <div class="pdf-title-main">BẢNG ĐIỂM CHI TIẾT</div>
-        <div class="pdf-title-sub">${folder.name}</div>
-        
-        <p style="color: #000 !important; font-size: 14px; margin-bottom: 10px;">
-            <b>Môn học:</b> ${folder.subject || "Tự do"}<br>
-            <b>Ngày làm bài:</b> ${testDate} | <b>Tổng số:</b> ${matches.length} thí sinh
-        </p>
+            <p style="font-size: 14px; margin-bottom: 10px;">
+                <b>Môn học:</b> ${folder.subject || "Tự do"}<br>
+                <b>Ngày làm bài:</b> ${testDate} | <b>Tổng số:</b> ${matches.length} thí sinh
+            </p>
+            <hr style="border: 0.5px solid #000;">
     `;
 
     const grouped = matches.reduce((acc, h) => {
@@ -8617,37 +8597,59 @@ async function generatePDFScore(idx) {
     Object.keys(grouped).sort().forEach(code => {
         const students = sortArrayByVietnameseName(grouped[code], 'fullname');
         html += `
-            <p style="font-weight: bold; margin-top: 20px; color: #000 !important;">MÃ ĐỀ: ${code}</p>
-            <table class="pdf-table">
+            <h3 style="margin-top: 20px; font-size: 15px;">MÃ ĐỀ: ${code}</h3>
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
                 <thead>
-                    <tr>
-                        <th style="width: 45px;">STT</th>
-                        <th style="width: 250px;" class="text-left">Họ và Tên thí sinh</th>
-                        <th style="width: 100px;">Số câu đúng</th>
-                        <th style="width: 80px;">Điểm số</th>
-                        <th style="width: 100px;">Thời gian</th>
+                    <tr style="background-color: #f2f2f2;">
+                        <th style="border: 1px solid black; padding: 8px; width: 40px;">STT</th>
+                        <th style="border: 1px solid black; padding: 8px; text-align: left;">Họ và Tên</th>
+                        <th style="border: 1px solid black; padding: 8px; width: 100px;">Đúng</th>
+                        <th style="border: 1px solid black; padding: 8px; width: 70px;">Điểm</th>
+                        <th style="border: 1px solid black; padding: 8px; width: 90px;">Thời gian</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${students.map((s, i) => `<tr><td>${i+1}</td><td class="text-left">${s.fullname}</td><td>${s.score}/${s.total}</td><td><b>${s.point}</b></td><td>${s.duration}</td></tr>`).join('')}
+                    ${students.map((s, i) => `
+                        <tr>
+                            <td style="border: 1px solid black; padding: 8px; text-align: center;">${i+1}</td>
+                            <td style="border: 1px solid black; padding: 8px;">${s.fullname}</td>
+                            <td style="border: 1px solid black; padding: 8px; text-align: center;">${s.score}/${s.total}</td>
+                            <td style="border: 1px solid black; padding: 8px; text-align: center; font-weight: bold;">${s.point}</td>
+                            <td style="border: 1px solid black; padding: 8px; text-align: center;">${s.duration}</td>
+                        </tr>
+                    `).join('')}
                 </tbody>
             </table>`;
     });
 
-    html += `<p style="text-align: right; margin-top: 40px; font-style: italic; color: #000 !important;">Xuất từ hệ thống S-STICK Quiz</p>`;
+    html += `<p style="text-align: right; margin-top: 30px; font-style: italic; font-size: 10px;">Xuất từ hệ thống S-STICK Quiz</p></div>`;
     element.innerHTML = html;
+
+    // BẮT BUỘC: Gắn vào body thì thư viện mới render được ảnh/font trên mobile
+    document.body.appendChild(element);
 
     const opt = { 
         margin: 10, 
-        filename: `DIEM_${folder.name}.pdf`, 
-        image: { type: 'jpeg', quality: 1 }, 
-        html2canvas: { scale: 3, useCORS: true }, 
+        filename: `BangDiem_${folder.name.replace(/\s+/g, '_')}.pdf`, 
+        image: { type: 'jpeg', quality: 0.98 }, 
+        html2canvas: { 
+            scale: 2, // Giảm scale xuống 2 cho nhẹ máy mobile
+            useCORS: true, 
+            letterRendering: true,
+            backgroundColor: '#ffffff'
+        }, 
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
     };
 
-    html2pdf().set(opt).from(element).save().then(() => {
-        showModernToast("Thành công", "Đã lưu file PDF!", "success");
-    });
+    try {
+        await html2pdf().set(opt).from(element).save();
+        showModernToast("Thành công", "Đã tải file PDF!", "success");
+    } catch (err) {
+        console.error("PDF Error:", err);
+        showModernToast("Lỗi", "Không thể tạo PDF trên thiết bị này.", "error");
+    } finally {
+        document.body.removeChild(element); // Xóa sau khi xuất xong
+    }
 }
 
 // 3. HÀM XUẤT EXCEL (BẢN ĐÃ FIX LỖI CÚ PHÁP)

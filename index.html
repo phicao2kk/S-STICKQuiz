@@ -121,6 +121,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
 
+@keyframes flicker {
+    0% { opacity: 0.4; }
+    100% { opacity: 0.7; }
+}
+
 /* Mặc định cho máy tính: Hiện video */
 .video-bg {
     display: block;
@@ -1499,19 +1504,72 @@ input::-webkit-inner-spin-button {
     user-select: none;
 }
 
+.sub-separator-row td {
+    padding: 0 !important;
+    height: 1px;
+}
+.sub-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.2), transparent);
+    width: 80%;
+    margin: 0 auto;
+}
+
     </style>
 </head>
 <body>
-<div id="radar-screen" style="display: none; position: fixed; inset: 0; z-index: 9999999; background: #0f172a; flex-direction: column; align-items: center; justify-content: center; font-family: sans-serif;">
-    <div style="position: relative; width: 200px; height: 200px; margin-bottom: 30px;">
-        <div style="position: absolute; inset: 0; border: 2px solid rgba(99, 102, 241, 0.2); border-radius: 50%;"></div>
-        <div style="position: absolute; inset: 25px; border: 1px solid rgba(99, 102, 241, 0.15); border-radius: 50%;"></div>
-        <div style="position: absolute; top: 50%; left: 50%; width: 50%; height: 2px; background: linear-gradient(to right, transparent, #6366f1); transform-origin: 0% 50%; animation: radar-spin 2s linear infinite;"></div>
-        <img src="https://i.ibb.co/B5P92C4Y/LOGO-S-STICK-c-n-n.png" style="position: absolute; inset: 0; margin: auto; width: 60px; height: 60px; border-radius: 15px; box-shadow: 0 0 30px rgba(99,102,241,0.5);">
+<!-- GIAO DIỆN RADAR SIÊU CẤP - CYBER SCANNER -->
+<div id="radar-screen" style="display: none; position: fixed; inset: 0; z-index: 9999999; background: #030712; flex-direction: column; align-items: center; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden;">
+    
+    <!-- Hiệu ứng lưới nền (Grid) cho chuyên nghiệp -->
+    <div style="position: absolute; inset: 0; background-image: linear-gradient(rgba(99, 102, 241, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(99, 102, 241, 0.05) 1px, transparent 1px); background-size: 50px 50px;"></div>
+
+    <div style="position: relative; width: 600px; height: 600px; max-width: 95vw; max-height: 95vw; display: flex; align-items: center; justify-content: center;">
+        
+        <!-- Các vòng tròn chính với hiệu ứng Neon -->
+        <div style="position: absolute; inset: 0; border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 50%; box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.1);"></div>
+        <div style="position: absolute; inset: 15%; border: 1px solid rgba(99, 102, 241, 0.15); border-radius: 50%;"></div>
+        <div style="position: absolute; inset: 30%; border: 1px solid rgba(99, 102, 241, 0.1); border-radius: 50%;"></div>
+        <div style="position: absolute; inset: 45%; border: 2px dashed rgba(99, 102, 241, 0.05); border-radius: 50%; animation: radar-spin 10s linear infinite reverse;"></div>
+
+        <!-- Vạch chia độ radar (Decor) -->
+        <div style="position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 1px solid rgba(255,255,255,0.02); background: repeating-conic-gradient(from 0deg, transparent 0deg 1deg, rgba(99, 102, 241, 0.1) 1deg 2deg, transparent 2deg 30deg);"></div>
+
+        <!-- Các điểm sáng "Blips" giả lập dò tìm -->
+        <div class="blip" style="position: absolute; top: 20%; left: 30%; width: 6px; height: 6px; background: #22d3ee; border-radius: 50%; box-shadow: 0 0 10px #22d3ee; animation: pulse 2s infinite;"></div>
+        <div class="blip" style="position: absolute; top: 60%; left: 80%; width: 4px; height: 4px; background: #f472b6; border-radius: 50%; box-shadow: 0 0 10px #f472b6; animation: pulse 3s infinite 1s;"></div>
+        <div class="blip" style="position: absolute; top: 75%; left: 40%; width: 5px; height: 5px; background: #6366f1; border-radius: 50%; box-shadow: 0 0 10px #6366f1; animation: pulse 2.5s infinite 0.5s;"></div>
+
+        <!-- Hiệu ứng quét bóng mờ (Sweep) -->
+        <div style="position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 50%, rgba(99, 102, 241, 0.3) 100%); animation: radar-spin 3s linear infinite;"></div>
+        
+        <!-- Kim quét Laser chính -->
+        <div style="position: absolute; top: 50%; left: 50%; width: 50%; height: 2px; background: linear-gradient(to right, transparent, #6366f1); transform-origin: 0% 50%; animation: radar-spin 3s linear infinite; filter: drop-shadow(0 0 8px #6366f1);"></div>
+
+        <!-- KHỐI LOGO TRUNG TÂM (ĐÃ LÀM TRÒN VÀ GLOW) -->
+        <div style="position: relative; z-index: 10; width: 100px; height: 100px; padding: 5px; background: #0f172a; border-radius: 50%; border: 2px solid #6366f1; box-shadow: 0 0 30px rgba(99, 102, 241, 0.6); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+            <img src="https://i.ibb.co/B5P92C4Y/LOGO-S-STICK-c-n-n.png" style="width: 80%; height: 80%; object-fit: contain; border-radius: 50%;">
+        </div>
+
+        <!-- Vòng xoay phụ quanh logo -->
+        <div style="position: absolute; width: 130px; height: 130px; border: 1px dashed #6366f1; border-radius: 50%; opacity: 0.3; animation: radar-spin 5s linear infinite;"></div>
     </div>
-    <div style="text-align: center;">
-        <h2 class="brand-run" style="font-size: 22px; letter-spacing: 5px; color: white; margin: 0;">S-STICK RADAR</h2>
-        <p id="radar-status-text" style="color: #818cf8; font-size: 11px; font-weight: 800; text-transform: uppercase; margin-top: 15px; letter-spacing: 2px;">Đang quét mạch máu hệ thống...</p>
+
+    <!-- PHẦN CHỮ BÊN DƯỚI -->
+    <div style="text-align: center; margin-top: 40px; z-index: 20;">
+        <h2 class="brand-run" style="font-size: 32px; letter-spacing: 12px; color: white; margin: 0; text-shadow: 0 0 20px rgba(99,102,241,0.8);">S-STICK SCANNING</h2>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 20px; background: rgba(99,102,241,0.1); padding: 8px 20px; border-radius: 50px; border: 1px solid rgba(99,102,241,0.2);">
+            <div style="width: 10px; height: 10px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px #10b981;"></div>
+            <p id="radar-status-text" style="color: #cbd5e1; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Đang khởi chạy hệ thống bảo mật...</p>
+        </div>
+    </div>
+
+    <!-- Thông số chạy góc màn hình cho giống máy tính quân sự -->
+    <div style="position: absolute; bottom: 30px; left: 30px; color: #6366f1; font-family: monospace; font-size: 10px; line-height: 2; opacity: 0.6; animation: flicker 0.15s infinite alternate;">
+        <div>SYS: S-STICK QUIZ V5.0</div>
+        <div>NODE: SOUTH_ASIA_01</div>
+        <div>DEV: CAO NGUYEN HONG PHI</div>
+        <div>ID: <span id="random-id">0978877125</span></div>
     </div>
 </div>
 
@@ -3034,71 +3092,169 @@ function renderHistoryTable() {
         return;
     }
 
-    const grouped = quizHistory.reduce((acc, item) => {
-        const key = item.examName || "Bộ đề không tên";
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(item);
-        return acc;
-    }, {});
+    // 1. CHUẨN HÓA & LẤY THÔNG TIN MÔN HỌC (Logic tách tên bộ đề gốc)
+    const processedHistory = quizHistory.map(h => {
+        const rawName = h.examName || "Bộ đề không tên";
+        // Tách lấy tên gốc (ví dụ: lấy "KIỂM TRA" từ "KIỂM TRA (mã 101)")
+        const folderBaseName = rawName.split(' (mã')[0].trim(); 
+        
+        // Tìm môn học tương ứng từ Ngân hàng bộ đề
+        const folderMatch = foldersDB.find(f => f.name.trim().toLowerCase() === folderBaseName.toLowerCase());
+        const dispSubject = folderMatch ? folderMatch.subject : (h.subject || "TỰ DO");
+        
+        return { ...h, folderBaseName, dispSubject };
+    });
+
+    // 2. SẮP XẾP: Theo tên Bộ đề -> Theo Mã đề -> Theo Tên thí sinh
+    processedHistory.sort((a, b) => {
+        if (a.folderBaseName !== b.folderBaseName) return a.folderBaseName.localeCompare(b.folderBaseName, 'vi');
+        if (a.examCode !== b.examCode) return (a.examCode || "").localeCompare(b.examCode || "", 'vi');
+        return a.fullname.localeCompare(b.fullname, 'vi');
+    });
 
     let fullHtml = "";
     
-    for (const examName in grouped) {
-        const folderSubmissions = grouped[examName];
-        
-        // Hàng tiêu đề của từng bộ đề + Nút xóa tất cả của bộ đề đó
-        fullHtml += `
-            <tr class="bg-indigo-500/10">
-                <td colspan="5" class="py-3 px-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <span class="text-indigo-400 font-black text-sm uppercase">📂 BỘ ĐỀ: ${examName}</span>
-                            <span class="bg-indigo-500/20 text-[10px] px-2 py-0.5 rounded-full text-indigo-300">${folderSubmissions.length} lượt làm bài</span>
+    processedHistory.forEach((h, i) => {
+        const prev = processedHistory[i - 1];
+        const next = processedHistory[i + 1];
+
+        // --- A. TIÊU ĐỀ TỔNG (BÀI THI + MÔN HỌC) ---
+        // Chỉ hiện khi bắt đầu một nhóm bài thi mới
+        if (!prev || prev.folderBaseName !== h.folderBaseName) {
+            fullHtml += `
+                <tr class="bg-slate-800/60 border-t border-indigo-500/30">
+                    <td colspan="5" class="py-5 px-6 border-l-4 border-indigo-500">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center text-2xl shadow-inner">📂</div>
+                                <div>
+                                    <span class="text-[10px] text-indigo-400 font-black uppercase tracking-[3px] block mb-1">BÀI THI</span>
+                                    <b class="text-xl text-white font-black uppercase">${h.folderBaseName}</b>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[9px] text-slate-500 font-bold uppercase block mb-1">MÔN HỌC</span>
+                                <b class="text-emerald-400 font-black tracking-widest uppercase text-sm bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20">${h.dispSubject}</b>
+                            </div>
                         </div>
-                        <!-- NÚT XÓA TẤT CẢ LỊCH SỬ CỦA BỘ ĐỀ NÀY -->
-                        <button onclick="clearSpecificFolderHistory('${examName}')" class="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white text-[10px] px-3 py-1 rounded-lg transition-all font-bold">
-                            🗑️ XÓA SẠCH LỊCH SỬ ĐỀ NÀY
+                    </td>
+                </tr>`;
+        }
+
+        // --- B. TIÊU ĐỀ NHÁNH (MÃ ĐỀ) + NÚT XÓA NHÓM ---
+        if (!prev || prev.examCode !== h.examCode || prev.folderBaseName !== h.folderBaseName) {
+            fullHtml += `
+                <tr class="bg-indigo-500/5">
+                    <td colspan="5" class="py-2 px-10">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <span class="text-orange-400">⚡</span>
+                                <span class="text-slate-400 text-[9px] font-black uppercase">MÃ ĐỀ:</span>
+                                <b class="text-[12px] text-indigo-300 font-mono tracking-[4px]">${h.examCode || "GỐC"}</b>
+                            </div>
+                            <button onclick="clearSpecificExamCodeHistory('${h.examName}', '${h.examCode}')" 
+                                    class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white text-[9px] px-3 py-1 rounded-lg font-black transition-all border border-red-500/20">
+                                🗑️ XÓA TOÀN BỘ MÃ ${h.examCode}
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+        }
+
+        // --- C. DÒNG DỮ LIỆU THÍ SINH (Gồm nhãn GV Thu và nút Xóa riêng) ---
+        const forcedBadge = h.isForced ? `<span class="ml-2 px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[8px] font-black rounded border border-red-500/30">GV THU</span>` : '';
+        
+        fullHtml += `
+            <tr class="hover:bg-white/5 transition border-b border-white/5">
+                <td class="pl-16 py-4">
+                    <div class="flex items-center">
+                        <span class="font-bold text-white text-sm">${h.fullname}</span>
+                        ${forcedBadge}
+                    </div>
+                    <div class="text-[9px] text-slate-500 font-mono mt-0.5 opacity-60">ID: ${h.user} | ${h.time}</div>
+                </td>
+                <td class="text-center text-emerald-400 font-black">${h.score}/${h.total}</td>
+                <td class="text-center font-mono text-indigo-400 font-bold">${h.point}</td>
+                <td class="text-center">
+                    <span class="px-2 py-1 rounded-md text-[9px] font-bold ${h.point >= 5 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}">
+                        ${h.percent}%
+                    </span>
+                </td>
+                <td class="text-right pr-6">
+                    <div class="flex gap-2 justify-end">
+                        <button onclick="viewHistoryDetailByKey('${h.fbKey}')" class="bg-white/5 hover:bg-indigo-600 p-2 rounded-xl text-[10px] font-bold text-indigo-300 hover:text-white transition-all">CHI TIẾT</button>
+                        <button onclick="resetSingleAttempt('${h.fbKey}', '${h.examCode}', '${h.user}')" class="bg-red-500/10 hover:bg-red-600 p-2 rounded-xl text-red-500 hover:text-white transition-all" title="Xóa thí sinh này">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                         </button>
                     </div>
                 </td>
-            </tr>
-        `;
+            </tr>`;
 
-        sortArrayByVietnameseName(folderSubmissions, 'fullname'); 
-        folderSubmissions.slice().forEach((h) => {
-    fullHtml += `
-        <tr class="hover:bg-white/5 transition border-b border-white/5">
-            <td class="pl-8 py-4">
-                <div class="font-bold text-white">${h.fullname}</div>
-                <div class="text-[9px] text-slate-500 font-mono">
-                    Ngày: ${h.time} | Làm bài trong: <b class="text-indigo-400">${h.duration || 'N/A'}</b>
-                </div>
-            </td>
-            <td class="text-center">
-                <span class="text-emerald-400 font-black">${h.score}</span><span class="text-slate-500 text-xs">/${h.total}</span>
-            </td>
-            <td class="text-center font-mono text-indigo-400 font-bold">${h.point}</td>
-            <td class="text-center">
-                <span class="px-2 py-1 rounded-md text-[9px] font-bold ${h.point >= 8 ? 'bg-emerald-500/20 text-emerald-400' : (h.point >= 4 ? 'bg-orange-500/20 text-orange-400' : 'bg-red-500/20 text-red-400')}">
-                    ${h.percent}%
-                </span>
-            </td>
-            <td class="text-right pr-4">
-                <div class="flex justify-end gap-2">
-                    <button onclick="viewHistoryDetailByKey('${h.fbKey}')" class="bg-white/5 hover:bg-indigo-600 p-2 rounded-xl transition-all group">
-                        <span class="text-[10px] text-indigo-300 group-hover:text-white font-bold px-2">CHI TIẾT</span>
-                    </button>
-                    <button onclick="resetSingleAttempt('${h.fbKey}', '${h.examCode}', '${h.user}')" class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white p-2 rounded-xl transition-all" title="Xóa & Cho làm lại">
-                        🔄
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `;
-});
-    }
+        // --- D. XỬ LÝ NGĂN CÁCH GIỮA CÁC BỘ ĐỀ KHÁC NHAU ---
+        if (next && next.folderBaseName !== h.folderBaseName) {
+            fullHtml += `
+                <tr class="separator-row">
+                    <td colspan="5" class="py-8 px-8">
+                        <div class="w-full flex items-center gap-4 opacity-20">
+                            <div class="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent"></div>
+                            <span class="text-[10px] text-white tracking-[10px] font-black">•••••</span>
+                            <div class="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent"></div>
+                        </div>
+                    </td>
+                </tr>`;
+        }
+    });
+
     container.innerHTML = fullHtml;
 }
+
+// HÀM XÓA RIÊNG LẺ 1 THÍ SINH
+async function resetSingleAttempt(fbKey, examCode, studentId) {
+    const confirmMsg = `Bạn muốn xóa lịch sử và cho phép thí sinh này thi lại?`;
+    if (await sysConfirm(confirmMsg)) {
+        sysNotify("Đang xử lý...", "Đang mở khóa cho thí sinh...", "info");
+        try {
+            const safeAdmin = currentUser.user.replace(/\./g, '_');
+            const updates = {};
+            // 1. Xóa trong kho điểm của Admin
+            updates[`users_data/${safeAdmin}/quiz_history/${fbKey}`] = null;
+            // 2. Mở chặn (Xóa ổ khóa) để thí sinh thi lại được
+            updates[`system/submissions/${safeAdmin}/${examCode}/${studentId}`] = null;
+            
+            await rdb.ref().update(updates);
+            showModernToast("Thành công", "Đã xóa kết quả thí sinh.", "success");
+        } catch (e) {
+            sysNotify("Lỗi", "Không thể xóa dữ liệu!", "error");
+        }
+    }
+}
+
+// HÀM XÓA TOÀN BỘ THEO MÃ ĐỀ (TRONG MỘT NHÓM)
+async function clearSpecificExamCodeHistory(examName, examCode) {
+    // Lọc ra danh sách thí sinh thuộc mã đề này
+    const targets = quizHistory.filter(h => h.examName === examName && h.examCode === examCode);
+    if (targets.length === 0) return;
+
+    const confirmMsg = `Bạn muốn xóa toàn bộ <b>${targets.length}</b> thí sinh thuộc mã đề <b>${examCode}</b>?`;
+    if (await sysConfirm(confirmMsg)) {
+        sysNotify("Đang xử lý...", "Đang dọn dẹp mã đề...", "info");
+        try {
+            const safeAdmin = currentUser.user.replace(/\./g, '_');
+            const updates = {};
+            targets.forEach(h => {
+                updates[`users_data/${safeAdmin}/quiz_history/${h.fbKey}`] = null;
+                updates[`system/submissions/${safeAdmin}/${examCode}/${h.user}`] = null;
+            });
+            await rdb.ref().update(updates);
+            showModernToast("Thành công", `Đã dọn dẹp xong mã đề ${examCode}`, "success");
+        } catch (e) {
+            sysNotify("Lỗi", "Không thể hoàn tất thao tác xóa!", "error");
+        }
+    }
+}
+
 
 // Bổ sung hàm xem chi tiết theo Key
 function viewHistoryDetailByKey(fbKey) {
@@ -4108,16 +4264,25 @@ const radar = document.getElementById('radar-screen');
 
 // ... bên trong loginSuccess()
 } else {
-    // LOGIC CHO THÍ SINH
+    // LOGIC CHO THÍ SINH (ĐÃ FIX LỖI LOAD TÊN)
     if (pwSection) pwSection.classList.add('hidden'); 
     if (profileMenu) profileMenu.innerHTML = "👤 Hồ sơ cá nhân"; 
     if (adminZone) adminZone.classList.add('hidden');
     if (studentZone) studentZone.classList.remove('hidden');
 
+    // --- ĐOẠN BỔ SUNG: CẬP NHẬT TÊN BÀI THI & MÔN HỌC ---
+    const examNameEl = document.getElementById('display-exam-name');
+    const examSubjectEl = document.getElementById('display-exam-subject');
+    const examTimeEl = document.getElementById('display-exam-time');
+
+    if (examNameEl) examNameEl.innerText = currentUser.examName || "Bài thi trắc nghiệm";
+    if (examSubjectEl) examSubjectEl.innerText = "MÔN HỌC: " + (currentUser.subject || "TỰ DO");
+    if (examTimeEl) examTimeEl.innerText = (currentUser.quizDuration || 45) + " Phút";
+    // ------------------------------------------------
+
     // Kiểm tra xem có bài thi đang làm dở không
     const savedQuiz = localStorage.getItem('quiz_save_' + currentUser.user);
     if (savedQuiz) {
-        // Nếu có hộp đen, tự động kích hoạt chế độ vào thi lại luôn
         startQuizFromCode(); 
         return; 
     }
@@ -5070,7 +5235,7 @@ async function generateChildCodes(idx) {
             // 2. CHUẨN BỊ LỆNH CẬP NHẬT HÀNG LOẠT
             const updates = {};
             const duration = parseInt(folder.duration) || 45;
-            const expiry = Date.now() + (duration * 60 * 1000);
+            const expiry = getServerTime() + (duration * 60 * 1000);
 
             // --- BƯỚC QUAN TRỌNG: LỆNH THU HỒI MÃ CŨ ---
             myOldCodes.forEach(oldCode => {
@@ -5329,10 +5494,7 @@ function shareFolder(i) {
     const folder = foldersDB[i]; 
     if (!folder) return;
 
-    // Tạo mã ngẫu nhiên
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Kiểm tra và ép kiểu số cho duration để tránh lỗi NaN
     const duration = parseInt(folder.duration) || 45; 
     const expiry = Date.now() + (duration * 60 * 1000);
     
@@ -5340,11 +5502,11 @@ function shareFolder(i) {
     folder.expiresAt = expiry;
     saveFolders();
     
-    // DÙNG CÁCH NÀY ĐỂ ĐẢM BẢO KHÔNG CÓ GIÁ TRỊ UNDEFINED
     const shareData = { 
         admin: currentUser.user || "admin", 
         folderIdx: i,
-        subject: folder.subject || "Tự do", // Dự phòng nếu môn học trống
+        examName: folder.name, // THÊM DÒNG NÀY ĐỂ GỬI TÊN ĐỀ
+        subject: folder.subject || "Tự do",
         duration: duration,
         expiresAt: expiry 
     };
@@ -5375,49 +5537,35 @@ function handleJoinQuiz() {
 
     rdb.ref('system/global_share_map/' + code).once('value', async (s) => {
         const data = s.val();
-        if(!data || getServerTime() > data.expiresAt) {
+        if(!data) {
             closeNotify();
-            return sysNotify("Lỗi", "Mã đề không tồn tại hoặc hết hạn!", "error");
+            return sysNotify("Lỗi", "Mã đề không tồn tại!", "error");
         }
 
-        // --- CẬP NHẬT GIAO DIỆN CHỜ THI ---
-        document.getElementById('display-exam-name').innerText = data.examName || "Bài thi " + code;
-        document.getElementById('display-exam-subject').innerText = "MÔN HỌC: " + (data.subject || "TỰ DO").toUpperCase();
-        
-        // CẬP NHẬT THỜI GIAN THI THỰC TẾ (Nếu bạn đã đặt ID cho thẻ HTML ở bước trước)
-        const durationDisplay = document.getElementById('display-exam-time');
-        if (durationDisplay) {
-            durationDisplay.innerText = (data.duration || 45) + " Phút";
-        }
-
+        const now = getServerTime();
         const safeUser = name.replace(/[.$#[\]]/g, "_") + "_" + code; 
         const safeAdmin = data.admin.replace(/\./g, '_');
         currentExamCode = code;
 
-        // BƯỚC 1: KIỂM TRA XEM THÍ SINH NÀY ĐÃ CÓ TRONG HỆ THỐNG GIÁM SÁT CHƯA
         const sessionRef = rdb.ref(`system/active_sessions/${safeAdmin}/${code}/${safeUser}`);
         const snapSession = await sessionRef.once('value');
         const sData = snapSession.val();
 
-        if (!sData) {
-            await sessionRef.update({
-                name: name,
-                startTime: getServerTime(),
-                status: 'ĐÃ TRUY CẬP VÀO ĐỀ', 
-                score: '---',
-                examName: data.examName || "Đề thi " + code,
-                lastActive: getServerTime() 
-            });
+        const isExistingStudentWithTime = sData && sData.endTime && now < sData.endTime;
+
+        if (!isExistingStudentWithTime) {
+            if (now > data.expiresAt) {
+                closeNotify();
+                return sysNotify("Hết hạn", "Mã đề này đã hết thời gian cho phép vào thi mới!", "error");
+            }
         }
 
-        // BƯỚC 2: KIỂM TRA XEM ĐÃ NỘP BÀI CHƯA (Ổ KHÓA)
         rdb.ref('system/submissions/' + safeAdmin + '/' + code + '/' + safeUser).once('value', (sub) => {
             if (sub.exists()) {
                 closeNotify();
-                return sysNotify("Từ chối", "Bạn đã hoàn thành bài này trước đó rồi!", "error");
+                return sysNotify("Từ chối", "Bạn đã hoàn thành bài thi này trước đó!", "error");
             }
 
-            // LƯU THÔNG TIN VÀO MÁY THÍ SINH
             currentUser = { 
                 name: name, 
                 user: safeUser, 
@@ -5426,12 +5574,23 @@ function handleJoinQuiz() {
                 examCode: code, 
                 examName: data.examName || "Bài thi",
                 subject: data.subject || "TỰ DO",
-                quizDuration: data.duration || 45, // LƯU SỐ PHÚT VÀO PHIÊN ĐĂNG NHẬP
+                quizDuration: data.duration || 45,
                 endTimeMs: 0 
             };
             localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
 
-            // Tải câu hỏi
+            const adminKey = data.admin.replace(/\./g, '_');
+            const studentKey = currentUser.user;
+
+            rdb.ref(`system/active_sessions/${adminKey}/${code}/${safeUser}`).update({
+                name: name,
+                status: 'ĐÃ TRUY CẬP VÀO ĐỀ', 
+                examName: data.examName || "Bài thi",
+                score: '---',
+                startTime: 0,
+                endTime: 0
+            });
+
             if (data.isChildCode && data.fixedQuestions) {
                 activeQuestions = data.fixedQuestions;
             } else {
@@ -5443,6 +5602,61 @@ function handleJoinQuiz() {
 
             setTimeout(() => {
                 loginSuccess(); 
+                
+                const checkCodeRef = rdb.ref('system/global_share_map/' + code);
+
+                // --- HÀM XỬ LÝ ĐUỔI THÍ SINH (DÙNG CHUNG) ---
+                const kickOutStudent = (reasonTitle, reasonMsg) => {
+                    checkCodeRef.off(); // Ngừng lắng nghe
+                    if (window.localExpiryTimer) clearTimeout(window.localExpiryTimer);
+
+                    // 1. Cập nhật Radar giáo viên ngay lập tức
+                    rdb.ref(`system/active_sessions/${adminKey}/${code}/${studentKey}`).update({
+                        status: 'CHƯA LÀM BÀI',
+                        score: '0.0'
+                    });
+
+                    // 2. Thông báo lỗi lớn
+                    sysNotify(reasonTitle, `
+                        <div class="text-center">
+                            <b class="text-red-500 text-lg uppercase">${reasonMsg}</b><br>
+                            <p class="text-slate-300 mt-2">Hệ thống sẽ tự động quay lại màn hình chính...</p>
+                        </div>
+                    `, "error");
+
+                    // 3. Xóa session và thoát
+                    setTimeout(() => {
+                        localStorage.removeItem('sys_logged_user');
+                        location.reload();
+                    }, 4000);
+                };
+
+                // --- 1. REALTIME LISTENER (Khi admin xóa mã) ---
+                checkCodeRef.on('value', (snapshot) => {
+                    const mapData = snapshot.val();
+                    const isStillAtWaitingRoom = !document.getElementById('student-zone').classList.contains('hidden');
+                    
+                    if (isStillAtWaitingRoom) {
+                        if (!snapshot.exists()) {
+                            kickOutStudent("MÃ ĐỀ BỊ HỦY", "GIÁO VIÊN ĐÃ THU HỒI MÃ THI");
+                        } else if (getServerTime() > mapData.expiresAt) {
+                            kickOutStudent("HẾT GIỜ TRUY CẬP", "THỜI GIAN VÀO THI ĐÃ KẾT THÚC");
+                        }
+                    }
+                });
+
+                // --- 2. BỘ ĐẾM GIÂY CHÍNH XÁC (Trường hợp thí sinh treo máy để mã tự hết hạn) ---
+                const timeUntilExpiry = data.expiresAt - getServerTime();
+                if (timeUntilExpiry > 0) {
+                    if (window.localExpiryTimer) clearTimeout(window.localExpiryTimer);
+                    window.localExpiryTimer = setTimeout(() => {
+                        const isStillAtWaitingRoom = !document.getElementById('student-zone').classList.contains('hidden');
+                        if (isStillAtWaitingRoom) {
+                            kickOutStudent("HẾT GIỜ TRUY CẬP", "THỜI GIAN VÀO THI ĐÃ KẾT THÚC");
+                        }
+                    }, timeUntilExpiry);
+                }
+
                 closeNotify();
             }, 500);
         });
@@ -5450,64 +5664,81 @@ function handleJoinQuiz() {
 }
 
 async function startQuizFromCode() {
-    if (!currentUser) {
-        currentUser = JSON.parse(localStorage.getItem('sys_logged_user'));
-    }
-
-    if (!currentUser || !currentUser.examCode) {
-        return sysNotify("Lỗi", "Không tìm thấy phiên thi. Vui lòng quay lại nhập mã đề!", "error");
-    }
+    if (!currentUser) currentUser = JSON.parse(localStorage.getItem('sys_logged_user'));
+    if (!currentUser || !currentUser.examCode) return sysNotify("Lỗi", "Không tìm thấy phiên thi!", "error");
 
     const examCode = currentUser.examCode;
-    sysNotify("⏳ ĐANG ĐỒNG BỘ", "Đang lấy giờ thi từ máy chủ giám sát...", "info");
+    sysNotify("⏳ ĐANG ĐỒNG BỘ", "Đang kiểm tra thời hạn mã đề...", "info");
 
     try {
+        // 1. Lấy dữ liệu mã đề mới nhất từ máy chủ
         const mapSnap = await rdb.ref(`system/global_share_map/${examCode}`).once('value');
         const mapData = mapSnap.val();
-        
-        if (!mapData) {
-            closeNotify();
-            return sysNotify("Lỗi", "Mã đề không tồn tại hoặc đã hết hạn!", "error");
-        }
-
-        // Tạo Key chuẩn Firebase
-        const rawAdmin = currentUser.adminSource || mapData.admin || "admin";
-        const adminKey = rawAdmin.replace(/[.#$\[\]]/g, "_");
-        const studentKey = currentUser.user.replace(/[.#$\[\]]/g, "_");
-
-        // 1. Lấy dữ liệu từ Giám sát (Radar) trước
-        const sessionRef = rdb.ref(`system/active_sessions/${adminKey}/${examCode}/${studentKey}`);
-        const snap = await sessionRef.once('value');
-        const sData = snap.val();
-
         const now = getServerTime();
-    let endMs = 0;
 
-    // LOGIC LẤY GIỜ CHUẨN:
-    if (sData && sData.endTime && sData.endTime > now) {
-        endMs = sData.endTime;
-    } else {
-        // --- SỬA TẠI ĐÂY ---
-        // Lấy số phút từ thông tin đã lưu thay vì số 45
-        const quizMins = currentUser.quizDuration || 45; 
-        endMs = now + (quizMins * 60 * 1000); 
+        // 2. CHỐT CHẶN: Nếu mã đề không tồn tại hoặc đã hết hạn (expiresAt)
+        if (!mapData || now > mapData.expiresAt) {
+            const adminKey = (currentUser.adminSource || (mapData ? mapData.admin : "admin")).replace(/\./g, '_');
+            const studentKey = currentUser.user.replace(/[.#$\[\]]/g, "_");
 
-        await sessionRef.update({
-            status: 'ĐANG LÀM BÀI',
-            startTime: now,
-            endTime: endMs, // Gửi thời gian kết thúc chuẩn lên Radar
-            name: currentUser.name,
-            examName: currentUser.examName || mapData.examName || "Bài thi"
-        });
-            console.log("⏱️ Thiết lập giờ thi mới.");
+            await rdb.ref(`system/active_sessions/${adminKey}/${examCode}/${studentKey}`).update({
+                status: 'CHƯA LÀM BÀI',
+                score: '0.0'
+            });
+
+            closeNotify();
+            sysNotify("HẾT GIỜ TRUY CẬP", `
+                <div class="text-center">
+                    <b class="text-red-500 text-lg uppercase">MÃ ĐỀ ĐÃ BỊ THU HỒI</b><br>
+                    <p class="text-slate-300 mt-2">Đã hết thời gian cho phép bắt đầu làm bài thi này.</p>
+                </div>
+            `, "error");
+
+            setTimeout(() => {
+                localStorage.removeItem('quiz_save_' + currentUser.user);
+                localStorage.removeItem('sys_logged_user');
+                location.reload();
+            }, 3500);
+            return;
         }
 
-        // 3. Cập nhật vào biến hệ thống
-        currentUser.endTimeMs = endMs;
-        timeLeft = Math.floor((endMs - now) / 1000); // Cập nhật lại timeLeft cho startTimer
+        // --- 3. LOGIC KHÔI PHỤC HOẶC TẠO MỚI (PHẦN KẾT HỢP) ---
+        const adminKey = (currentUser.adminSource || mapData.admin).replace(/\./g, '_');
+        const studentKey = currentUser.user.replace(/[.#$\[\]]/g, "_");
+        const sessionRef = rdb.ref(`system/active_sessions/${adminKey}/${examCode}/${studentKey}`);
+        
+        // Kiểm tra xem trong máy có bản lưu nháp (Hộp đen) không
+        const blackBox = JSON.parse(localStorage.getItem('quiz_save_' + currentUser.user) || 'null');
 
-        // 4. Khôi phục câu hỏi & đáp án (BlackBox)
-        if (!activeQuestions || activeQuestions.length === 0) {
+        if (blackBox && blackBox.examCode === examCode) {
+            // TRƯỜNG HỢP A: CÓ DỮ LIỆU CŨ -> KHÔI PHỤC
+            activeQuestions = blackBox.activeQuestions;
+            userAnswers = blackBox.userAnswers;
+            currentIdx = blackBox.currentIdx || 0;
+            currentUser.endTimeMs = blackBox.endTimeMs;
+        } else {
+            // TRƯỜNG HỢP B: KHÔNG CÓ LƯU NHÁP -> CHẠY LOGIC CŨ CỦA BẠN
+            const snap = await sessionRef.once('value');
+            const sData = snap.val();
+            let endMs = 0;
+
+            if (sData && sData.endTime && sData.endTime > now) {
+                endMs = sData.endTime;
+            } else {
+                const quizMins = currentUser.quizDuration || 45; 
+                endMs = now + (quizMins * 60 * 1000); 
+                await sessionRef.update({
+                    status: 'ĐANG LÀM BÀI',
+                    startTime: now,
+                    endTime: endMs,
+                    name: currentUser.name,
+                    examName: currentUser.examName || mapData.examName || "Bài thi"
+                });
+            }
+
+            currentUser.endTimeMs = endMs;
+
+            // Tải câu hỏi lần đầu
             if (mapData.isChildCode && mapData.fixedQuestions) {
                 activeQuestions = mapData.fixedQuestions;
             } else {
@@ -5515,35 +5746,26 @@ async function startQuizFromCode() {
                 const fVal = fSnap.val();
                 activeQuestions = (fVal && fVal.isShuffle) ? shuffleArray([...fVal.questions]) : fVal.questions;
             }
-        }
-
-        const savedBlackBox = localStorage.getItem('quiz_save_' + currentUser.user);
-        if (savedBlackBox) {
-            const data = JSON.parse(savedBlackBox);
-            if (data.examCode === examCode && data.userAnswers) {
-                userAnswers = data.userAnswers;
-                currentIdx = data.currentIdx || 0;
-            } else {
-                userAnswers = activeQuestions.map(() => -1);
-            }
-        } else {
+            // Reset đáp án về -1 vì là lần đầu
             userAnswers = activeQuestions.map(() => -1);
+            currentIdx = 0;
         }
 
-        // 5. Lưu lại thông tin đã đồng bộ
+        // 4. Kích hoạt giao diện và bắt đầu thi
+        timeLeft = Math.floor((currentUser.endTimeMs - now) / 1000);
         localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
-        
         closeNotify();
+        
         document.getElementById('student-zone')?.classList.add('hidden');
         showPage('page-quiz-view');
-        
         renderQuestion();
         startTimer();
+        saveQuizBlackBox(); // Lưu ngay trạng thái hiện tại để "chốt" bộ đề
 
     } catch (err) {
-        console.error("Lỗi đồng bộ thời gian:", err);
+        console.error("Lỗi StartQuiz:", err);
         closeNotify();
-        sysNotify("Lỗi kết nối", "Không thể lấy giờ thi. Vui lòng kiểm tra mạng!", "error");
+        sysNotify("Lỗi kết nối", "Không thể đồng bộ dữ liệu với máy chủ!", "error");
     }
 }
 
@@ -5560,16 +5782,41 @@ function saveCurrentProgress() {
 
 // Cập nhật hàm selectOption để tự động lưu
 function selectOption(val) {
-    // 1. Gán đáp án vào mảng tạm trong bộ nhớ
+    // 1. Cập nhật đáp án vào mảng tạm của thí sinh
     userAnswers[currentIdx] = val;
-    
-    // 2. Vẽ lại giao diện (để hiện màu Indigo) và bảng điều hướng
+
+    // 2. Cập nhật giao diện làm bài ngay lập tức
     renderNav(); 
     renderQuestion(); 
-    
-    // 3. LƯU NGAY VÀO HỘP ĐEN (localStorage)
-    // Phải lưu ở đây thì khi F5, hệ thống mới biết bạn đã chọn gì
+
+    // 3. QUAN TRỌNG: Lưu ngay vào "Hộp đen" LocalStorage để chống F5
     saveQuizBlackBox(); 
+
+    // 4. ĐỒNG BỘ TIẾN ĐỘ LÊN RADAR GIÁO VIÊN (Chỉ dành cho thí sinh)
+    if (!currentUser.isAdmin && currentUser.adminSource) {
+        const adminKey = currentUser.adminSource.replace(/\./g, '_');
+        
+        // Tính điểm hệ 10 hiện tại dựa trên số câu đã làm đúng
+        let correctCount = 0;
+        activeQuestions.forEach((q, i) => {
+            // Sử dụng Number() để ép kiểu, tránh lỗi so sánh 0 == "0"
+            if (userAnswers[i] !== -1 && Number(userAnswers[i]) === Number(q.correct)) {
+                correctCount++;
+            }
+        });
+
+        // Tính điểm hệ 10, làm tròn 1 chữ số thập phân (Ví dụ: 7.5, 8.2)
+        const currentPoint = activeQuestions.length > 0 
+            ? ((correctCount / activeQuestions.length) * 10).toFixed(1) 
+            : '0.0';
+
+        // Gửi dữ liệu lên Firebase active_sessions
+        rdb.ref(`system/active_sessions/${adminKey}/${currentUser.examCode}/${currentUser.user}`).update({
+            score: currentPoint,             // Điểm số nhảy liên tục trên màn hình giáo viên
+            lastUpdated: getServerTime(),    // Mốc thời gian tương tác cuối cùng
+            tempAnswers: userAnswers         // Gửi mảng đáp án để giáo viên có thể "Thu bài" hộ
+        });
+    }
 }
 
 // Cập nhật startTimer để lưu thời gian mỗi giây (hoặc mỗi 5s để tránh lag)
@@ -9058,6 +9305,7 @@ function stopAllQuizAudio() {
 // Chỉ cần 1 biến duy nhất này để quản lý bộ đếm giờ toàn cục của giáo viên
 let monitorInterval = null; 
 let monitorCache = {}; // THÊM BIẾN NÀY ĐỂ LƯU DỮ LIỆU CHẠY GIỜ
+let lastKnownTotalCandidates = -1; // Biến dùng để so sánh số lượng
 
 function listenToCandidates() {
     if (!currentUser || !currentUser.isAdmin) return;
@@ -9066,172 +9314,270 @@ function listenToCandidates() {
     const body = document.getElementById('candidates-table-body');
     const ref = rdb.ref(`system/active_sessions/${safeAdmin}`);
 
-    if (body && !candidatesInitialDataLoaded) {
+    // 1. Hiển thị trạng thái quét radar ban đầu
+    if (body && !window.candidatesInitialDataLoaded) {
         body.innerHTML = `<tr><td colspan="5" class="text-center py-12"><p class="animate-pulse text-indigo-400 font-bold text-xs uppercase tracking-widest">📡 Đang quét radar thí sinh...</p></td></tr>`;
     }
 
-    ref.off();
+    ref.off(); // Xóa listener cũ để tránh trùng lặp dữ liệu
     ref.on('value', (snapshot) => {
         const data = snapshot.val();
-        monitorCache = data || {}; 
+        window.monitorCache = data || {}; 
         
         if (!data) {
             if (body) body.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-500 italic text-xs">Hiện tại chưa có thí sinh nào tham gia.</td></tr>';
-            candidatesInitialDataLoaded = true;
+            window.candidatesInitialDataLoaded = true;
             return;
         }
 
-        if (monitorInterval) clearInterval(monitorInterval);
+        // --- LOGIC THÔNG BÁO MỚI ---
+        let currentTotal = 0;
+        Object.keys(data).forEach(code => {
+            currentTotal += Object.keys(data[code]).length;
+        });
+
+        if (lastKnownTotalCandidates !== -1 && currentTotal > lastKnownTotalCandidates) {
+            if (!isialLoad) { 
+                NOTI_SOUND.play().catch(() => {});
+                showModernToast("THÍ SINH MỚI 👤", "Có thí sinh vừa tham gia phòng thi!", "info", "page-candidates-manager");
+                updateCandidateBadge(currentTotal - lastKnownTotalCandidates);
+            }
+        }
+        lastKnownTotalCandidates = currentTotal;
+
+        if (window.monitorInterval) clearInterval(window.monitorInterval);
+
+        // --- BƯỚC 1: PHẲNG HÓA VÀ GOM NHÓM THEO BỘ ĐỀ GỐC ---
+        let flatList = [];
+        Object.keys(data).forEach(examCode => {
+            Object.entries(data[examCode]).forEach(([safeUser, s]) => {
+                const baseExamName = s.examName.split(' (mã')[0].trim();
+                flatList.push({ ...s, examCode, safeUser, baseExamName });
+            });
+        });
+
+        const groupedByExam = {};
+        flatList.forEach(item => {
+            if (!groupedByExam[item.baseExamName]) groupedByExam[item.baseExamName] = [];
+            groupedByExam[item.baseExamName].push(item);
+        });
 
         let html = "";
-        const sortedExamCodes = Object.keys(data).sort();
+        const now = getServerTime(); // <--- QUAN TRỌNG: Lấy thời gian hiện tại ở đây
 
-        // Duyệt qua từng mã đề
-        sortedExamCodes.forEach((examCode, groupIndex) => { // Thêm groupIndex ở đây
-            const studentsEntries = Object.entries(data[examCode]);
-            if (studentsEntries.length === 0) return;
-
-            // --- LOGIC LẤY THÔNG TIN BỘ ĐỀ (Giữ nguyên) ---
-            const firstStudent = studentsEntries[0][1];
-            const rawExamName = firstStudent.examName || "Bài thi";
-            const folderMatch = foldersDB.find(f => rawExamName.toLowerCase().includes(f.name.toLowerCase()));
+        // --- BƯỚC 2: VẼ GIAO DIỆN ---
+        Object.keys(groupedByExam).forEach((examName) => {
+            const students = groupedByExam[examName];
+            const folderMatch = foldersDB.find(f => examName.toLowerCase() === f.name.toLowerCase());
             const dispSubject = folderMatch ? folderMatch.subject : "Tự do";
-            const dispExamName = rawExamName.toUpperCase();
 
-            // 1. THANH TIÊU ĐỀ NHÓM MÃ ĐỀ
+            // TIÊU ĐỀ BỘ ĐỀ
             html += `
-                <tr class="bg-indigo-500/15 border-y border-indigo-500/20">
-                    <td colspan="5" class="py-3 px-4">
-                        <div class="flex items-center flex-wrap gap-x-8 gap-y-2 w-full">
-                            <div class="flex items-center gap-2">
-                                <span class="text-orange-400">⚡</span>
-                                <b class="text-[10px] text-indigo-300 uppercase tracking-widest">MÃ ĐỀ: ${examCode}</b>
+                <tr class="bg-indigo-600/20 border-t-2 border-indigo-500/50">
+                    <td colspan="5" class="py-4 px-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-xl">📂</div>
+                                <div>
+                                    <span class="text-[9px] text-indigo-400 font-black uppercase block mb-0.5">GIÁM SÁT BỘ ĐỀ:</span>
+                                    <b class="text-lg text-white font-black uppercase">${examName}</b>
+                                </div>
                             </div>
-                            <div class="hidden md:block h-4 w-[1px] bg-white/10"></div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-slate-500 text-[9px] font-black uppercase tracking-tighter">BỘ ĐỀ:</span>
-                                <b class="text-[10px] text-white font-extrabold uppercase tracking-wide">${dispExamName}</b>
-                            </div>
-                            <div class="hidden md:block h-4 w-[1px] bg-white/10"></div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-slate-500 text-[9px] font-black uppercase tracking-tighter">MÔN:</span>
-                                <b class="text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest">${dispSubject}</b>
-                            </div>
-                            <div class="ml-auto">
-                                <span class="text-[9px] bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-black border border-indigo-500/20 shadow-lg">
-                                    ${studentsEntries.length} THÍ SINH
-                                </span>
-                            </div>
+                            <b class="text-emerald-400 font-black uppercase text-sm bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20">${dispSubject}</b>
                         </div>
                     </td>
                 </tr>`;
-            
-            // Sắp xếp và vẽ thí sinh
-            studentsEntries.sort((a, b) => a[1].name.localeCompare(b[1].name, 'vi'));
 
-            studentsEntries.forEach(([safeUser, s]) => {
-                const studentUniqueKey = `${examCode}_${safeUser}`;
-                // ... (Phần vẽ dòng <tr> của thí sinh giữ nguyên như code hiện tại của bạn) ...
-                const isDone = s.status === 'ĐÃ NỘP BÀI';
-                const isWaiting = s.status === 'ĐÃ TRUY CẬP VÀO ĐỀ';
+            students.sort((a, b) => a.examCode !== b.examCode ? a.examCode.localeCompare(b.examCode) : a.name.localeCompare(b.name, 'vi'));
+
+            let lastCode = null;
+            students.forEach((s) => {
+                const studentUniqueKey = `${s.examCode}_${s.safeUser}`;
+                
+                // --- ĐỊNH NGHĨA CÁC BIẾN LOGIC (FIX LỖI TẠI ĐÂY) ---
+                const isDone = s.status === 'ĐÃ NỘP BÀI' || s.status === 'ĐÃ THU BÀI';
+                const isExpired = (s.status === 'ĐANG LÀM BÀI' && s.endTime > 0 && now > s.endTime);
+                const isWaiting = s.status === 'ĐÃ TRUY CẬP VÀO ĐỀ';
+                const isNotStarted = s.status === 'CHƯA LÀM BÀI';
+
+                if (s.examCode !== lastCode) {
+                    html += `
+                        <tr class="bg-white/5">
+                            <td colspan="5" class="py-1.5 px-10 border-l-4 border-amber-500/50">
+                                <span class="text-slate-400 text-[9px] font-black uppercase">MÃ ĐỀ:</span>
+                                <b class="text-[11px] text-indigo-300 font-mono tracking-widest">${s.examCode}</b>
+                            </td>
+                        </tr>`;
+                    lastCode = s.examCode;
+                }
+
+                // XỬ LÝ MÀU SẮC BADGE
+                let badgeClass = "bg-amber-500/20 text-amber-400 animate-pulse";
+                if (isDone) badgeClass = "bg-emerald-500/20 text-emerald-400";
+                if (isExpired) badgeClass = "bg-rose-500/20 text-rose-400";
+                if (isWaiting) badgeClass = "bg-slate-700 text-slate-400";
+                if (isNotStarted) badgeClass = "bg-red-600/20 text-red-500 font-black border border-red-500/50";
+
+                // XỬ LÝ ĐIỂM SỐ VÀ NÚT THU BÀI (YÊU CẦU CHÍNH)
+                let scoreDisplayHtml = "";
+                if (isDone) {
+                    // Nếu đã xong: Hiện điểm, không hiện nút
+                    scoreDisplayHtml = `<span class="text-xl font-black text-indigo-400 animate-in zoom-in duration-300">${s.score || '0.0'}</span>`;
+                } else if (isExpired) {
+                    // Nếu hết giờ: Hiện nút Thu bài đè lên vị trí điểm
+                    scoreDisplayHtml = `
+                        <button onclick="collectStudentPaper('${s.examCode}', '${s.safeUser}')" 
+                                class="bg-orange-600 hover:bg-orange-500 text-white text-[10px] font-black px-4 py-2 rounded-xl shadow-lg transition-all border-none active:scale-95 animate-pulse">
+                            THU BÀI
+                        </button>`;
+                } else {
+                    // Đang làm: Hiện dấu chờ
+                    scoreDisplayHtml = `<span class="text-lg font-black text-slate-800">---</span>`;
+                }
 
                 html += `
                 <tr id="row-${studentUniqueKey}" class="border-b border-white/5 hover:bg-white/10 transition">
-                    <td class="py-4 px-4 min-w-[140px]">
+                    <td class="py-4 px-12">
                         <div class="flex items-center gap-2">
                              <div class="w-1.5 h-1.5 shrink-0 rounded-full ${isDone ? 'bg-slate-600' : 'bg-emerald-500 animate-pulse'}"></div>
                              <div class="font-bold text-white text-sm truncate">${s.name || "N/A"}</div>
                         </div>
                     </td>
-                    <td class="text-center font-mono text-xs text-slate-500">${examCode}</td>
+                    <td class="text-center font-mono text-xs text-slate-600">${s.examCode}</td>
                     <td class="text-center px-2">
-                        <span id="status-text-${safeUser}" class="inline-block whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-black ${isDone ? 'bg-emerald-500/20 text-emerald-400' : (isWaiting ? 'bg-slate-700 text-slate-400' : 'bg-amber-500/20 text-amber-400 animate-pulse')}">
-                            ${s.status}
+                        <span class="inline-block whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-black ${badgeClass}">
+                            ${isExpired && s.status !== 'CHƯA NỘP BÀI' ? 'CHƯA NỘP BÀI' : s.status}
                         </span>
                     </td>
-                    <td class="text-center min-w-[100px]">
-                        <div id="clock-${safeUser}" class="font-mono text-xs ${isWaiting ? 'text-slate-500 italic' : (isDone ? 'text-slate-600' : 'text-indigo-300 font-bold')}">
-                            ${isWaiting ? 'ĐANG ĐỢI...' : (isDone ? 'HOÀN THÀNH' : '--:--')}
+                    <td class="text-center">
+                        <div id="clock-${studentUniqueKey}" class="font-mono text-xs ${isDone ? 'text-slate-600' : (isNotStarted || isExpired ? 'text-rose-500' : 'text-indigo-300 font-bold')}">
+                            ${isDone ? 'HOÀN TẤT' : (isWaiting ? 'ĐANG ĐỢI...' : (isExpired ? 'HẾT GIỜ' : '--:--'))}
                         </div>
                     </td>
                     <td class="pr-6 text-right">
-                        <span class="text-lg font-black ${isDone ? 'text-indigo-400' : 'text-slate-800'}">
-                            ${s.score ? s.score : '---'}
-                        </span>
+                        <div class="flex items-center justify-end">${scoreDisplayHtml}</div>
                     </td>
                 </tr>`;
             });
-
-            // --- BƯỚC QUAN TRỌNG: CHÈN DẤU PHÂN CÁCH SAU KHI KẾT THÚC NHÓM ---
-            // Chỉ chèn nếu đây chưa phải là nhóm cuối cùng
-            if (groupIndex < sortedExamCodes.length - 1) {
-                html += `
-                <tr class="separator-row">
-                    <td colspan="5" class="py-2 px-8">
-                        <div class="w-full flex items-center gap-4 opacity-20">
-                            <div class="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent"></div>
-                            <span class="text-[10px] text-white tracking-[10px] font-black">----------</span>
-                            <div class="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent"></div>
-                        </div>
-                    </td>
-                </tr>`;
-            }
         });
 
         if (body) body.innerHTML = html;
-        candidatesInitialDataLoaded = true;
+        window.candidatesInitialDataLoaded = true;
 
-        // Bộ đếm giờ Realtime tích hợp xử lý Treo máy & Hết hạn
-        monitorInterval = setInterval(() => {
-            const now = getServerTime();
-            
-            let codeExpiryMap = {};
-            foldersDB.forEach(f => {
-                if (f.accessCode) codeExpiryMap[f.accessCode] = f.expiresAt;
-                if (f.childCodesData && f.childCodesData.codes) {
-                    f.childCodesData.codes.forEach(c => codeExpiryMap[c] = f.childCodesData.expiresAt);
-                }
-            });
-
-            Object.keys(monitorCache).forEach(examCode => {
-                const examCodeExpiry = codeExpiryMap[examCode] || 0;
-
-                Object.entries(monitorCache[examCode]).forEach(([safeUser, s]) => {
-                    const clockEl = document.getElementById(`clock-${safeUser}`);
-                    const statusEl = document.getElementById(`status-text-${safeUser}`);
-                    if (!clockEl) return;
-
+        // BỘ ĐẾM GIỜ CHẠY NGẦM TRONG BẢNG
+        window.monitorInterval = setInterval(() => {
+            const currentTime = getServerTime();
+            Object.keys(window.monitorCache).forEach(examCode => {
+                Object.entries(window.monitorCache[examCode]).forEach(([safeUser, s]) => {
                     if (s.status === 'ĐANG LÀM BÀI' && s.endTime > 0) {
-                        const remain = s.endTime - now;
+                        const studentUniqueKey = `${examCode}_${safeUser}`;
+                        const clockEl = document.getElementById(`clock-${studentUniqueKey}`);
+                        const remain = s.endTime - currentTime;
                         if (remain <= 0) {
-                            clockEl.innerText = "HẾT GIỜ";
-                            clockEl.className = "text-red-500 font-black text-xs animate-pulse";
-                        } else {
+                            if(clockEl) clockEl.innerText = "HẾT GIỜ";
+                            // Tự động vẽ lại bảng để hiện nút Thu bài khi giây cuối cùng trôi qua
+                            if (remain > -1000 && remain < 0) listenToCandidates(); 
+                        } else if (clockEl) {
                             const m = Math.floor(remain / 60000);
                             const sec = Math.floor((remain % 60000) / 1000);
                             clockEl.innerText = `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
                         }
-                    } 
-                    else if (s.status === 'ĐÃ TRUY CẬP VÀO ĐỀ') {
-                        if (examCodeExpiry > 0 && now > examCodeExpiry) {
-                            clockEl.innerText = "HẾT HẠN LÀM BÀI";
-                            clockEl.className = "text-red-400 font-bold text-[9px]";
-                            if (statusEl) {
-                                statusEl.innerText = "THÍ SINH CHƯA HOÀN THÀNH BÀI THI";
-                                statusEl.className = "px-2 py-0.5 rounded-full text-[8px] font-black bg-red-900/30 text-red-500 border border-red-500/20";
-                            }
-                        } else {
-                            clockEl.innerText = "ĐANG ĐỢI...";
-                        }
-                    }
-                    else if (s.status === 'ĐÃ NỘP BÀI') {
-                        clockEl.innerText = "HOÀN TẤT";
-                        clockEl.className = "text-slate-500 text-[10px] font-bold";
                     }
                 });
             });
         }, 1000);
     });
+}
+
+async function collectStudentPaper(examCode, studentKey) {
+    const safeAdmin = currentUser.user.replace(/\./g, '_');
+    const sessionRef = rdb.ref(`system/active_sessions/${safeAdmin}/${examCode}/${studentKey}`);
+    
+    // 1. Lấy dữ liệu "nóng" từ Firebase của thí sinh
+    const snap = await sessionRef.once('value');
+    const s = snap.val();
+    if (!s) return;
+
+    // 2. Tìm bộ đề gốc trong máy Admin để lấy đáp án đúng
+    const folderBaseName = s.examName.split(' (mã')[0].trim();
+    const folder = foldersDB.find(f => f.name.trim().toLowerCase() === folderBaseName.toLowerCase());
+    
+    if (!folder) {
+        return sysNotify("Lỗi", "Không tìm thấy bộ đề gốc để đối soát đáp án!", "error");
+    }
+
+    if (await sysConfirm(`Xác nhận THU BÀI cưỡng chế của thí sinh: ${s.name}?`)) {
+        sysNotify("Đang xử lý", "Đang chấm điểm và thu hồi bài làm...", "info");
+
+        try {
+            const questions = folder.questions || [];
+            const studentAnswers = s.tempAnswers || []; // Mảng đáp án thí sinh đã tích
+            
+            let correctCount = 0;
+            let details = [];
+
+            // 3. Chấm điểm offline dựa trên dữ liệu tạm
+            questions.forEach((q, i) => {
+                const sAns = studentAnswers[i] !== undefined ? studentAnswers[i] : -1;
+                const isCorrect = (sAns !== -1 && Number(sAns) === Number(q.correct));
+                
+                if (isCorrect) correctCount++;
+                
+                details.push({
+                    text: q.text,
+                    options: [...q.options],
+                    correct: q.correct,
+                    selected: sAns,
+                    isFullyCorrect: isCorrect
+                });
+            });
+
+            const pointVal = parseFloat(((correctCount / questions.length) * 10).toFixed(1));
+            const percentVal = Math.round((correctCount / questions.length) * 100);
+
+            // 4. Chuẩn bị bản ghi lịch sử
+            const historyItem = {
+                user: studentKey,
+                fullname: s.name,
+                score: correctCount,
+                total: questions.length,
+                point: pointVal.toFixed(1),
+                percent: percentVal,
+                examName: s.examName,
+                examCode: examCode,
+                isForced: true,      
+                time: new Date().toLocaleString(),
+                duration: "GV Thu bài",
+                details: details 
+            };
+
+            // 5. Cập nhật đồng bộ 3 nơi
+            await Promise.all([
+                // A. Lưu vào kho điểm của Admin
+                rdb.ref(`users_data/${safeAdmin}/quiz_history`).push(historyItem),
+                
+                // B. Khóa bài làm (Submissions)
+                rdb.ref(`system/submissions/${safeAdmin}/${examCode}/${studentKey}`).set({
+                    submittedAt: getServerTime(),
+                    score: pointVal.toFixed(1),
+                    type: 'forced'
+                }),
+                
+                // C. Cập nhật session (Nút Thu bài sẽ tự ẩn do status đổi sang 'ĐÃ THU BÀI')
+                sessionRef.update({
+                    status: 'ĐÃ THU BÀI',
+                    score: pointVal.toFixed(1)
+                })
+            ]);
+
+            closeNotify();
+            showModernToast("THÀNH CÔNG", `Đã thu bài: <b>${s.name}</b> đạt <b>${pointVal}đ</b>`, "success");
+
+        } catch (err) {
+            console.error(err);
+            sysNotify("Lỗi hệ thống", "Không thể thu bài. Kiểm tra kết nối mạng!", "error");
+        }
+    }
 }
 
 // Hàm cập nhật Badge trên Sidebar
@@ -9323,7 +9669,7 @@ async function syncUpdateToFirebaseCodes(folderIdx) {
     if (folderIdx === -1) return;
     
     const folder = foldersDB[folderIdx];
-    const now = Date.now();
+    const now = getServerTime();
     const newDuration = parseInt(folder.duration) || 45;
     // Tính lại thời gian hết hạn mới = thời điểm hiện tại + số phút mới
     const newExpiry = now + (newDuration * 60 * 1000);
@@ -9376,13 +9722,13 @@ async function syncUpdateToFirebaseCodes(folderIdx) {
 
 // HÀM SAO LƯU TIẾN ĐỘ THI CỨ (Dành cho Thí sinh)
 function saveQuizBlackBox() {
-    if (!currentUser || currentUser.isAdmin || activeQuestions.length === 0) return;
+    if (!currentUser || currentUser.isAdmin || !activeQuestions || activeQuestions.length === 0) return;
 
     const backupData = {
         activeQuestions: activeQuestions, 
         userAnswers: userAnswers,
         currentIdx: currentIdx,           
-        endTimeMs: currentUser.endTimeMs, // Lưu mốc giờ chết của Giám sát
+        endTimeMs: currentUser.endTimeMs, 
         examCode: currentUser.examCode,
         examName: currentUser.examName,
         subject: currentUser.subject,
@@ -9419,20 +9765,36 @@ async function revokeFolderCodes(idx) {
 
         try {
             const updates = {};
-            
-            // 1. Gom mã gốc
-            if (folder.accessCode) {
-                updates[`system/global_share_map/${folder.accessCode}`] = null;
-            }
-
-            // 2. Gom tất cả mã con
+            const codesToRevoke = [];
+            if (folder.accessCode) codesToRevoke.push(folder.accessCode);
             if (folder.childCodesData && folder.childCodesData.codes) {
-                folder.childCodesData.codes.forEach(code => {
-                    updates[`system/global_share_map/${code}`] = null;
-                });
+                codesToRevoke.push(...folder.childCodesData.codes);
             }
 
-            // 3. Thực hiện xóa trên Firebase
+            const safeAdmin = currentUser.user.replace(/\./g, '_');
+
+            codesToRevoke.forEach(code => {
+                // 1. Xóa mã khỏi bản đồ dùng chung
+                updates[`system/global_share_map/${code}`] = null;
+
+                // 2. Tìm và cập nhật tất cả thí sinh đang ở màn hình chờ của mã này
+                rdb.ref(`system/active_sessions/${safeAdmin}/${code}`).once('value', (snap) => {
+                    const students = snap.val();
+                    if (students) {
+                        const studentUpdates = {};
+                        Object.keys(students).forEach(sKey => {
+                            // Chỉ ép khóa những người CHƯA bắt đầu làm bài (status Đang truy cập)
+                            if (students[sKey].status === 'ĐÃ TRUY CẬP VÀO ĐỀ') {
+                                studentUpdates[`system/active_sessions/${safeAdmin}/${code}/${sKey}/status`] = 'CHƯA LÀM BÀI';
+                                studentUpdates[`system/active_sessions/${safeAdmin}/${code}/${sKey}/score`] = '0.0';
+                            }
+                        });
+                        rdb.ref().update(studentUpdates);
+                    }
+                });
+            });
+
+            // Thực hiện lệnh xóa mã
             await rdb.ref().update(updates);
 
             // 4. Xóa dữ liệu mã trong local folder
@@ -9440,15 +9802,14 @@ async function revokeFolderCodes(idx) {
             delete folder.expiresAt;
             delete folder.childCodesData;
 
-            saveFolders(); // Lưu lại folder đã sạch mã
-            renderFolders(); // Vẽ lại danh sách
-            
+            saveFolders(); 
+            renderFolders(); 
             closeNotify();
-            showModernToast("THÀNH CÔNG", "Đã thu hồi toàn bộ mã đề và giải phóng tài nguyên!", "success");
+            showModernToast("THÀNH CÔNG", "Đã thu hồi toàn bộ mã và khóa thí sinh đang chờ!", "success");
 
         } catch (err) {
             console.error("Lỗi thu hồi:", err);
-            sysNotify("Lỗi", "Không thể thu hồi mã. Vui lòng kiểm tra mạng!", "error");
+            sysNotify("Lỗi", "Không thể thu hồi mã!", "error");
         }
     }
 }
@@ -10100,6 +10461,52 @@ function handleSync(btn) {
     setTimeout(() => {
         location.reload();
     }, 1000); 
+}
+
+async function collectStudentPaper(examCode, studentKey) {
+    const safeAdmin = currentUser.user.replace(/\./g, '_');
+    const sessionRef = rdb.ref(`system/active_sessions/${safeAdmin}/${examCode}/${studentKey}`);
+    const snap = await sessionRef.once('value');
+    const s = snap.val();
+    
+    if (!s || s.status === 'ĐÃ NỘP BÀI' || s.status === 'ĐÃ THU BÀI') return;
+
+    const folder = foldersDB.find(f => s.examName.toLowerCase().includes(f.name.toLowerCase()));
+    const totalQuestions = folder && folder.questions ? folder.questions.length : 0;
+
+    if (await sysConfirm(`Thu bài thí sinh: ${s.name}?`)) {
+        try {
+            const pointVal = parseFloat(s.score || 0);
+            const percentVal = Math.round((pointVal / 10) * 100);
+            const rawScore = Math.round((pointVal / 10) * totalQuestions);
+
+            const historyItem = {
+                user: studentKey,
+                fullname: s.name,
+                score: rawScore,
+                total: totalQuestions,
+                point: pointVal.toFixed(1),
+                percent: percentVal,
+                examName: s.examName, // GIỮ NGUYÊN TÊN GỐC ĐỂ GỘP CHUNG BẢNG
+                examCode: examCode,
+                isForced: true,      // ĐÁNH DẤU ĐÂY LÀ ADMIN THU BÀI
+                time: new Date().toLocaleString(),
+                duration: "GV Thu bài",
+                details: [] 
+            };
+
+            await rdb.ref(`users_data/${safeAdmin}/quiz_history`).push(historyItem);
+            await rdb.ref(`system/submissions/${safeAdmin}/${examCode}/${studentKey}`).set({
+                submittedAt: Date.now(),
+                score: s.score,
+                type: 'forced'
+            });
+
+            await sessionRef.update({ status: 'ĐÃ THU BÀI', score: s.score });
+            showModernToast("THÀNH CÔNG", `Đã thu bài: ${s.name}`, "success");
+            closeNotify();
+        } catch (err) { console.error(err); }
+    }
 }
 
 </script>

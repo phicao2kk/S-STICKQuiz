@@ -8373,17 +8373,43 @@ async function generatePDFScore(idx) {
     element.style.background = "#ffffff";
     element.style.fontFamily = "'Times New Roman', serif";
 
+    // Lấy ngày từ thí sinh đầu tiên (Trích xuất phần ngày từ chuỗi "HH:mm:ss DD/MM/YYYY")
+    let testDate = matches.length > 0 ? matches[0].time.split(' ').pop() : new Date().toLocaleDateString('vi-VN');
+
     let html = `
         <style>
             .pdf-table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
             .pdf-table th, .pdf-table td { border: 1.5px solid #000 !important; padding: 10px 5px; text-align: center; font-size: 13px; color: #000 !important; }
             .pdf-table th { background-color: #f0f0f0 !important; font-weight: bold; }
             .text-left { text-align: left !important; padding-left: 10px !important; }
+            
+            /* Style cho tiêu đề lớn */
+            .pdf-title-main { 
+                text-align: center; 
+                margin-bottom: 5px; 
+                color: #000 !important; 
+                font-weight: 900 !important; 
+                font-size: 24px !important; /* Tăng cỡ chữ tiêu đề chính */
+                text-transform: uppercase;
+            }
+            .pdf-title-sub { 
+                text-align: center; 
+                margin-top: 0; 
+                margin-bottom: 20px;
+                color: #000 !important; 
+                font-weight: 800 !important; 
+                font-size: 18px !important; /* Tăng cỡ chữ tên bài thi */
+                text-transform: uppercase;
+            }
         </style>
-        <h2 style="text-align: center; margin-bottom: 5px; color: #000 !important;">BẢNG ĐIỂM CHI TIẾT</h2>
-        <h3 style="text-align: center; margin-top: 0; text-transform: uppercase; color: #000 !important;">${folder.name}</h3>
-        <p style="color: #000 !important; font-size: 14px;"><b>Môn học:</b> ${folder.subject || "Tự do"}<br>
-        <b>Ngày xuất:</b> ${new Date().toLocaleDateString('vi-VN')} | <b>Tổng số:</b> ${matches.length} lượt thi</p>
+        
+        <div class="pdf-title-main">BẢNG ĐIỂM CHI TIẾT</div>
+        <div class="pdf-title-sub">${folder.name}</div>
+        
+        <p style="color: #000 !important; font-size: 14px; margin-bottom: 10px;">
+            <b>Môn học:</b> ${folder.subject || "Tự do"}<br>
+            <b>Ngày làm bài:</b> ${testDate} | <b>Tổng số:</b> ${matches.length} thí sinh
+        </p>
     `;
 
     const grouped = matches.reduce((acc, h) => {
@@ -8429,7 +8455,7 @@ async function generatePDFScore(idx) {
     });
 }
 
-// 3. HÀM XUẤT EXCEL (FIX LỖI MẤT CHỮ / LỖI GỘP Ô)
+// 3. HÀM XUẤT EXCEL (BẢN ĐÃ FIX LỖI CÚ PHÁP)
 async function generateExcelScore(idx) {
     closeNotify();
     const folder = foldersDB[idx];
@@ -8439,41 +8465,50 @@ async function generateExcelScore(idx) {
         return hName === fName || hName.startsWith(fName + " (mã");
     });
 
+    if (matches.length === 0) return sysNotify("Thông báo", "Chưa có dữ liệu thí sinh.", "warn");
+
     showModernToast("Hệ thống", "Đang tạo Excel thẩm mỹ...", "info");
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('BangDiem');
 
-    // Cấu hình cột chính
+    // Cấu hình 5 cột chính (Đã bỏ cột Ngày nộp)
     worksheet.columns = [
         { key: 'stt', width: 8 },
         { key: 'name', width: 35 },
-        { key: 'score', width: 15 },
-        { key: 'total', width: 15 },
+        { key: 'result', width: 18 }, 
         { key: 'point', width: 15 },
-        { key: 'duration', width: 18 },
-        { key: 'date', width: 25 }
+        { key: 'duration', width: 18 }
     ];
 
     // Dòng 1: Tiêu đề chính
-    const row1 = worksheet.getRow(1);
-    row1.getCell(1).value = 'BẢNG ĐIỂM CHI TIẾT BÀI THI';
-    worksheet.mergeCells('A1:G1');
+    const row1 = worksheet.addRow(['BẢNG ĐIỂM CHI TIẾT']);
+    worksheet.mergeCells('A1:E1'); 
     row1.font = { name: 'Times New Roman', size: 20, bold: true, color: { argb: 'FF3F51B5' } };
     row1.alignment = { vertical: 'middle', horizontal: 'center' };
     row1.height = 35;
 
     // Dòng 2: Tên bộ đề
-    const row2 = worksheet.getRow(2);
-    row2.getCell(1).value = folder.name.toUpperCase();
-    worksheet.mergeCells('A2:G2');
+    const row2 = worksheet.addRow([folder.name.toUpperCase()]);
+    worksheet.mergeCells('A2:E2');
     row2.font = { name: 'Times New Roman', size: 16, bold: true };
     row2.alignment = { vertical: 'middle', horizontal: 'center' };
     row2.height = 25;
 
-    // Thông tin phụ
-    worksheet.addRow(['Môn học: ' + (folder.subject || "Tự do")]);
-    worksheet.addRow(['Ngày xuất file: ' + new Date().toLocaleString('vi-VN')]);
+    // Dòng 3: Môn học
+    const monHocRow = worksheet.addRow(['Môn học: ' + (folder.subject || "Tự do")]);
+    monHocRow.getCell(1).font = { name: 'Times New Roman', size: 12, bold: true };
+
+    // --- LOGIC LẤY NGÀY LÀM BÀI TỪ THÍ SINH ĐẦU TIÊN ---
+    let testDate = matches[0].time.split(' ').pop(); 
+
+    // Dòng 4: Thông tin tổng hợp
+    const infoRow = worksheet.addRow([
+        'Ngày làm bài: ' + testDate + '  |  Tổng số: ' + matches.length + ' thí sinh'
+    ]);
+    worksheet.mergeCells(`A${infoRow.number}:E${infoRow.number}`);
+    infoRow.getCell(1).font = { name: 'Times New Roman', size: 12, color: { argb: 'FF000000' } };
+    
     worksheet.addRow([]); // Dòng trống
 
     const grouped = matches.reduce((acc, h) => {
@@ -8484,31 +8519,68 @@ async function generateExcelScore(idx) {
     }, {});
 
     Object.keys(grouped).sort().forEach(code => {
+        // Dòng Mã đề
         const codeRow = worksheet.addRow(['MÃ ĐỀ: ' + code]);
-        worksheet.mergeCells(`A${codeRow.number}:G${codeRow.number}`);
-        codeRow.font = { bold: true, size: 13 };
-        codeRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EAF6' } };
+        const rNum = codeRow.number;
+        worksheet.mergeCells(`A${rNum}:E${rNum}`);
+        
+        // Tô màu nền cho thanh Mã đề (Giới hạn cột A-E)
+        for (let i = 1; i <= 5; i++) {
+            const cell = codeRow.getCell(i);
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EAF6' } };
+            cell.font = { name: 'Times New Roman', bold: true, size: 13 };
+            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        }
+        codeRow.height = 25;
 
-        const headerRow = worksheet.addRow(['STT', 'Họ và Tên thí sinh', 'Số câu đúng', 'Tổng số câu', 'Điểm hệ 10', 'Thời gian làm', 'Ngày nộp']);
+        // Tiêu đề bảng (Header)
+        const headerRow = worksheet.addRow(['STT', 'Họ và Tên thí sinh', 'Số câu đúng', 'Điểm số', 'Thời gian làm']);
         headerRow.eachCell((cell) => {
-            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.font = { name: 'Times New Roman', bold: true, color: { argb: 'FFFFFFFF' } };
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3F51B5' } };
             cell.alignment = { horizontal: 'center' };
             cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
         });
 
+        // Đổ dữ liệu thí sinh
         const students = sortArrayByVietnameseName(grouped[code], 'fullname');
         students.forEach((s, i) => {
-            const row = worksheet.addRow([i + 1, s.fullname, s.score, s.total, parseFloat(s.point), s.duration, s.time]);
+            const row = worksheet.addRow([
+                i + 1, 
+                s.fullname, 
+                `${s.score}/${s.total}`, 
+                parseFloat(s.point), 
+                s.duration
+            ]);
+
             row.eachCell((cell, colNumber) => {
                 cell.font = { name: 'Times New Roman', size: 12 };
                 cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                if (colNumber !== 2) cell.alignment = { horizontal: 'center' };
-                if (colNumber === 5 && parseFloat(s.point) < 5) cell.font = { color: { argb: 'FFFF0000' }, bold: true };
+                
+                // Căn lề
+                if (colNumber === 2) cell.alignment = { horizontal: 'left' };
+                else cell.alignment = { horizontal: 'center' };
+
+                // Đổi màu cột Điểm số (Bây giờ là Cột số 4)
+                if (colNumber === 4) {
+                    const val = parseFloat(s.point);
+                    let color = 'FF000000';
+                    if (val >= 8) color = 'FF10B981';      // Xanh lá
+                    else if (val >= 4) color = 'FFF59E0B'; // Vàng
+                    else color = 'FFEF4444';               // Đỏ
+                    
+                    cell.font = { name: 'Times New Roman', size: 12, bold: true, color: { argb: color } };
+                }
             });
         });
         worksheet.addRow([]); 
     });
+
+    // --- FOOTER XUẤT TỪ HỆ THỐNG ---
+    const footerRow = worksheet.addRow(['Xuất từ hệ thống S-STICK Quiz']);
+    worksheet.mergeCells(`A${footerRow.number}:E${footerRow.number}`);
+    footerRow.getCell(1).font = { name: 'Times New Roman', size: 10, italic: true, color: { argb: 'FF666666' } };
+    footerRow.getCell(1).alignment = { horizontal: 'right' };
 
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), `BANG_DIEM_${folder.name.replace(/\s+/g, '_')}.xlsx`);

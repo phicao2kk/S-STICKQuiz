@@ -1515,6 +1515,50 @@ input::-webkit-inner-spin-button {
     margin: 0 auto;
 }
 
+@media print {
+    /* 1. Ẩn sạch các thứ rác rưởi: Sidebar, Header, Video, Nút bấm, Chat */
+    #sidebar, #header, .video-bg, button, #chat-container, .sync-banner, #toast-container, .no-print, .notify-icon {
+        display: none !important;
+    }
+
+    /* 2. Ép toàn bộ trang web về nền trắng chữ đen để tiết kiệm mực và chuyên nghiệp */
+    body, html, #app-content, .page, .card {
+        background: white !important;
+        color: black !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+
+    /* 3. Chỉnh lại khung bảng điểm cho giống trang giấy A4 */
+    .card.glass {
+        border: none !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+    }
+
+    #app-content {
+        margin-top: 0 !important;
+    }
+
+    /* 4. Định dạng bảng cho rõ nét khi in */
+    table {
+        width: 100% !important;
+        border: 1px solid #333 !important;
+        border-collapse: collapse !important;
+    }
+    th, td {
+        border: 1px solid #333 !important;
+        color: black !important;
+        padding: 8px !important;
+    }
+
+    /* Hiện các trang đang bị ẩn nhưng có dữ liệu */
+    .page:not(.hidden) {
+        display: block !important;
+    }
+}
+
     </style>
 </head>
 <body>
@@ -7430,7 +7474,7 @@ function loadChatMessages() {
             return;
         }
 
-        const msgs = Object.entries(data.messages);
+        const msgs = (data && data.messages) ? Object.entries(data.messages) : [];
         let fullHtml = "";
         let lastDateString = ""; 
 

@@ -1280,14 +1280,72 @@ input::-webkit-inner-spin-button {
     margin: 0;
 }
 
-/* Xóa bỏ nút tăng giảm trên Firefox */
-input[type=number] {
-    -moz-appearance: textfield;
+/* Hiệu ứng xoay NGƯỢC chiều kim đồng hồ */
+@keyframes spin-refresh {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(-360deg); } /* Thêm dấu trừ để xoay ngược */
+}
+
+.spinning-active svg {
+    animation: spin-refresh 0.5s linear infinite; /* Tăng tốc lên 0.5s cho mượt */
+    color: #6366f1 !important;
+}
+
+.sync-banner {
+    position: fixed;
+    top: -60px; /* Ban đầu giấu ở trên đỉnh */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999999;
+    background: rgba(30, 41, 59, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    border-top: none;
+    padding: 8px 20px;
+    border-radius: 0 0 15px 15px;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: none;
+}
+
+.sync-banner.show {
+    top: 0; /* Thả xuống chạm đỉnh */
+}
+
+.sync-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Spinner nhỏ quay bên cạnh chữ */
+.sync-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top: 2px solid #6366f1;
+    border-radius: 50%;
+    animation: sync-spin 0.6s linear infinite;
+}
+
+@keyframes sync-spin {
+    to { transform: rotate(360deg); }
 }
 
     </style>
 </head>
 <body>
+
+    <!-- Thanh thông báo tải lại trang -->
+<div id="sync-banner" class="sync-banner">
+    <div class="sync-content">
+        <span class="sync-spinner"></span>
+        <span>Hệ thống đang tải lại...</span>
+    </div>
+</div>
 
 <div id="toast-container"></div>
 
@@ -1443,7 +1501,7 @@ input[type=number] {
         
         <div class="flex items-center gap-2">
             <span class="brand-run text-[18px]">S-STICK Quiz</span>
-            <button onclick="location.reload()" class="btn-f5-head">
+            <button onclick="handleSync(this)" class="btn-f5-head">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
@@ -1469,7 +1527,7 @@ input[type=number] {
             <!-- Tiêu đề có nút F5 -->
             <div class="flex items-center justify-center gap-3 mt-4">
                 <h1 class="text-4xl font-black brand-run" style="letter-spacing: 2px;">S-STICK Quiz</h1>
-                <button onclick="location.reload()" class="p-1.5 bg-white/5 hover:bg-indigo-500/20 rounded-full transition-all text-slate-500 hover:text-indigo-400" title="Tải lại trang">
+                <button onclick="handleSync(this)" class="p-1.5 bg-white/5 hover:bg-indigo-500/20 rounded-full transition-all text-slate-500 hover:text-indigo-400">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
@@ -9753,6 +9811,22 @@ function closeImageModal() {
             document.body.style.overflow = 'auto';
         }, 200);
     }
+}
+
+// Hàm tạo hiệu ứng xoay và tải lại trang
+function handleSync(btn) {
+    const banner = document.getElementById('sync-banner');
+    
+    // 1. Kích hoạt icon xoay (nếu có class spinning-active)
+    btn.classList.add('spinning-active');
+    
+    // 2. Thả thanh thông báo xuống
+    banner.classList.add('show');
+    
+    // 3. Đợi một lát cho đẹp rồi mới tải lại trang
+    setTimeout(() => {
+        location.reload();
+    }, 800); // 0.8 giây là đủ để thấy thông báo
 }
 
 </script>

@@ -410,6 +410,10 @@ input[type=range].media-seek::-webkit-slider-thumb:hover {
     }
 }
 
+@media (max-width: 400px) {
+    button { font-size: 14px !important; }
+}
+
 /* --- FIX TRIỆT ĐỂ LỖI CUỘN MOBILE --- */
 html {
     height: -webkit-fill-available; /* Fix chiều cao cho trình duyệt di động */
@@ -633,7 +637,14 @@ body {
             width: 100%; 
             z-index: 1000; /* Đảm bảo nó luôn nằm trên các nội dung khác */
         }        
-        .card { background: rgba(30, 41, 59, 0.5); padding: 25px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 25px; transition: 0.3s; }
+        .card { 
+            background: rgba(30, 41, 59, 0.5); 
+            padding: 20px; /* Giảm từ 25px xuống 20px */
+            border-radius: 24px; 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            margin-bottom: 25px; 
+            transition: 0.3s; 
+        }
         .input-control { width: 100%; padding: 12px 16px; margin: 8px 0; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; font-size: 14px; outline: none; background: rgba(0,0,0,0.2); color: white; transition: 0.3s; }
         .input-control:focus { border-color: var(--primary); background: rgba(0,0,0,0.4); }
         
@@ -1467,10 +1478,10 @@ input[type=number] {
             <p class="text-slate-400 text-sm mt-1">Hệ thống thi trắc nghiệm trực truyến</p>
         </div>
         
-        <div class="flex bg-black/20 rounded-xl p-1 mb-6">
-            <button id="tab-login" class="flex-1 py-2.5 rounded-lg font-semibold transition" onclick="switchAuth('login')">Đăng nhập</button>
-            <button id="tab-reg" class="flex-1 py-2.5 rounded-lg font-semibold text-slate-400 transition" onclick="switchAuth('reg')">Đăng ký</button>
-            <button id="tab-join" class="flex-1 py-2.5 rounded-lg font-semibold text-slate-400 transition" onclick="switchAuth('join')">Vào thi</button>
+        <div class="flex bg-black/20 rounded-xl p-1 mb-6 overflow-hidden">
+            <button id="tab-login" class="flex-1 py-2.5 rounded-lg font-semibold transition whitespace-nowrap text-[13px] sm:text-base px-1" onclick="switchAuth('login')">Đăng nhập</button>
+            <button id="tab-reg" class="flex-1 py-2.5 rounded-lg font-semibold text-slate-400 transition whitespace-nowrap text-[13px] sm:text-base px-1" onclick="switchAuth('reg')">Đăng ký</button>
+            <button id="tab-join" class="flex-1 py-2.5 rounded-lg font-semibold text-slate-400 transition whitespace-nowrap text-[13px] sm:text-base px-1" onclick="switchAuth('join')">Vào thi</button>
         </div>
 
         <div id="form-login" class="space-y-4">
@@ -1482,14 +1493,14 @@ input[type=number] {
                 <input type="password" id="login-pass" class="input-control" placeholder="Mật khẩu">
                 <span class="pw-toggle" onclick="togglePassword('login-pass')">👁️</span>
             </div>
-            <button onclick="handleLogin()" class="w-full py-4 mt-2">VÀO HỆ THỐNG</button>
+            <button onclick="handleLogin()" id="tab-login-btn" class="w-full py-4 mt-2 whitespace-nowrap font-black uppercase tracking-widest">VÀO HỆ THỐNG</button>
             <p class="text-center text-xs text-slate-400 cursor-pointer hover:text-indigo-400" onclick="switchAuth('forgot')">Quên mật khẩu?</p>
         </div>
 
         <div id="form-join" class="hidden space-y-4">
             <input type="text" id="join-code" class="input-control text-center text-2xl tracking-[5px] font-bold" placeholder="NHẬP MÃ ĐỀ" maxlength="6">
             <input type="text" id="join-name" class="input-control" placeholder="Họ và tên của bạn">
-            <button onclick="handleJoinQuiz()" class="btn-success w-full py-4 mt-2">XÁC NHẬN VÀO THI</button>
+            <button onclick="handleJoinQuiz()" id="tab-join-btn" class="btn-success w-full py-4 mt-2 whitespace-nowrap font-black uppercase tracking-widest">XÁC NHẬN VÀO THI</button>
             <p class="text-center text-xs text-indigo-400 cursor-pointer" onclick="switchAuth('login')">Quay lại đăng nhập</p>
         </div>
 
@@ -1504,7 +1515,7 @@ input[type=number] {
                 <input type="password" id="reg-confirm" class="input-control" placeholder="Xác nhận mật khẩu">
                 <span class="pw-toggle" onclick="togglePassword('reg-confirm')">👁️</span>
             </div>
-            <button onclick="handleRegister()" class="btn-success w-full py-4 mt-2">ĐĂNG KÝ NGAY</button>
+            <button onclick="handleRegister()" id="tab-reg-btn" class="btn-success w-full py-4 mt-2 whitespace-nowrap font-black uppercase tracking-widest">ĐĂNG KÝ NGAY</button>
         </div>
 
         <div id="form-forgot" class="hidden space-y-4">

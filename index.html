@@ -8278,122 +8278,72 @@ function analyzeQuestionDifficulty(submissions) {
 
 function exportFolderToWord(idx) {
     const folder = foldersDB[idx];
-    if (!folder || !folder.questions || folder.questions.length === 0) {
-        return sysNotify("Lỗi", "Bộ đề chưa có câu hỏi!", "error");
-    }
+    if (!folder || !folder.questions || folder.questions.length === 0) return sysNotify("Lỗi", "Đề trống!", "error");
 
-    showModernToast("Đang xử lý", "Đang ép định dạng bảng chuẩn Word...", "info");
+    showModernToast("Hệ thống", "Đang đóng gói đề thi .docx...", "info");
 
     const examName = folder.name.toUpperCase();
     const questions = folder.questions;
-    const examCode = Math.floor(100 + Math.random() * 899);
+    const randomCode = Math.floor(100 + Math.random() * 899);
 
-    // SỬ DỤNG XML/HTML ĐẶC BIỆT CHO MICROSOFT WORD
-    let htmlString = `
-    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            /* ÉP FONT TIMES NEW ROMAN TOÀN BỘ FILE */
-            @font-face { font-family: "Times New Roman"; }
-            body, table, td, p, div, b, span { 
-                font-family: "Times New Roman", serif !important; 
-                font-size: 13pt; 
-                line-height: 1.2;
-                color: black;
-            }
-            @page { 
-                size: A4; 
-                margin: 0.7in 0.5in 0.7in 1in; /* Lề trái rộng để đóng ghim */
-            }
-            .header-table, .options-table, .footer-table { 
-                width: 100%; 
-                border-collapse: collapse; 
-                border: none; 
-            }
-            .q-item { margin-top: 12pt; margin-bottom: 0pt; }  
-        </style>
-    </head>
-    <body>
-        <!-- HEADER: CHIA 2 CỘT BẰNG TABLE -->
-        <table class="header-table">
-            <tr>
-                <td style="width: 40%; text-align: center; vertical-align: top;">
-                    SỞ GIÁO DỤC VÀ ĐÀO TẠO<br>
-                    <b>TRƯỜNG ...........................</b><br>
-                    <div style="border-top: 1pt solid black; width: 100px; margin: 2pt auto;"></div>
-                    <i style="font-size: 10pt;">(Đề thi có ${questions.length} câu)</i>
-                </td>
-                <td style="width: 60%; text-align: center; vertical-align: top;">
-                    <b>KIỂM TRA ĐỊNH KỲ NĂM HỌC 2025-2026</b><br>
-                    <b>Môn: ${examName}</b><br>
-                    <i>Thời gian làm bài: 45 phút</i><br>
-                    <b>Mã đề thi: ${examCode}</b>
-                </td>
-            </tr>
-        </table>
-
-        <p style="margin-top: 15pt; border-bottom: 1pt solid black; padding-bottom: 5pt;">
-            <b>Họ, tên thí sinh:</b> ........................................................................ <b>SBD:</b> ......................
-        </p>
-
-        <!-- NỘI DUNG CÂU HỎI -->
-        ${questions.map((q, i) => `
-            <div style="margin-top: 15pt;">
-                <p style="margin: 0; text-align: justify;"><b>Câu ${i + 1}:</b> ${q.text}</p>
-                
-                <table class="options-table" style="margin-top: 3pt; table-layout: fixed;">
-                    <tr>
-                        <td style="width: 25%; padding: 2pt 0;"><b>A.</b> ${q.options[0]}</td>
-                        <td style="width: 25%; padding: 2pt 0;"><b>B.</b> ${q.options[1]}</td>
-                        <td style="width: 25%; padding: 2pt 0;"><b>C.</b> ${q.options[2]}</td>
-                        <td style="width: 25%; padding: 2pt 0;"><b>D.</b> ${q.options[3]}</td>
-                    </tr>
-                </table>
-            </div>
-        `).join('')}
-
-        <!-- TRANG ĐÁP ÁN -->
-        <br clear="all" style="page-break-before:always">
-        
-        <div style="text-align: center; margin-top: 20pt;">
-            <b style="font-size: 16pt;">ĐÁP ÁN MÃ ĐỀ: ${examCode}</b>
-            <br><br>
-            <table border="1" cellspacing="0" cellpadding="5" style="width: 100%; border-collapse: collapse; text-align: center;">
-                <tr style="background-color: #f2f2f2;">
-                    ${questions.map((_, i) => `<td style="font-weight: bold;">${i + 1}</td>`).join('')}
-                </tr>
+    let html = `
+        <html>
+        <head><meta charset="utf-8"></head>
+        <body style="font-family: 'Times New Roman';">
+            <table style="width: 100%; border: none;">
                 <tr>
-                    ${questions.map(q => `<td>${String.fromCharCode(65 + q.correct)}</td>`).join('')}
+                    <td style="width: 40%; text-align: center; font-size: 12pt;">
+                        SỞ GIÁO DỤC VÀ ĐÀO TẠO<br><b>TRƯỜNG ...........................</b>
+                    </td>
+                    <td style="width: 60%; text-align: center;">
+                        <b style="font-size: 14pt;">ĐỀ THI TRẮC NGHIỆM</b><br>
+                        <b>Môn: ${examName}</b><br>
+                        <i>Thời gian: 45 phút - Mã đề: ${randomCode}</i>
+                    </td>
                 </tr>
             </table>
-        </div>
-    </body>
-    </html>`;
+            <p style="margin-top: 15pt;"><b>Họ và tên:</b> ........................................................... <b>SBD:</b> .................</p>
+            <div style="border-top: 1px solid black; margin: 10pt 0;"></div>
+    `;
 
-    try {
-        // Chuyển đổi và tải file
-        const converted = htmlDocx.asBlob(htmlString);
-        const fileName = `DE_THI_${examName.replace(/\s+/g, '_')}.docx`;
-        const url = URL.createObjectURL(converted);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        showModernToast("Thành công", "Đã xuất file chuẩn Microsoft Word!", "success");
-    } catch (e) {
-        sysNotify("Lỗi", "Không thể tạo file Word", "error");
-    }
+    questions.forEach((q, i) => {
+        html += `
+            <div style="margin-bottom: 15pt;">
+                <p><b>Câu ${i + 1}:</b> ${q.text}</p>
+                <table style="width: 100%; border: none;">
+                    <tr>
+                        <td width="25%"><b>A.</b> ${q.options[0]}</td>
+                        <td width="25%"><b>B.</b> ${q.options[1]}</td>
+                        <td width="25%"><b>C.</b> ${q.options[2]}</td>
+                        <td width="25%"><b>D.</b> ${q.options[3]}</td>
+                    </tr>
+                </table>
+            </div>`;
+    });
+
+    html += `
+        <br style="page-break-before: always;">
+        <p style="text-align: center; font-size: 16pt; font-weight: bold;">ĐÁP ÁN MÃ ĐỀ: ${randomCode}</p>
+        <table border="1" style="width: 100%; border-collapse: collapse; text-align: center;">
+            <tr style="background-color: #eee;">
+                ${questions.map((_, i) => `<td style="font-weight:bold;">${i + 1}</td>`).join('')}
+            </tr>
+            <tr>
+                ${questions.map(q => `<td>${String.fromCharCode(65 + q.correct)}</td>`).join('')}
+            </tr>
+        </table>
+    </body></html>`;
+
+    saveAsDocxBinary(html, `DE_THI_${examName.replace(/\s+/g, '_')}`);
 }
 
 function exportFolderScoresToWord(idx) {
     if (typeof foldersDB === 'undefined' || !foldersDB[idx]) return;
 
     const folder = foldersDB[idx];
-    const subjectName = (folder.subject || "TOÁN").toUpperCase();
+    const subjectName = (folder.subject || "TỰ DO").toUpperCase();
     const folderName = (folder.name || "KẾT QUẢ").trim();
+    
     const matches = (quizHistory || []).filter(h => {
         if (!h || !h.examName) return false;
         const hName = h.examName.trim().toLowerCase();
@@ -8403,61 +8353,71 @@ function exportFolderScoresToWord(idx) {
 
     if (matches.length === 0) return sysNotify("Thông báo", "Chưa có dữ liệu thí sinh.", "warn");
 
-    let examDate = matches[0].time ? matches[0].time.split(' ')[1] : "18/04/2026";
-    const groupedByCode = matches.reduce((acc, h) => {
-        const code = h.examCode || "1";
-        if (!acc[code]) acc[code] = [];
-        acc[code].push(h);
+    showModernToast("Đang xử lý", "Đang tạo file Word chuẩn cho iPhone/Android...", "info");
+
+    let html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body { font-family: 'Times New Roman', Times, serif; line-height: 1.4; }
+                .centered { text-align: center; }
+                .bold { font-weight: bold; }
+                .title { font-size: 18pt; margin-bottom: 5pt; }
+                .subtitle { font-size: 14pt; margin-bottom: 20pt; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10pt; }
+                th, td { border: 1px solid black; padding: 6px; text-align: center; font-size: 11pt; }
+                .t-left { text-align: left; }
+                .footer { margin-top: 30pt; text-align: right; font-style: italic; font-size: 10pt; }
+            </style>
+        </head>
+        <body>
+            <div class="centered bold title">BẢNG ĐIỂM CHI TIẾT</div>
+            <div class="centered bold subtitle">${folderName.toUpperCase()}</div>
+            <p><span class="bold">Môn học:</span> ${subjectName}</p>
+            <p><span class="bold">Ngày xuất:</span> ${new Date().toLocaleDateString('vi-VN')}</p>
+            <p><span class="bold">Tổng số lượt thi:</span> ${matches.length}</p>
+    `;
+
+    const grouped = matches.reduce((acc, h) => {
+        const c = h.examCode || "Gốc";
+        if (!acc[c]) acc[c] = [];
+        acc[c].push(h);
         return acc;
     }, {});
 
-    const f = 'font-family: "Times New Roman", Times, serif;';
-    const border = 'border: 0.5pt solid black;';
-
-    // 1. TẠO NỘI DUNG HTML
-    let bodyHtml = `
-        <p align="center" style="${f} font-size: 20pt; font-weight: bold; text-transform: uppercase; margin: 0;">
-            BẢNG ĐIỂM CHI TIẾT
-        </p>
-        <p align="center" style="${f} font-size: 16pt; font-weight: bold; text-transform: uppercase; margin: 5pt 0 20pt 0;">
-            ${folderName.toUpperCase()}
-        </p>
-
-        <table border="0" width="100%" style="${f} margin-bottom: 15pt;">
-            <tr><td style="font-size: 13pt; padding: 2pt 0;"><b>Môn học:</b> ${subjectName}</td></tr>
-            <tr><td style="font-size: 13pt; padding: 2pt 0;"><b>Ngày kiểm tra:</b> ${examDate}</td></tr>
-            <tr><td style="font-size: 13pt; padding: 2pt 0;"><b>Tổng số thí sinh:</b> ${matches.length}</td></tr>
-        </table>
-    `;
-
-    Object.keys(groupedByCode).sort().forEach(code => {
-        const students = sortArrayByVietnameseName(groupedByCode[code], 'fullname');
-        bodyHtml += `
-            <table border="1" width="100%" cellspacing="0" cellpadding="5" style="border-collapse: collapse; margin-top: 15pt; ${f}">
-                <tr bgcolor="#F2F2F2">
-                    <td colspan="5" style="font-weight: bold; font-size: 13pt; ${border}">MÃ ĐỀ: ${code} (${students.length} thí sinh)</td>
-                </tr>
-                <tr bgcolor="#E2E2E2" align="center" style="font-weight: bold;">
-                    <td width="8%" style="${border}">STT</td>
-                    <td width="47%" align="left" style="${border}">Họ và Tên thí sinh</td>
-                    <td width="15%" style="${border}">Câu đúng</td>
-                    <td width="10%" style="${border}">Điểm</td>
-                    <td width="20%" style="${border}">TG làm bài</td>
-                </tr>
-                ${students.map((s, i) => `
-                    <tr align="center">
-                        <td style="${border}">${i + 1}</td>
-                        <td align="left" style="${border}">${s.fullname || "N/A"}</td>
-                        <td style="${border}">${s.score}/${s.total}</td>
-                        <td style="${border} font-weight: bold;">${s.point}</td>
-                        <td style="${border}">${s.duration || "---"}</td>
+    Object.keys(grouped).sort().forEach(code => {
+        const students = sortArrayByVietnameseName(grouped[code], 'fullname');
+        html += `
+            <p style="margin-top: 15pt;"><span class="bold">MÃ ĐỀ: ${code}</span> (${students.length} thí sinh)</p>
+            <table>
+                <thead>
+                    <tr style="background-color: #f2f2f2;">
+                        <th width="8%">STT</th>
+                        <th width="42%">Họ và Tên</th>
+                        <th width="15%">Câu đúng</th>
+                        <th width="15%">Điểm số</th>
+                        <th width="20%">Thời gian làm</th>
                     </tr>
-                `).join('')}
+                </thead>
+                <tbody>
+                    ${students.map((s, i) => `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td class="t-left">${s.fullname || "N/A"}</td>
+                            <td>${s.score}/${s.total}</td>
+                            <td class="bold">${s.point}</td>
+                            <td>${s.duration || "---"}</td>
+                        </tr>`).join('')}
+                </tbody>
             </table>
         `;
     });
 
-    bodyHtml += `<p align="right" style="margin-top: 30pt; font-style: italic; font-size: 10pt; ${f}">Tài liệu xuất từ hệ thống S-STICK Quiz - ${new Date().toLocaleDateString('vi-VN')}</p>`;
+    html += `<div class="footer">Tài liệu xuất từ hệ thống S-STICK Quiz</div></body></html>`;
+
+    saveAsDocxBinary(html, `BANG_DIEM_${folderName.replace(/\s+/g, '_')}`);
 
     // 2. ĐÓNG GÓI CHUẨN ĐỊNH DẠNG WORD XML (Dùng .doc để tương thích cao nhất)
     const header = `
@@ -8518,6 +8478,33 @@ function exportFolderScoresToWord(idx) {
     } catch (e) {
         console.error(e);
         alert("Lỗi xuất file: " + e.message);
+    }
+}
+
+function saveAsDocxBinary(htmlContent, fileName) {
+    try {
+        // Chuyển đổi HTML thành Blob Docx binary (Đây là chìa khóa để iPhone mở được)
+        const converted = htmlDocx.asBlob(htmlContent);
+        const url = window.URL.createObjectURL(converted);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName + ".docx"; // Luôn dùng đuôi .docx
+        
+        // Buộc phải thêm vào document để Safari iOS kích hoạt lệnh tải
+        document.body.appendChild(link);
+        link.click();
+        
+        // Xóa dấu vết sau khi tải
+        setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        }, 1000);
+
+        showModernToast("Thành công", "Đã tải file .docx thành công!", "success");
+    } catch (e) {
+        console.error("Lỗi chuyển đổi Docx:", e);
+        alert("Thiết bị này không hỗ trợ chuyển đổi file: " + e.message);
     }
 }
 

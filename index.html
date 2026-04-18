@@ -2,6 +2,49 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <script>
+(function() {
+    // 1. Kiểm tra quyền Admin gốc từ LocalStorage
+    const isRoot = JSON.parse(localStorage.getItem('sys_logged_user') || '{}').isRoot;
+    if (isRoot) return;
+
+    // 2. Hàm trừng phạt: Xóa sạch trang và chuyển hướng
+    function punish() {
+        window.stop(); // Dừng nạp trang ngay lập tức
+        document.documentElement.innerHTML = ""; // Xóa sạch HTML
+        location.href = "about:blank"; // Đẩy sang trang trắng
+    }
+
+    // 3. Kiểm tra tốc độ thực thi (Nếu mở F12, JavaScript sẽ chạy chậm lại -> punish)
+    const check = function() {
+        const start = new Date();
+        debugger; // Bẫy người dùng nhấn F5+F12 sẽ bị khựng tại đây
+        const end = new Date();
+        if (end - start > 100) {
+            punish();
+        }
+    };
+
+    // 4. Chống nhấn F12/Chuột phải/Ctrl+U/Ctrl+S
+    window.addEventListener('keydown', (e) => {
+        if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && [73, 74, 67].includes(e.keyCode)) || (e.ctrlKey && e.keyCode == 85)) {
+            e.preventDefault();
+            punish();
+        }
+    });
+    window.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Chạy kiểm tra liên tục mỗi 50ms
+    setInterval(check, 50);
+
+    // Kiểm tra kích thước cửa sổ (Detection bằng kích thước)
+    setInterval(() => {
+        if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) {
+            punish();
+        }
+    }, 100);
+})();
+</script>
     <!-- Icon cho iPhone (Tự động bo góc) -->
     <link rel="apple-touch-icon" href="https://i.ibb.co/B5P92C4Y/LOGO-S-STICK-c-n-n.png">
     
@@ -19,6 +62,22 @@
     <meta name="apple-mobile-web-app-title" content="S-STICK">
     <link rel="preload" as="image" href="https://i.ibb.co/B5P92C4Y/LOGO-S-STICK-c-n-n.png">
     <title>S-STICK Quiz • Hệ thống Trắc nghiệm v5.0 - Professional Admin Multi-User</title>
+    <script>
+    // Chặn Console ngay từ khi bắt đầu tải trang
+    (function() {
+        const savedUser = JSON.parse(localStorage.getItem('sys_logged_user') || 'null');
+        if (savedUser && savedUser.isRoot) return; // Nếu là Admin gốc thì bỏ qua
+        
+        const noop = () => {};
+        console.log = noop;
+        console.warn = noop;
+        console.error = noop;
+        console.info = noop;
+        console.debug = noop;
+
+        setInterval(console.clear, 10);
+    })();
+</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -70,6 +129,37 @@ input[type=range].media-seek {
     border-radius: 10px;
     outline: none;
     cursor: pointer;
+}
+
+/* Hiệu ứng viền chạy CHẬM và SANG TRỌNG */
+.card-sync-active {
+    position: relative !important;
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 50px rgba(99, 102, 241, 0.4) !important;
+    transition: all 0.5s ease;
+    z-index: 10;
+}
+
+.card-sync-active::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 3px; 
+    border-radius: inherit;
+    background: linear-gradient(90deg, #6366f1, #f472b6, #22d3ee, #a855f7, #6366f1);
+    background-size: 200% 200%;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    /* CHỈNH TẠI ĐÂY: 1.0s là tốc độ chạy của viền */
+    animation: border-slow-loop 1.0s linear forwards !important; 
+    opacity: 1 !important;
+    pointer-events: none;
+}
+
+@keyframes border-slow-loop {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
 }
 
 /* KHỐI TRÒN KÉO (Thumb) - Hiện lại ở đây */
@@ -2284,21 +2374,27 @@ window.currentQuizAudio = null;
 })();
 // ------------------------------------------------
 
-// --- LỚP BẢO VỆ 1: CHẶN CHUỘT PHẢI & PHÍM TẮT F12 (BỎ QUA CHO ROOT) ---
-document.addEventListener('contextmenu', e => {
-    if (currentUser?.isRoot) return; // Nếu là Root thì cho dùng chuột phải
-    e.preventDefault();
-});
+// --- LỚP BẢO VỆ SIÊU CẤP ---
+function antiF12Hardware() {
+    if (currentUser?.isRoot) return;
 
-document.onkeydown = function(e) {
-    if (currentUser?.isRoot) return true; // Nếu là Root thì cho dùng phím tắt
-
-    if (e.keyCode == 123 || 
-       (e.ctrlKey && e.shiftKey && (e.keyCode == 'I'.charCodeAt(0) || e.keyCode == 'J'.charCodeAt(0) || e.keyCode == 'C'.charCodeAt(0))) || 
-       (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0))) {
-        return false;
+    // Phát hiện console mở bằng cách đo thời gian thực thi (Performance trick)
+    let startTime = performance.now();
+    debugger;
+    let endTime = performance.now();
+    
+    // Nếu console mở, lệnh 'debugger' sẽ làm dừng luồng thực thi, 
+    // dẫn đến thời gian chênh lệch cực lớn
+    if (endTime - startTime > 100) {
+        document.body.innerHTML = "<div style='background:#000;color:#fff;height:100vh;display:flex;align-items:center;justify-content:center;font-family:sans-serif;'><h1>⚠️ HÀNH VI BỊ CHẶN: KHÔNG ĐƯỢC MỞ F12</h1></div>";
+        location.reload();
     }
-};
+}
+
+// Kiểm tra liên tục mỗi 200ms
+if (!JSON.parse(localStorage.getItem('sys_logged_user') || '{}').isRoot) {
+    setInterval(antiF12Hardware, 200);
+}
 
 // ==========================================
 // 2. BIẾN TOÀN CỤC & HẰNG SỐ (FULL LOGIC CŨ)
@@ -2315,6 +2411,18 @@ let currentQuizAudio = null;
 let quizActualStartTime = 0; // Biến này sẽ lưu thời gian bắt đầu thực tế để tính kết quả
 let usersDB = JSON.parse(localStorage.getItem('users_db') || '{}');
 let currentUser = JSON.parse(localStorage.getItem('sys_logged_user') || 'null');
+(function() {
+    if (currentUser && currentUser.isRoot) return;
+    
+    const noop = () => {};
+    console.log = noop;
+    console.warn = noop;
+    console.error = noop;
+    console.info = noop;
+    console.debug = noop;
+
+    setInterval(console.clear, 10);
+})();
 
 let currentFolderIdx = -1, currentIdx = 0, userAnswers = [], quizInterval = null, timeLeft = 2700;
 let tempQuestions = [], idleTimeout, activeQuestions = [];
@@ -9826,16 +9934,28 @@ function closeImageModal() {
 function handleSync(btn) {
     const banner = document.getElementById('sync-banner');
     
-    // 1. Kích hoạt icon xoay (nếu có class spinning-active)
+    // 1. Nút tròn xoay liên tục
     btn.classList.add('spinning-active');
     
-    // 2. Thả thanh thông báo xuống
+    // 2. Hiện thanh thông báo
     banner.classList.add('show');
+
+    // 3. Tìm tất cả Card đang hiện và áp dụng viền chạy chậm
+    const allCards = document.querySelectorAll('.card.glass');
+    allCards.forEach(card => {
+        if (card.offsetWidth > 0 || card.offsetHeight > 0) {
+            card.classList.add('card-sync-active');
+        }
+    });
+
+    // 4. Các mục Menu cũng chạy chậm theo
+    const menuItems = document.querySelectorAll('#sidebar .menu-item');
+    menuItems.forEach(item => item.classList.add('card-sync-active'));
     
-    // 3. Đợi một lát cho đẹp rồi mới tải lại trang
+    // 5. CHỈNH TẠI ĐÂY: Chờ 1.0 giây (1000ms) để khớp với tốc độ CSS rồi mới Reload
     setTimeout(() => {
         location.reload();
-    }, 800); // 0.8 giây là đủ để thấy thông báo
+    }, 1000); 
 }
 
 </script>

@@ -1291,34 +1291,43 @@ input::-webkit-inner-spin-button {
     color: #6366f1 !important;
 }
 
+/* Thông báo load trang */
 .sync-banner {
     position: fixed;
-    top: -60px; /* Ban đầu giấu ở trên đỉnh */
+    top: -80px; /* Giấu sâu hơn một chút */
     left: 50%;
     transform: translateX(-50%);
     z-index: 9999999;
-    background: rgba(30, 41, 59, 0.9);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(99, 102, 241, 0.4);
+    background: rgba(15, 23, 42, 0.95); /* Màu tối đậm hơn cho chuyên nghiệp */
+    backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(99, 102, 241, 0.5);
     border-top: none;
-    padding: 8px 20px;
-    border-radius: 0 0 15px 15px;
+    padding: 10px 25px; /* Tăng padding một chút cho cân đối */
+    border-radius: 0 0 20px 20px;
     color: white;
-    font-size: 12px;
-    font-weight: 700;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    font-size: 13px; /* Tăng nhẹ cỡ chữ */
+    font-weight: 800;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     pointer-events: none;
+    
+    /* CÁC DÒNG QUAN TRỌNG ĐỂ THẲNG HÀNG */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap; /* Chống xuống dòng tuyệt đối */
+    width: max-content;  /* Độ rộng co giãn theo nội dung chữ */
+    min-width: 200px;    /* Đảm bảo khung không quá bé */
 }
 
 .sync-banner.show {
-    top: 0; /* Thả xuống chạm đỉnh */
+    top: 0;
 }
 
 .sync-content {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px; /* Khoảng cách giữa vòng xoay và chữ */
 }
 
 /* Spinner nhỏ quay bên cạnh chữ */
@@ -1342,8 +1351,8 @@ input::-webkit-inner-spin-button {
     <!-- Thanh thông báo tải lại trang -->
 <div id="sync-banner" class="sync-banner">
     <div class="sync-content">
-        <span class="sync-spinner"></span>
-        <span>Hệ thống đang tải lại...</span>
+        <div class="sync-spinner"></div>
+        <span>HỆ THỐNG ĐANG TẢI LẠI...</span>
     </div>
 </div>
 

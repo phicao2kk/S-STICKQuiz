@@ -1471,6 +1471,34 @@ input::-webkit-inner-spin-button {
     animation: radar-spin 2s linear infinite;
 }
 
+/* Chống vỡ bảng trên Mobile cho trang Giám sát */
+#page-candidates-manager .overflow-x-auto {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+#page-candidates-manager table {
+    min-width: 600px; /* Ép bảng luôn giữ độ rộng ít nhất 600px để không bị nhảy dòng */
+    table-layout: fixed; /* Giữ cố định kích thước các cột */
+}
+
+#page-candidates-manager th, #page-candidates-manager td {
+    white-space: nowrap; /* Không cho phép chữ trong ô tự động xuống dòng */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Style cho dòng phân cách nhóm mã đề */
+.separator-row td {
+    border: none !important;
+    background: transparent !important;
+}
+
+.separator-row div {
+    pointer-events: none;
+    user-select: none;
+}
+
     </style>
 </head>
 <body>
@@ -1499,7 +1527,7 @@ input::-webkit-inner-spin-button {
 
 <div id="notify-container">
     <div id="notify-box">
-        <button onclick="closeNotify()" class="absolute top-4 right-5 text-slate-500 hover:text-white text-xl transition-all">✕</button>
+        <button onclick="closeNotify(false)" class="absolute top-4 right-5 text-slate-500 hover:text-white text-xl transition-all">✕</button>
         <span id="nt-icon" class="notify-icon">🔔</span>
         <div id="nt-title" class="notify-title">Thông báo</div>
         <div id="nt-msg" class="notify-msg">Hệ thống không tìm thấy câu hỏi đúng cấu trúc.</div>
@@ -3581,78 +3609,97 @@ function syncDataFromServer() {
 // ==========================================
 // 4. HÀM HỆ THỐNG (FULL LOGIC CŨ)
 // ==========================================
+// 1. Thông báo thông thường
 function sysNotify(title, msg, type = 'info') {
-    const okBtn = document.getElementById('nt-btn-ok');
-    if(okBtn) okBtn.disabled = false; // MỞ KHÓA NÚT NGAY LẬP TỨC
-    
     const icon = { 'info': '🔔', 'success': '✅', 'error': '❌', 'warn': '⚠️' }[type] || '🔔';
     document.getElementById('nt-icon').innerText = icon;
     document.getElementById('nt-title').innerText = title;
     document.getElementById('nt-msg').innerHTML = msg;
     document.getElementById('nt-input').classList.add('hidden');
     document.getElementById('nt-btn-cancel').classList.add('hidden');
+    
+    // Gán lại lệnh cho nút OK
+    const okBtn = document.getElementById('nt-btn-ok');
+    okBtn.innerText = "Đồng ý";
+    okBtn.disabled = false;
+    okBtn.onclick = () => closeNotify(true); // Thông báo thường thì trả về true/false đều được
+    
     document.getElementById('notify-container').classList.add('active');
 }
 
-// Tìm hàm sysConfirm và thêm dòng okBtn.disabled = false
+// 2. Xác nhận (Có Có/Không)
 function sysConfirm(msg) {
     return new Promise(resolve => {
-        const okBtn = document.getElementById('nt-btn-ok');
-        if(okBtn) {
-            okBtn.disabled = false; // MỞ KHÓA NÚT
-            okBtn.innerText = "Xác nhận";
-            okBtn.className = "bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold w-full";
-            okBtn.classList.remove('hidden');
-        }
-
         document.getElementById('nt-icon').innerText = '⚠️';
         document.getElementById('nt-title').innerText = 'Xác nhận';
         document.getElementById('nt-msg').innerHTML = msg;
         document.getElementById('nt-input').classList.add('hidden');
-        document.getElementById('nt-btn-cancel').classList.remove('hidden');
+        
+        const okBtn = document.getElementById('nt-btn-ok');
+        const cancelBtn = document.getElementById('nt-btn-cancel');
+        
+        okBtn.innerText = "Xác nhận";
+        okBtn.className = "bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold w-full";
+        okBtn.disabled = false;
+        cancelBtn.classList.remove('hidden');
+
+        // QUAN TRỌNG: Gán lệnh trả về kết quả
+        okBtn.onclick = () => closeNotify(true);
+        cancelBtn.onclick = () => closeNotify(false);
+        
         document.getElementById('notify-container').classList.add('active');
         notifyResolver = resolve;
     });
 }
 
-// Tìm hàm sysPrompt và thêm dòng okBtn.disabled = false
+// 3. Nhập liệu (Prompt)
 function sysPrompt(title, msg, placeholder = "", defaultValue = "") {
     return new Promise(resolve => {
-        const okBtn = document.getElementById('nt-btn-ok');
-        if(okBtn) okBtn.disabled = false; // MỞ KHÓA NÚT
-
         document.getElementById('nt-icon').innerText = '📝';
         document.getElementById('nt-title').innerText = title;
         document.getElementById('nt-msg').innerHTML = msg;
+        
         const input = document.getElementById('nt-input');
         input.value = defaultValue; 
         input.placeholder = placeholder;
         input.classList.remove('hidden');
-        document.getElementById('nt-btn-cancel').classList.remove('hidden');
+        
+        const okBtn = document.getElementById('nt-btn-ok');
+        const cancelBtn = document.getElementById('nt-btn-cancel');
+        
+        okBtn.innerText = "Đồng ý";
+        okBtn.disabled = false;
+        cancelBtn.classList.remove('hidden');
+
+        // Trả về giá trị input nếu OK, trả về null nếu Hủy
+        okBtn.onclick = () => closeNotify(input.value);
+        cancelBtn.onclick = () => closeNotify(null);
+        
         document.getElementById('notify-container').classList.add('active');
-        notifyResolver = (res) => resolve(res ? input.value : null);
+        notifyResolver = resolve;
     });
 }
 
-function closeNotify(result = true) {
+function closeNotify(result = false) {
     document.getElementById('notify-container').classList.remove('active');
     
+    // Trả kết quả về cho Promise đang đợi (nếu có)
+    if (notifyResolver) { 
+        notifyResolver(result); 
+        notifyResolver = null; 
+    }
+
+    // Reset giao diện sau khi ẩn để dùng cho lần sau
     setTimeout(() => {
         const okBtn = document.getElementById('nt-btn-ok');
         if (okBtn) {
-            okBtn.disabled = false; // LUÔN MỞ KHÓA KHI ĐÓNG
+            okBtn.disabled = false;
             okBtn.innerText = "Đồng ý";
-            okBtn.onclick = () => closeNotify(true);
             okBtn.className = "bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold w-full";
         }
         document.getElementById('nt-input').classList.add('hidden');
         document.getElementById('nt-btn-cancel').classList.add('hidden');
     }, 300);
-
-    if (notifyResolver) { 
-        notifyResolver(result); 
-        notifyResolver = null; 
-    }
 }
 
 function showPage(id) {
@@ -4820,7 +4867,6 @@ function renderFolders() {
 
         ${childCodesHtml}
 
-        <!-- HÀNG THÔNG SỐ: CÂU HỎI | THỜI GIAN -->
         <div class="flex items-center gap-3 py-2 px-3 bg-black/20 rounded-xl border border-white/5 w-fit">
             <!-- SỐ CÂU HỎI -->
             <div class="flex items-center gap-1.5">
@@ -4833,23 +4879,21 @@ function renderFolders() {
 
             <!-- Ô NHẬP THỜI GIAN MINI -->
             <div class="flex items-center gap-1.5">
-                <div class="relative flex items-center bg-white/5 rounded-md border border-white/10 px-1 focus-within:border-indigo-500 transition-all">
+                <div class="flex items-center bg-white/5 rounded-lg border border-white/10 p-0.5 focus-within:border-emerald-500 transition-all">
                     <input type="text" id="time-input-${i}" 
                         value="${f.duration || ''}" 
-                        placeholder="..." 
+                        placeholder="--" 
                         inputmode="numeric"
                         oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                        class="no-spin w-7 bg-transparent text-[11px] text-white outline-none text-center font-bold py-0.5" 
+                        class="no-spin w-8 bg-transparent text-[11px] text-white outline-none text-center font-bold" 
                         title="Nhập số phút">
                     
                     <button onclick="saveFolderDuration(${i})" 
-                        class="text-emerald-400 hover:text-emerald-300 transition-colors p-0.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                        </svg>
+                        class="bg-emerald-600 hover:bg-emerald-500 text-white text-[8px] font-black px-2 py-1 rounded-md transition-all active:scale-90 shadow-lg border-none">
+                        LƯU
                     </button>
                 </div>
-                <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest" id="duration-label-${i}">Phút</span>
+                <span class="text-[9px] font-black text-slate-500 uppercase" id="duration-label-${i}">Phút</span>
             </div>
         </div>
 
@@ -4967,8 +5011,8 @@ async function generateChildCodes(idx) {
     ntMsg.innerHTML = `
         <div class="text-left space-y-4 mt-2">
             <div class="p-3 bg-amber-500/10 border-l-4 border-amber-500 rounded-r-xl mb-2">
-                <p class="text-[10px] text-amber-200 font-bold uppercase">⚠️ Lưu ý thu hồi:</p>
-                <p class="text-[9px] text-slate-300 italic">Nếu bạn tạo mã mới, các mã đề con cũ của bộ đề này sẽ bị hủy bỏ ngay lập tức để giải phóng tài nguyên.</p>
+                <p class="text-[10px] text-amber-200 font-bold uppercase">⚠️ Xác nhận thay thế:</p>
+                <p class="text-[9px] text-slate-300 italic">Mọi mã đề con cũ của bộ đề này sẽ bị hủy bỏ và thay thế bằng danh sách mã mới.</p>
             </div>
             <div>
                 <label class="text-[10px] font-extrabold text-indigo-400 uppercase tracking-widest ml-1">1. Số lượng mã đề muốn tạo:</label>
@@ -4983,7 +5027,7 @@ async function generateChildCodes(idx) {
 
     document.getElementById('nt-input').classList.add('hidden');
     okBtn.innerText = "XÁC NHẬN & THAY THẾ";
-    okBtn.disabled = false; // Đảm bảo nút không bị khóa từ lần trước
+    okBtn.disabled = false;
     okBtn.className = "w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-2xl shadow-lg transition-all border-none";
     
     okBtn.onclick = async () => {
@@ -4995,7 +5039,7 @@ async function generateChildCodes(idx) {
             return;
         }
 
-        okBtn.innerText = "⏳ ĐANG XỬ LÝ...";
+        okBtn.innerText = "⏳ ĐANG THU HỒI & CẤP MỚI...";
         okBtn.disabled = true;
 
         try {
@@ -5003,33 +5047,35 @@ async function generateChildCodes(idx) {
             const requestedCodes = [];
             for (let i = 0; i < count; i++) { requestedCodes.push((startNum + i).toString()); }
 
-            // 1. KIỂM TRA TRÙNG MÃ VỚI NGƯỜI KHÁC (Trừ chính mã của bộ đề này sắp bị xóa)
+            // 1. KIỂM TRA TRÙNG MÃ VỚI NGƯỜI KHÁC
             const shareMapSnap = await rdb.ref('system/global_share_map').once('value');
             const activeMaps = shareMapSnap.val() || {};
-            
-            // Lấy danh sách mã cũ của folder này để loại trừ khỏi danh sách báo trùng
             const myOldCodes = (folder.childCodesData && folder.childCodesData.codes) ? folder.childCodesData.codes : [];
 
             let conflictedCode = requestedCodes.find(c => 
                 activeMaps[c] && 
                 activeMaps[c].expiresAt > now && 
-                !myOldCodes.includes(c) // Nếu mã trùng nằm trong tập mã cũ của chính mình thì cho phép (vì lát nữa sẽ xóa)
+                !myOldCodes.includes(c)
             );
 
             if (conflictedCode) {
-                showModernToast("MÃ ĐANG BẬN", `Mã <b>${conflictedCode}</b> đang được dùng bởi bộ đề khác. Hãy chọn số khác!`, "error");
+                showModernToast("MÃ ĐANG BẬN", `Mã <b>${conflictedCode}</b> đang được dùng. Hãy chọn số khác!`, "error");
                 okBtn.innerText = "XÁC NHẬN & THAY THẾ";
                 okBtn.disabled = false;
                 return;
             }
 
-            // 2. BẮT ĐẦU QUÁ TRÌNH THAY THẾ
-            showModernToast("HỆ THỐNG", "Đang khởi tạo mã mới...", "info");
-
+            // 2. CHUẨN BỊ LỆNH CẬP NHẬT HÀNG LOẠT
             const updates = {};
-            const duration = parseInt(folder.duration) || 45; // Ép kiểu số
+            const duration = parseInt(folder.duration) || 45;
             const expiry = Date.now() + (duration * 60 * 1000);
-            
+
+            // --- BƯỚC QUAN TRỌNG: LỆNH THU HỒI MÃ CŨ ---
+            myOldCodes.forEach(oldCode => {
+                updates[`system/global_share_map/${oldCode}`] = null;
+            });
+
+            // --- BƯỚC CẤP MÃ MỚI ---
             for (let code of requestedCodes) {
                 let shuffledQ = JSON.parse(JSON.stringify(folder.questions));
                 shuffledQ = shuffleArray(shuffledQ);
@@ -5039,12 +5085,11 @@ async function generateChildCodes(idx) {
                     q.correct = q.options.indexOf(correctText);
                 });
 
-                // ĐẢM BẢO MỌI TRƯỜNG DỮ LIỆU ĐỀU CÓ GIÁ TRỊ DỰ PHÒNG
                 updates[`system/global_share_map/${code}`] = {
-                    admin: currentUser.user || "admin",
+                    admin: currentUser.user,
                     folderIdx: idx,
-                    examName: (folder.name || "Bài thi") + " (Mã " + code + ")",
-                    subject: folder.subject || "Tự do", // Fallback ở đây
+                    examName: (folder.name || "Bài thi"),
+                    subject: folder.subject || "Tự do",
                     duration: duration,
                     fixedQuestions: shuffledQ,
                     expiresAt: expiry,
@@ -5052,32 +5097,28 @@ async function generateChildCodes(idx) {
                 };
             }
 
-            // Đẩy cập nhật
+            // 3. ĐẨY LÊN SERVER
             await rdb.ref().update(updates);
 
-            // 4. CẬP NHẬT DỮ LIỆU LOCAL
+            // 4. CẬP NHẬT LOCAL
             foldersDB[idx].childCodesData = { codes: requestedCodes, expiresAt: expiry };
             saveFolders();
             
             renderFolders();
             closeNotify();
-            showModernToast("THÀNH CÔNG", `Đã thu hồi mã cũ và cấp ${count} mã mới thành công!`, "success");
+            showModernToast("THÀNH CÔNG", `Đã thu hồi ${myOldCodes.length} mã cũ và cấp ${count} mã mới!`, "success");
 
         } catch (err) {
-            console.error("Lỗi thay thế mã:", err);
-            showModernToast("LỖI", "Không thể cập nhật mã đề. Vui lòng thử lại!", "error");
+            console.error(err);
+            showModernToast("LỖI", "Không thể cập nhật mã đề.", "error");
             okBtn.innerText = "XÁC NHẬN & THAY THẾ";
             okBtn.disabled = false;
         }
     };
 
-    const cancelBtn = document.getElementById('nt-btn-cancel');
-    cancelBtn.classList.remove('hidden');
-    cancelBtn.innerText = "Hủy";
-    cancelBtn.onclick = () => closeNotify();
-
-    document.getElementById('notify-container').classList.add('active');
-    setTimeout(() => { document.getElementById('child-count').focus(); }, 300);
+    document.getElementById('nt-btn-cancel').classList.remove('hidden');
+    document.getElementById('nt-btn-cancel').onclick = () => closeNotify(false);
+    ntBox.classList.add('active');
 }
 
 function toggleShuffleOutside(idx, checkbox) {
@@ -9022,19 +9063,17 @@ function listenToCandidates() {
     const body = document.getElementById('candidates-table-body');
     const ref = rdb.ref(`system/active_sessions/${safeAdmin}`);
 
-    // Hiển thị trạng thái chờ khi mới vào trang
     if (body && !candidatesInitialDataLoaded) {
         body.innerHTML = `<tr><td colspan="5" class="text-center py-12"><p class="animate-pulse text-indigo-400 font-bold text-xs uppercase tracking-widest">📡 Đang quét radar thí sinh...</p></td></tr>`;
     }
 
-    ref.off(); // Tắt các trình lắng nghe cũ
-
+    ref.off();
     ref.on('value', (snapshot) => {
         const data = snapshot.val();
         monitorCache = data || {}; 
         
         if (!data) {
-            if (body) body.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-500 italic text-xs">Hiện tại chưa có thí sinh nào tham gia phòng thi.</td></tr>';
+            if (body) body.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-500 italic text-xs">Hiện tại chưa có thí sinh nào tham gia.</td></tr>';
             candidatesInitialDataLoaded = true;
             return;
         }
@@ -9044,136 +9083,147 @@ function listenToCandidates() {
         let html = "";
         const sortedExamCodes = Object.keys(data).sort();
 
-        sortedExamCodes.forEach((examCode) => {
+        // Duyệt qua từng mã đề
+        sortedExamCodes.forEach((examCode, groupIndex) => { // Thêm groupIndex ở đây
+            const studentsEntries = Object.entries(data[examCode]);
+            if (studentsEntries.length === 0) return;
+
+            // --- LOGIC LẤY THÔNG TIN BỘ ĐỀ (Giữ nguyên) ---
+            const firstStudent = studentsEntries[0][1];
+            const rawExamName = firstStudent.examName || "Bài thi";
+            const folderMatch = foldersDB.find(f => rawExamName.toLowerCase().includes(f.name.toLowerCase()));
+            const dispSubject = folderMatch ? folderMatch.subject : "Tự do";
+            const dispExamName = rawExamName.toUpperCase();
+
+            // 1. THANH TIÊU ĐỀ NHÓM MÃ ĐỀ
             html += `
-                <tr class="bg-indigo-500/10 header-row">
-                    <td colspan="5" class="py-2 pl-4">
-                        <div class="flex justify-between items-center pr-4">
-                            <b class="text-[10px] text-indigo-400 uppercase tracking-widest">⚡ MÃ ĐỀ: ${examCode}</b>
-                            <span class="text-[9px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full">${Object.keys(data[examCode]).length} Thí sinh</span>
+                <tr class="bg-indigo-500/15 border-y border-indigo-500/20">
+                    <td colspan="5" class="py-3 px-4">
+                        <div class="flex items-center flex-wrap gap-x-8 gap-y-2 w-full">
+                            <div class="flex items-center gap-2">
+                                <span class="text-orange-400">⚡</span>
+                                <b class="text-[10px] text-indigo-300 uppercase tracking-widest">MÃ ĐỀ: ${examCode}</b>
+                            </div>
+                            <div class="hidden md:block h-4 w-[1px] bg-white/10"></div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-500 text-[9px] font-black uppercase tracking-tighter">BỘ ĐỀ:</span>
+                                <b class="text-[10px] text-white font-extrabold uppercase tracking-wide">${dispExamName}</b>
+                            </div>
+                            <div class="hidden md:block h-4 w-[1px] bg-white/10"></div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-500 text-[9px] font-black uppercase tracking-tighter">MÔN:</span>
+                                <b class="text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest">${dispSubject}</b>
+                            </div>
+                            <div class="ml-auto">
+                                <span class="text-[9px] bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full font-black border border-indigo-500/20 shadow-lg">
+                                    ${studentsEntries.length} THÍ SINH
+                                </span>
+                            </div>
                         </div>
                     </td>
                 </tr>`;
             
-    const studentsEntries = Object.entries(data[examCode]);
-
-    studentsEntries.sort((a, b) => {
-        // Lấy tên đầy đủ và dọn dẹp khoảng trắng
-        const fullA = (a[1].name || "").trim();
-        const fullB = (b[1].name || "").trim();
-
-        // Tách các từ trong tên
-        const partsA = fullA.split(" ");
-        const partsB = fullB.split(" ");
-
-        // Lấy từ cuối cùng (Tên chính hoặc Số)
-        const nameA = partsA.pop();
-        const nameB = partsB.pop();
-
-        // So sánh Tên chính trước
-        // numeric: true giúp xếp số 2 đứng trước số 12
-        // sensitivity: 'accent' để phân biệt chữ có dấu
-        const cmp = nameA.localeCompare(nameB, 'vi', { numeric: true, sensitivity: 'accent' });
-
-        // Nếu tên chính giống hệt nhau (ví dụ cùng tên "Phi"), so sánh tiếp toàn bộ họ tên
-        if (cmp !== 0) return cmp;
-        return fullA.localeCompare(fullB, 'vi', { numeric: true, sensitivity: 'accent' });
-    });
+            // Sắp xếp và vẽ thí sinh
+            studentsEntries.sort((a, b) => a[1].name.localeCompare(b[1].name, 'vi'));
 
             studentsEntries.forEach(([safeUser, s]) => {
                 const studentUniqueKey = `${examCode}_${safeUser}`;
-                const oldStatus = trackedStudents[studentUniqueKey];
-                
-                // --- LOGIC NỔ THÔNG BÁO THÔNG MINH ---
-                if (candidatesInitialDataLoaded) {
-                    // TRƯỜNG HỢP 1: THÍ SINH MỚI VÀO
-                    if (!oldStatus) {
-                        NOTI_SOUND.play().catch(() => {});
-                        showModernToast(
-                            "THÍ SINH MỚI 👥", 
-                            `<b>${s.name}</b> vừa truy cập vào mã đề <b>${examCode}</b>`, 
-                            "success", 
-                            "page-candidates-manager"
-                        );
-                        updateCandidateBadge(1);
-                    } 
-                    // TRƯỜNG HỢP 2: THÍ SINH VỪA NỘP BÀI
-                    else if (oldStatus !== s.status && s.status === 'ĐÃ NỘP BÀI') {
-                        NOTI_SOUND.play().catch(() => {});
-                        showModernToast(
-                            "NỘP BÀI THÀNH CÔNG ✅", 
-                            `Thí sinh <b>${s.name}</b> đã hoàn thành. Điểm: <b class="text-white">${s.score}</b>`, 
-                            "info", 
-                            "page-candidates-manager"
-                        );
-                    }
-                }
-
-                trackedStudents[studentUniqueKey] = s.status;
+                // ... (Phần vẽ dòng <tr> của thí sinh giữ nguyên như code hiện tại của bạn) ...
                 const isDone = s.status === 'ĐÃ NỘP BÀI';
                 const isWaiting = s.status === 'ĐÃ TRUY CẬP VÀO ĐỀ';
 
                 html += `
-                <tr id="row-${studentUniqueKey}" class="border-b border-white/5 hover:bg-white/5 transition">
-                    <td class="py-3 pl-6">
+                <tr id="row-${studentUniqueKey}" class="border-b border-white/5 hover:bg-white/10 transition">
+                    <td class="py-4 px-4 min-w-[140px]">
                         <div class="flex items-center gap-2">
-                             <div class="w-1.5 h-1.5 rounded-full ${isDone ? 'bg-slate-600' : 'bg-emerald-500 animate-pulse'}"></div>
-                             <div class="font-bold text-white text-sm">${s.name || "N/A"}</div>
+                             <div class="w-1.5 h-1.5 shrink-0 rounded-full ${isDone ? 'bg-slate-600' : 'bg-emerald-500 animate-pulse'}"></div>
+                             <div class="font-bold text-white text-sm truncate">${s.name || "N/A"}</div>
                         </div>
                     </td>
                     <td class="text-center font-mono text-xs text-slate-500">${examCode}</td>
-                    <td class="text-center">
-                        <span class="px-2 py-0.5 rounded-full text-[9px] font-black ${isDone ? 'bg-emerald-500/20 text-emerald-400' : (isWaiting ? 'bg-slate-700 text-slate-400' : 'bg-amber-500/20 text-amber-400 animate-pulse')}">
+                    <td class="text-center px-2">
+                        <span id="status-text-${safeUser}" class="inline-block whitespace-nowrap px-2 py-0.5 rounded-full text-[9px] font-black ${isDone ? 'bg-emerald-500/20 text-emerald-400' : (isWaiting ? 'bg-slate-700 text-slate-400' : 'bg-amber-500/20 text-amber-400 animate-pulse')}">
                             ${s.status}
                         </span>
                     </td>
-                    <td class="text-center">
+                    <td class="text-center min-w-[100px]">
                         <div id="clock-${safeUser}" class="font-mono text-xs ${isWaiting ? 'text-slate-500 italic' : (isDone ? 'text-slate-600' : 'text-indigo-300 font-bold')}">
                             ${isWaiting ? 'ĐANG ĐỢI...' : (isDone ? 'HOÀN THÀNH' : '--:--')}
                         </div>
                     </td>
                     <td class="pr-6 text-right">
-                        <span class="text-lg font-black ${isDone ? 'text-indigo-400' : 'text-slate-700'}">
+                        <span class="text-lg font-black ${isDone ? 'text-indigo-400' : 'text-slate-800'}">
                             ${s.score ? s.score : '---'}
                         </span>
                     </td>
                 </tr>`;
             });
+
+            // --- BƯỚC QUAN TRỌNG: CHÈN DẤU PHÂN CÁCH SAU KHI KẾT THÚC NHÓM ---
+            // Chỉ chèn nếu đây chưa phải là nhóm cuối cùng
+            if (groupIndex < sortedExamCodes.length - 1) {
+                html += `
+                <tr class="separator-row">
+                    <td colspan="5" class="py-2 px-8">
+                        <div class="w-full flex items-center gap-4 opacity-20">
+                            <div class="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent"></div>
+                            <span class="text-[10px] text-white tracking-[10px] font-black">----------</span>
+                            <div class="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent"></div>
+                        </div>
+                    </td>
+                </tr>`;
+            }
         });
 
         if (body) body.innerHTML = html;
-        candidatesInitialDataLoaded = true; // Đánh dấu đã load xong đợt đầu, từ giờ ai mới vào sẽ nổ Toast
+        candidatesInitialDataLoaded = true;
 
-        // Bộ đếm giờ Realtime
+        // Bộ đếm giờ Realtime tích hợp xử lý Treo máy & Hết hạn
         monitorInterval = setInterval(() => {
             const now = getServerTime();
-            Object.keys(monitorCache).forEach(examCode => {
-                Object.entries(monitorCache[examCode]).forEach(([safeUser, s]) => {
-                    const el = document.getElementById(`clock-${safeUser}`);
-                    if (!el) return;
+            
+            let codeExpiryMap = {};
+            foldersDB.forEach(f => {
+                if (f.accessCode) codeExpiryMap[f.accessCode] = f.expiresAt;
+                if (f.childCodesData && f.childCodesData.codes) {
+                    f.childCodesData.codes.forEach(c => codeExpiryMap[c] = f.childCodesData.expiresAt);
+                }
+            });
 
-                    // Nếu thí sinh đang làm bài và có mốc thời gian kết thúc
+            Object.keys(monitorCache).forEach(examCode => {
+                const examCodeExpiry = codeExpiryMap[examCode] || 0;
+
+                Object.entries(monitorCache[examCode]).forEach(([safeUser, s]) => {
+                    const clockEl = document.getElementById(`clock-${safeUser}`);
+                    const statusEl = document.getElementById(`status-text-${safeUser}`);
+                    if (!clockEl) return;
+
                     if (s.status === 'ĐANG LÀM BÀI' && s.endTime > 0) {
                         const remain = s.endTime - now;
-
                         if (remain <= 0) {
-                            // Nếu hiệu số <= 0, ép hiển thị HẾT GIỜ ngay lập tức
-                            el.innerText = "HẾT GIỜ";
-                            el.className = "text-red-500 font-black text-xs animate-pulse";
+                            clockEl.innerText = "HẾT GIỜ";
+                            clockEl.className = "text-red-500 font-black text-xs animate-pulse";
                         } else {
-                            // Chỉ tính toán khi remain là số dương
                             const m = Math.floor(remain / 60000);
                             const sec = Math.floor((remain % 60000) / 1000);
-                            el.innerText = `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
-                            el.classList.remove('text-red-500', 'animate-pulse');
-                            el.classList.add('text-indigo-300');
+                            clockEl.innerText = `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
                         }
-                    } else if (s.status === 'ĐÃ NỘP BÀI') {
-                        el.innerText = "HOÀN TẤT";
-                        el.className = "text-slate-500 text-[10px] font-bold";
-                    } else {
-                        el.innerText = "ĐANG ĐỢI...";
-                        el.className = "text-slate-500 italic text-[10px]";
+                    } 
+                    else if (s.status === 'ĐÃ TRUY CẬP VÀO ĐỀ') {
+                        if (examCodeExpiry > 0 && now > examCodeExpiry) {
+                            clockEl.innerText = "HẾT HẠN LÀM BÀI";
+                            clockEl.className = "text-red-400 font-bold text-[9px]";
+                            if (statusEl) {
+                                statusEl.innerText = "THÍ SINH CHƯA HOÀN THÀNH BÀI THI";
+                                statusEl.className = "px-2 py-0.5 rounded-full text-[8px] font-black bg-red-900/30 text-red-500 border border-red-500/20";
+                            }
+                        } else {
+                            clockEl.innerText = "ĐANG ĐỢI...";
+                        }
+                    }
+                    else if (s.status === 'ĐÃ NỘP BÀI') {
+                        clockEl.innerText = "HOÀN TẤT";
+                        clockEl.className = "text-slate-500 text-[10px] font-bold";
                     }
                 });
             });

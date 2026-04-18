@@ -1559,6 +1559,36 @@ input::-webkit-inner-spin-button {
     }
 }
 
+/* Fix lỗi chồng chữ radar stats trên mobile */
+#radar-info-stats {
+    position: absolute;
+    bottom: 40px; /* Tăng khoảng cách đáy */
+    left: 20px;
+    color: #6366f1;
+    font-family: monospace;
+    font-size: 10px;
+    line-height: 1.6; /* Giảm độ giãn dòng để không bị dồn */
+    opacity: 0.6;
+    animation: flicker 0.15s infinite alternate;
+    z-index: 100;
+    pointer-events: none;
+}
+
+/* Điều chỉnh riêng cho điện thoại */
+@media (max-width: 768px) {
+    #radar-info-stats {
+        bottom: calc(10px + env(safe-area-inset-bottom)); /* Sát đáy hơn và né thanh Home iPhone */
+        left: 10px;
+        font-size: 8px; /* Chữ nhỏ lại một chút cho cân đối */
+        line-height: 1.4;
+    }
+    
+    /* Đẩy tiêu đề chính lên cao một chút để không đè vào stats */
+    #radar-screen h2.brand-run {
+        margin-bottom: 10px !important;
+    }
+}
+
     </style>
 </head>
 <body>
@@ -1609,12 +1639,13 @@ input::-webkit-inner-spin-button {
     </div>
 
     <!-- Thông số chạy góc màn hình cho giống máy tính quân sự -->
-    <div style="position: absolute; bottom: 30px; left: 30px; color: #6366f1; font-family: monospace; font-size: 10px; line-height: 2; opacity: 0.6; animation: flicker 0.15s infinite alternate;">
-        <div>SYS: S-STICK QUIZ V5.0</div>
-        <div>NODE: SOUTH_ASIA_01</div>
-        <div>DEV: CAO NGUYEN HONG PHI</div>
-        <div>ID: <span id="random-id">0978877125</span></div>
-    </div>
+<!-- Thông số chạy góc màn hình - Đã fix chồng lấp trên Mobile -->
+<div id="radar-info-stats">
+    <div>SYS: S-STICK QUIZ V5.0</div>
+    <div>NODE: SOUTH_ASIA_01</div>
+    <div>DEV: CAO NGUYEN HONG PHI</div>
+    <div>ID: <span id="random-id">0978877125</span></div>
+</div>
 </div>
 
     <!-- Thanh thông báo tải lại trang -->

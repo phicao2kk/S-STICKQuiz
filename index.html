@@ -8393,7 +8393,7 @@ function exportFolderScoresToWord(idx) {
 
     const folder = foldersDB[idx]; 
     const subjectName = (folder.subject || "TOÁN").toUpperCase();
-    const folderName = (folder.name || "Báo cáo").trim();
+    const folderName = (folder.name || "Kết quả").trim();
     
     const matches = (quizHistory || []).filter(h => {
         if (!h || !h.examName) return false;
@@ -8413,34 +8413,28 @@ function exportFolderScoresToWord(idx) {
         return acc;
     }, {});
 
-    // PHÔNG CHỮ VÀ VIỀN
+    // PHÔNG CHỮ ÉP MẠNH (FORCED FONT)
     const f = 'font-family: "Times New Roman", Times, serif;';
-    const b = 'border: 1px solid black;';
 
-    let content = `
-    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    // XÂY DỰNG HTML SIÊU SẠCH (KHÔNG DÙNG DIV, CHỈ TABLE)
+    let contentHtml = `
+    <!DOCTYPE html>
+    <html>
     <head>
         <meta charset="utf-8">
-        <!--[if gte mso 9]>
-        <xml>
-            <w:WordDocument>
-                <w:View>Print</w:View>
-                <w:Zoom>100</w:Zoom>
-                <w:DoNotOptimizeForBrowser/>
-            </w:WordDocument>
-        </xml>
-        <![endif]-->
         <style>
-            @font-face { font-family: "Times New Roman"; }
-            p, table, td, th { ${f} font-size: 13pt; color: black; line-height: 1.5; }
+            body { ${f} font-size: 13pt; color: black; }
+            table { width: 100%; border-collapse: collapse; }
+            td, th { border: 1px solid black; padding: 6px; ${f} font-size: 12pt; }
         </style>
     </head>
-    <body style="padding: 1in;">
-        
+    <body>
+        <!-- TIÊU ĐỀ -->
         <p align="center" style="${f} font-size: 18pt; font-weight: bold; text-transform: uppercase;">
             BẢNG ĐIỂM CHI TIẾT: ${folderName.toUpperCase()}
         </p>
         
+        <!-- THÔNG TIN CHUNG -->
         <p style="${f}"><b>Môn học:</b> ${subjectName}</p>
         <p style="${f}"><b>Ngày kiểm tra:</b> ${examDate}</p>
         <p style="${f}"><b>Tổng số thí sinh:</b> ${matches.length}</p>
@@ -8448,26 +8442,30 @@ function exportFolderScoresToWord(idx) {
         ${Object.keys(groupedByCode).sort().map(code => {
             const sortedStudents = sortArrayByVietnameseName(groupedByCode[code], 'fullname');
             return `
-                <table border="1" cellspacing="0" cellpadding="6" style="width: 100%; border-collapse: collapse; margin-top: 20pt; ${f}">
+                <br>
+                <table border="1" cellspacing="0" cellpadding="5" style="${f}">
+                    <!-- MÃ ĐỀ -->
                     <tr bgcolor="#F2F2F2">
-                        <td colspan="5" style="${f} ${b} font-weight: bold; font-size: 14pt;">
+                        <td colspan="5" style="${f} font-weight: bold; font-size: 14pt; border: 1px solid black;">
                             MÃ ĐỀ: ${code} (${sortedStudents.length} thí sinh)
                         </td>
                     </tr>
-                    <tr bgcolor="#D9D9D9" align="center" style="font-weight: bold;">
-                        <td width="8%" style="${b} ${f}">STT</td>
-                        <td width="47%" style="${b} ${f}">Họ và Tên thí sinh</td>
-                        <td width="15%" style="${b} ${f}">Câu đúng</td>
-                        <td width="10%" style="${b} ${f}">Điểm</td>
-                        <td width="20%" style="${b} ${f}">TG làm bài</td>
+                    <!-- HEADER BẢNG -->
+                    <tr bgcolor="#E2E2E2" align="center" style="font-weight: bold;">
+                        <td width="8%" style="border: 1px solid black; ${f}">STT</td>
+                        <td width="47%" align="left" style="border: 1px solid black; ${f}">Họ và Tên thí sinh</td>
+                        <td width="15%" style="border: 1px solid black; ${f}">Câu đúng</td>
+                        <td width="10%" style="border: 1px solid black; ${f}">Điểm</td>
+                        <td width="20%" style="border: 1px solid black; ${f}">TG làm bài</td>
                     </tr>
+                    <!-- DỮ LIỆU -->
                     ${sortedStudents.map((s, i) => `
                         <tr align="center">
-                            <td style="${b} ${f}">${i + 1}</td>
-                            <td align="left" style="${b} ${f}">${s.fullname || "N/A"}</td>
-                            <td style="${b} ${f}">${s.score}/${s.total}</td>
-                            <td style="${b} ${f} font-weight: bold;">${s.point}</td>
-                            <td style="${b} ${f}">${s.duration || "---"}</td>
+                            <td style="border: 1px solid black; ${f}">${i + 1}</td>
+                            <td align="left" style="border: 1px solid black; ${f}">${s.fullname || "N/A"}</td>
+                            <td style="border: 1px solid black; ${f}">${s.score}/${s.total}</td>
+                            <td style="border: 1px solid black; ${f} font-weight: bold;">${s.point}</td>
+                            <td style="border: 1px solid black; ${f}">${s.duration || "---"}</td>
                         </tr>
                     `).join('')}
                 </table>
@@ -8481,26 +8479,26 @@ function exportFolderScoresToWord(idx) {
     </body>
     </html>`;
 
-    // CHUYỂN ĐỔI SANG BLOB CHUẨN MICROSOFT WORD
-    const blob = new Blob(['\ufeff', content], {
-        type: 'application/msword'
-    });
-    
-    const fileName = `BANG_DIEM_${folderName.replace(/\s+/g, '_')}.doc`;
-    
-    if (navigator.msSaveBlob) {
-        navigator.msSaveBlob(blob, fileName);
-    } else {
+    try {
+        // SỬ DỤNG THƯ VIỆN ĐỂ TẠO FILE .DOCX THẬT
+        const docxBlob = htmlDocx.asBlob(contentHtml);
+        const fileName = `BANG_DIEM_${folderName.replace(/\s+/g, '_')}.docx`;
+        
+        const url = URL.createObjectURL(docxBlob);
         const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
         link.href = url;
         link.download = fileName;
         document.body.appendChild(link);
         link.click();
+        
         setTimeout(() => {
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
         }, 500);
+
+        showModernToast("Thành công", "Đã xuất file .docx chuyên nghiệp", "success");
+    } catch (e) {
+        alert("Lỗi xuất file: " + e.message);
     }
 }
 

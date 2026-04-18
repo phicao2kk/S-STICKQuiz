@@ -8941,8 +8941,11 @@ async function generatePDFScore(idx) {
     element.style.background = "#ffffff";
     element.style.fontFamily = "'Times New Roman', serif";
 
-    // Lấy ngày từ thí sinh đầu tiên (Trích xuất phần ngày từ chuỗi "HH:mm:ss DD/MM/YYYY")
+    // Lấy ngày từ thí sinh đầu tiên
     let testDate = matches.length > 0 ? matches[0].time.split(' ').pop() : new Date().toLocaleDateString('vi-VN');
+    
+    // LẤY THỜI GIAN GIÁO VIÊN THIẾT LẬP
+    const durationLimit = folder.duration || '--';
 
     let html = `
         <style>
@@ -8951,13 +8954,12 @@ async function generatePDFScore(idx) {
             .pdf-table th { background-color: #f0f0f0 !important; font-weight: bold; }
             .text-left { text-align: left !important; padding-left: 10px !important; }
             
-            /* Style cho tiêu đề lớn */
             .pdf-title-main { 
                 text-align: center; 
                 margin-bottom: 5px; 
                 color: #000 !important; 
                 font-weight: 900 !important; 
-                font-size: 24px !important; /* Tăng cỡ chữ tiêu đề chính */
+                font-size: 24px !important; 
                 text-transform: uppercase;
             }
             .pdf-title-sub { 
@@ -8966,7 +8968,7 @@ async function generatePDFScore(idx) {
                 margin-bottom: 20px;
                 color: #000 !important; 
                 font-weight: 800 !important; 
-                font-size: 18px !important; /* Tăng cỡ chữ tên bài thi */
+                font-size: 18px !important; 
                 text-transform: uppercase;
             }
         </style>
@@ -8974,8 +8976,9 @@ async function generatePDFScore(idx) {
         <div class="pdf-title-main">BẢNG ĐIỂM CHI TIẾT</div>
         <div class="pdf-title-sub">${folder.name}</div>
         
-        <p style="color: #000 !important; font-size: 14px; margin-bottom: 10px;">
+        <p style="color: #000 !important; font-size: 14px; margin-bottom: 10px; line-height: 1.6;">
             <b>Môn học:</b> ${folder.subject || "Tự do"}<br>
+            <b>Thời gian quy định:</b> ${durationLimit} phút<br>
             <b>Ngày làm bài:</b> ${testDate} | <b>Tổng số:</b> ${matches.length} thí sinh
         </p>
     `;
@@ -8998,7 +9001,7 @@ async function generatePDFScore(idx) {
                         <th style="width: 250px;" class="text-left">Họ và Tên thí sinh</th>
                         <th style="width: 100px;">Số câu đúng</th>
                         <th style="width: 80px;">Điểm số</th>
-                        <th style="width: 100px;">Thời gian</th>
+                        <th style="width: 100px;">Thời gian làm</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -9012,7 +9015,7 @@ async function generatePDFScore(idx) {
 
     const opt = { 
         margin: 10, 
-        filename: `DIEM_${folder.name}.pdf`, 
+        filename: `DIEM_${folder.name.replace(/\s+/g, '_')}.pdf`, 
         image: { type: 'jpeg', quality: 1 }, 
         html2canvas: { scale: 3, useCORS: true }, 
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
@@ -9067,12 +9070,13 @@ async function generateExcelScore(idx) {
     const monHocRow = worksheet.addRow(['Môn học: ' + (folder.subject || "Tự do")]);
     monHocRow.getCell(1).font = { name: 'Times New Roman', size: 12, bold: true };
 
-    // --- LOGIC LẤY NGÀY LÀM BÀI TỪ THÍ SINH ĐẦU TIÊN ---
+    // --- LOGIC LẤY NGÀY LÀM BÀI VÀ THỜI GIAN QUY ĐỊNH ---
     let testDate = matches[0].time.split(' ').pop(); 
+    const durationLimit = folder.duration || '--'; // Lấy thời gian GV thiết lập
 
-    // Dòng 4: Thông tin tổng hợp
+    // Dòng 4: Thông tin tổng hợp (ĐÃ THÊM THỜI GIAN QUY ĐỊNH)
     const infoRow = worksheet.addRow([
-        'Ngày làm bài: ' + testDate + '  |  Tổng số: ' + matches.length + ' thí sinh'
+        'Ngày làm bài: ' + testDate + '  |  Thời gian quy định: ' + durationLimit + ' phút  |  Tổng số: ' + matches.length + ' thí sinh'
     ]);
     worksheet.mergeCells(`A${infoRow.number}:E${infoRow.number}`);
     infoRow.getCell(1).font = { name: 'Times New Roman', size: 12, color: { argb: 'FF000000' } };

@@ -8391,10 +8391,9 @@ function exportFolderToWord(idx) {
 function exportFolderScoresToWord(idx) {
     if (typeof foldersDB === 'undefined' || !foldersDB[idx]) return;
 
-    const folder = foldersDB[idx]; 
+    const folder = foldersDB[idx];
     const subjectName = (folder.subject || "TOÁN").toUpperCase();
-    const folderName = (folder.name || "Kết quả").trim();
-    
+    const folderName = (folder.name || "KẾT QUẢ").trim();
     const matches = (quizHistory || []).filter(h => {
         if (!h || !h.examName) return false;
         const hName = h.examName.trim().toLowerCase();
@@ -8402,10 +8401,9 @@ function exportFolderScoresToWord(idx) {
         return hName === fName || hName.startsWith(fName + " (mã");
     });
 
-    if (matches.length === 0) return sysNotify("Thông báo", "Chưa có dữ liệu bài làm.", "warn");
+    if (matches.length === 0) return sysNotify("Thông báo", "Chưa có dữ liệu thí sinh.", "warn");
 
     let examDate = matches[0].time ? matches[0].time.split(' ')[1] : "18/04/2026";
-    
     const groupedByCode = matches.reduce((acc, h) => {
         const code = h.examCode || "1";
         if (!acc[code]) acc[code] = [];
@@ -8413,91 +8411,112 @@ function exportFolderScoresToWord(idx) {
         return acc;
     }, {});
 
-    // PHÔNG CHỮ ÉP MẠNH (FORCED FONT)
     const f = 'font-family: "Times New Roman", Times, serif;';
+    const border = 'border: 0.5pt solid black;';
 
-    // XÂY DỰNG HTML SIÊU SẠCH (KHÔNG DÙNG DIV, CHỈ TABLE)
-    let contentHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            body { ${f} font-size: 13pt; color: black; }
-            table { width: 100%; border-collapse: collapse; }
-            td, th { border: 1px solid black; padding: 6px; ${f} font-size: 12pt; }
-        </style>
-    </head>
-    <body>
-        <!-- TIÊU ĐỀ -->
-        <p align="center" style="${f} font-size: 18pt; font-weight: bold; text-transform: uppercase;">
-            BẢNG ĐIỂM CHI TIẾT: ${folderName.toUpperCase()}
+    // 1. TẠO NỘI DUNG HTML
+    let bodyHtml = `
+        <p align="center" style="${f} font-size: 20pt; font-weight: bold; text-transform: uppercase; margin: 0;">
+            BẢNG ĐIỂM CHI TIẾT
         </p>
-        
-        <!-- THÔNG TIN CHUNG -->
-        <p style="${f}"><b>Môn học:</b> ${subjectName}</p>
-        <p style="${f}"><b>Ngày kiểm tra:</b> ${examDate}</p>
-        <p style="${f}"><b>Tổng số thí sinh:</b> ${matches.length}</p>
-
-        ${Object.keys(groupedByCode).sort().map(code => {
-            const sortedStudents = sortArrayByVietnameseName(groupedByCode[code], 'fullname');
-            return `
-                <br>
-                <table border="1" cellspacing="0" cellpadding="5" style="${f}">
-                    <!-- MÃ ĐỀ -->
-                    <tr bgcolor="#F2F2F2">
-                        <td colspan="5" style="${f} font-weight: bold; font-size: 14pt; border: 1px solid black;">
-                            MÃ ĐỀ: ${code} (${sortedStudents.length} thí sinh)
-                        </td>
-                    </tr>
-                    <!-- HEADER BẢNG -->
-                    <tr bgcolor="#E2E2E2" align="center" style="font-weight: bold;">
-                        <td width="8%" style="border: 1px solid black; ${f}">STT</td>
-                        <td width="47%" align="left" style="border: 1px solid black; ${f}">Họ và Tên thí sinh</td>
-                        <td width="15%" style="border: 1px solid black; ${f}">Câu đúng</td>
-                        <td width="10%" style="border: 1px solid black; ${f}">Điểm</td>
-                        <td width="20%" style="border: 1px solid black; ${f}">TG làm bài</td>
-                    </tr>
-                    <!-- DỮ LIỆU -->
-                    ${sortedStudents.map((s, i) => `
-                        <tr align="center">
-                            <td style="border: 1px solid black; ${f}">${i + 1}</td>
-                            <td align="left" style="border: 1px solid black; ${f}">${s.fullname || "N/A"}</td>
-                            <td style="border: 1px solid black; ${f}">${s.score}/${s.total}</td>
-                            <td style="border: 1px solid black; ${f} font-weight: bold;">${s.point}</td>
-                            <td style="border: 1px solid black; ${f}">${s.duration || "---"}</td>
-                        </tr>
-                    `).join('')}
-                </table>
-            `;
-        }).join('')}
-
-        <p align="right" style="margin-top: 40pt; font-style: italic; font-size: 11pt; ${f}">
-            Tài liệu được xuất từ hệ thống S-STICK Quiz<br>
-            Ngày xuất file: ${new Date().toLocaleDateString('vi-VN')}
+        <p align="center" style="${f} font-size: 16pt; font-weight: bold; text-transform: uppercase; margin: 5pt 0 20pt 0;">
+            ${folderName.toUpperCase()}
         </p>
-    </body>
-    </html>`;
+
+        <table border="0" width="100%" style="${f} margin-bottom: 15pt;">
+            <tr><td style="font-size: 13pt; padding: 2pt 0;"><b>Môn học:</b> ${subjectName}</td></tr>
+            <tr><td style="font-size: 13pt; padding: 2pt 0;"><b>Ngày kiểm tra:</b> ${examDate}</td></tr>
+            <tr><td style="font-size: 13pt; padding: 2pt 0;"><b>Tổng số thí sinh:</b> ${matches.length}</td></tr>
+        </table>
+    `;
+
+    Object.keys(groupedByCode).sort().forEach(code => {
+        const students = sortArrayByVietnameseName(groupedByCode[code], 'fullname');
+        bodyHtml += `
+            <table border="1" width="100%" cellspacing="0" cellpadding="5" style="border-collapse: collapse; margin-top: 15pt; ${f}">
+                <tr bgcolor="#F2F2F2">
+                    <td colspan="5" style="font-weight: bold; font-size: 13pt; ${border}">MÃ ĐỀ: ${code} (${students.length} thí sinh)</td>
+                </tr>
+                <tr bgcolor="#E2E2E2" align="center" style="font-weight: bold;">
+                    <td width="8%" style="${border}">STT</td>
+                    <td width="47%" align="left" style="${border}">Họ và Tên thí sinh</td>
+                    <td width="15%" style="${border}">Câu đúng</td>
+                    <td width="10%" style="${border}">Điểm</td>
+                    <td width="20%" style="${border}">TG làm bài</td>
+                </tr>
+                ${students.map((s, i) => `
+                    <tr align="center">
+                        <td style="${border}">${i + 1}</td>
+                        <td align="left" style="${border}">${s.fullname || "N/A"}</td>
+                        <td style="${border}">${s.score}/${s.total}</td>
+                        <td style="${border} font-weight: bold;">${s.point}</td>
+                        <td style="${border}">${s.duration || "---"}</td>
+                    </tr>
+                `).join('')}
+            </table>
+        `;
+    });
+
+    bodyHtml += `<p align="right" style="margin-top: 30pt; font-style: italic; font-size: 10pt; ${f}">Tài liệu xuất từ hệ thống S-STICK Quiz - ${new Date().toLocaleDateString('vi-VN')}</p>`;
+
+    // 2. ĐÓNG GÓI CHUẨN ĐỊNH DẠNG WORD XML (Dùng .doc để tương thích cao nhất)
+    const header = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+              xmlns:w='urn:schemas-microsoft-com:office:word' 
+              xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+            <meta charset="utf-8">
+            <!--[if gte mso 9]>
+            <xml>
+                <w:WordDocument>
+                    <w:View>Print</w:View>
+                    <w:Zoom>100</w:Zoom>
+                    <w:DoNotOptimizeForBrowser/>
+                </w:WordDocument>
+            </xml>
+            <![endif]-->
+            <style>
+                @page { size: 21cm 29.7cm; margin: 2cm; }
+                body { font-family: "Times New Roman", serif; }
+                table { border-collapse: collapse; }
+                td { mso-number-format:"\\@"; } /* Tránh Word tự format số */
+            </style>
+        </head>
+        <body>
+            ${bodyHtml}
+        </body>
+        </html>
+    `;
 
     try {
-        // SỬ DỤNG THƯ VIỆN ĐỂ TẠO FILE .DOCX THẬT
-        const docxBlob = htmlDocx.asBlob(contentHtml);
-        const fileName = `BANG_DIEM_${folderName.replace(/\s+/g, '_')}.docx`;
-        
-        const url = URL.createObjectURL(docxBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        
-        setTimeout(() => {
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-        }, 500);
+        const fileName = `BANG_DIEM_${folderName.replace(/\s+/g, '_')}.doc`;
+        const blob = new Blob(['\ufeff', header], {
+            type: 'application/msword;charset=utf-8'
+        });
 
-        showModernToast("Thành công", "Đã xuất file .docx chuyên nghiệp", "success");
+        // Xử lý tải file cho mọi nền tảng (PC, Android, iOS)
+        if (navigator.msSaveOrOpenBlob) {
+            // Cho IE/Edge cũ
+            navigator.msSaveOrOpenBlob(blob, fileName);
+        } else {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            
+            // Một số trình duyệt mobile yêu cầu link phải trong document
+            document.body.appendChild(link);
+            link.click();
+            
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+        }
+
+        showModernToast("Thành công", "Đã xuất file bảng điểm (.doc)", "success");
     } catch (e) {
+        console.error(e);
         alert("Lỗi xuất file: " + e.message);
     }
 }

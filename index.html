@@ -4837,12 +4837,12 @@ function renderFolders() {
         }
 
         // Phần mã gốc
-        if(f.accessCode && f.expiresAt > now) {
-            codeBadge = `<div class="mt-2 p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[11px] text-emerald-400 font-bold">
-                🔑 Mã gốc: <b class="text-white">${f.accessCode}</b> (<span id="timer-master-${i}">...</span>)
+       if(f.accessCode && f.expiresAt > now) {
+            codeBadge = `<div class="mt-2 p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[11px] text-emerald-400 font-bold flex justify-between items-center">
+                <span>🔑 Mã gốc: <b class="text-white text-[13px] ml-1">${f.accessCode}</b></span>
+                <span id="timer-master-${i}" class="text-amber-400 font-black animate-pulse text-[10px]">⏳ Đang tính...</span>
             </div>`;
         }
-
         return `
 <div class="bg-white/5 border border-white/10 p-5 rounded-[24px] relative flex flex-col justify-between hover:border-indigo-500/30 transition-all duration-300 group">
     <div>
@@ -8435,13 +8435,14 @@ setInterval(() => {
                 el.innerText = `⏳ ${mins}:${secs.toString().padStart(2, '0')}`;
             }
         }
-        // Cập nhật đếm ngược mã gốc
+        // Cập nhật đếm ngược mã gốc (Giống mã con)
         if (f.accessCode && f.expiresAt > now) {
             const el = document.getElementById(`timer-master-${i}`);
             if (el) {
                 const diff = f.expiresAt - now;
                 const mins = Math.floor(diff / 60000);
-                el.innerText = `Còn ${mins}p`;
+                const secs = Math.floor((diff % 60000) / 1000); // Lấy số giây còn lại
+                el.innerText = `⏳ ${mins}:${secs.toString().padStart(2, '0')}`;
             }
         }
     });

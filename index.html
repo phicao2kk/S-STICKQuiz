@@ -6006,9 +6006,9 @@ function checkPremiumUI() {
     const premiumMenuItem = document.getElementById('premium-menu-item');
     const badge = document.getElementById('role-badge');
 
-    if (!badge) return; // Bảo vệ nếu không tìm thấy phần tử
+    if (!badge) return;
 
-    // 1. TRƯỜNG HỢP: THÍ SINH (Ẩn sạch các thứ liên quan đến Premium)
+    // 1. TRƯỜNG HỢP: THÍ SINH
     if (!currentUser.isAdmin) {
         if (premiumStatus) premiumStatus.classList.add('hidden');
         if (premiumMenuItem) premiumMenuItem.classList.add('hidden');
@@ -6021,17 +6021,15 @@ function checkPremiumUI() {
         if (premiumStatus) premiumStatus.classList.remove('hidden');
         if (premiumMenuItem) premiumMenuItem.classList.add('hidden');
         
-        // Hiển thị nội dung chuẩn như ảnh
-        badge.innerHTML = "PREMIUM VÔ HẠN 💎"; 
-        badge.className = "badge-vip-active"; // Class màu vàng
-        badge.classList.remove('hidden');
+        badge.innerHTML = "PREMIUM 💎"; 
+        badge.className = "badge-vip-active"; 
+        badge.classList.remove('hidden'); // LUÔN HIỆN TRÊN MOBILE
         return; 
     }
 
     // 3. TRƯỜNG HỢP: ADMIN CON
     const userInLocal = usersDB[currentUser.user];
     if (userInLocal && userInLocal.isPremium) {
-        // ADMIN CON CÓ PREMIUM
         if (premiumStatus) premiumStatus.classList.remove('hidden');
         if (premiumMenuItem) premiumMenuItem.classList.add('hidden'); 
 
@@ -6041,22 +6039,15 @@ function checkPremiumUI() {
             daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
         }
         
-        // CẬP NHẬT QUAN TRỌNG: 
-        // - Dùng format ngắn gọn: PREMIUM (23N) 💎 thay vì "23 ngày" để không bị dạt hàng.
-        // - Dùng class badge-vip-active để có màu vàng y hệt Root.
-        badge.innerHTML = `PREMIUM (${daysLeft > 0 ? daysLeft : 0}N) 💎`; 
+        badge.innerHTML = `VIP (${daysLeft > 0 ? daysLeft : 0}N) 💎`; 
         badge.className = "badge-vip-active"; 
-        badge.classList.remove('hidden');
+        badge.classList.remove('hidden'); // LUÔN HIỆN TRÊN MOBILE
     } else {
         // ADMIN CON BẢN THƯỜNG
-        if (badge) {
-            badge.innerHTML = "BẢN THƯỜNG";
-            badge.className = "badge-normal"; // Class màu xám
-            
-            // TỰ ĐỘNG ẨN Badge "Bản thường" nếu là mobile để nhường chỗ cho logo
-            if (window.innerWidth < 450) badge.classList.add('hidden');
-            else badge.classList.remove('hidden');
-        }
+        badge.innerHTML = "MIỄN PHÍ";
+        badge.className = "badge-normal"; 
+        badge.classList.remove('hidden'); // ĐÃ BỎ LỆNH ẨN DƯỚI 450PX
+        
         if (premiumStatus) premiumStatus.classList.add('hidden');
         if (premiumMenuItem) premiumMenuItem.classList.remove('hidden');
     }
@@ -8395,14 +8386,11 @@ function exportFolderToWord(idx) {
 }
 
 function exportFolderScoresToWord(idx) {
-    if (typeof foldersDB === 'undefined' || !foldersDB[idx]) {
-        sysNotify("Lỗi", "Không tìm thấy dữ liệu bộ đề!", "error");
-        return;
-    }
+    if (typeof foldersDB === 'undefined' || !foldersDB[idx]) return;
 
     const folder = foldersDB[idx]; 
-    const subjectName = folder.subject || "Chưa rõ";
-    const folderName = (folder.name || "Bo_de").trim();
+    const subjectName = (folder.subject || "Chưa rõ").toUpperCase();
+    const folderName = (folder.name || "Ket_qua").trim();
     
     const matches = (quizHistory || []).filter(h => {
         if (!h || !h.examName) return false;
@@ -8412,19 +8400,11 @@ function exportFolderScoresToWord(idx) {
     });
 
     if (matches.length === 0) {
-        return sysNotify("Thông báo", `Bộ đề <b>${folder.name}</b> này hiện chưa có thí sinh làm bài.`, "warn");
+        return sysNotify("Thông báo", `Chưa có dữ liệu bài làm.`, "warn");
     }
 
-    // --- LOGIC: CHỈ LẤY NGÀY/THÁNG/NĂM (XÓA SẠCH GIỜ) ---
-    let examDate = "...................."; 
-    if (matches[0] && matches[0].time) {
-        let dateFound = matches[0].time.match(/\d{1,2}\/\d{1,2}\/\d{4}/);
-        if (dateFound) {
-            examDate = dateFound[0]; 
-        }
-    }
-
-    showModernToast("Đang xử lý", "Đang ép phông Times New Roman và thu hẹp dãn dòng...", "info");
+    let examDate = matches[0].time ? matches[0].time.split(',')[0] : "..../..../2026";
+    showModernToast("Đang xử lý", "Đang tạo file Word chuẩn phông Times New Roman...", "info");
 
     const groupedByCode = matches.reduce((acc, h) => {
         const code = h.examCode || "GỐC";
@@ -8433,98 +8413,70 @@ function exportFolderScoresToWord(idx) {
         return acc;
     }, {});
 
-    Object.keys(groupedByCode).forEach(code => {
-        sortArrayByVietnameseName(groupedByCode[code], 'fullname');
-    });
-
+    // PHẦN QUAN TRỌNG: HTML SIÊU SẠCH VÀ XML MSO
     let contentHtml = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
     <head>
         <meta charset="utf-8">
+        <!--[if gte mso 9]>
+        <xml>
+            <w:WordDocument>
+                <w:View>Print</w:View>
+                <w:Zoom>100</w:Zoom>
+                <w:DoNotOptimizeForBrowser/>
+            </w:WordDocument>
+        </xml>
+        <![endif]-->
         <style>
-            /* ÉP PHÔNG TIMES NEW ROMAN TOÀN DIỆN */
-            @font-face { font-family: "Times New Roman"; }
-            
-            body, div, p, table, tr, td, th, span, b, h2 {
-                font-family: "Times New Roman", Times, serif !important;
-                mso-ascii-font-family: "Times New Roman";
-                mso-hansi-font-family: "Times New Roman";
-                mso-bidi-font-family: "Times New Roman";
-                color: black;
-            }
-
-            body { font-size: 13pt; }
-
-            /* TIÊU ĐỀ CHÍNH */
-            h2 { 
-                text-align: center; 
-                text-transform: uppercase; 
-                font-weight: bold; 
-                font-size: 16pt; 
-                margin-bottom: 15pt; 
-            }
-            
-            /* PHẦN THÔNG TIN (MÔN HỌC, NGÀY KIỂM TRA, TỔNG SỐ) */
-            .info-header { margin-bottom: 10pt; }
-
-            .info-header p { 
-                /* --- CHỖ CHỈNH DÃN DÒNG --- */
-                margin-top: 0px !important;      /* Khoảng cách phía trên dòng */
-                margin-bottom: 0pt !important;   /* CHỈNH TẠI ĐÂY: Khoảng cách giữa các dòng (càng nhỏ càng sát) */
-                line-height: 1.2 !important;     /* CHỈNH TẠI ĐÂY: Độ dãn bản thân dòng (1.0 là sát nhất) */
-                padding: 0px !important;
-            }
-
-            /* BẢNG ĐIỂM */
-            table { width: 100%; border-collapse: collapse; margin-top: 10pt; border: 0.5pt solid black; }
-            th, td { border: 0.5pt solid black; padding: 5pt; text-align: center; font-size: 12pt; }
+            body { font-family: "Times New Roman", Times, serif; color: black; }
+            h2 { text-align: center; font-size: 16pt; font-weight: bold; text-transform: uppercase; }
+            .info-p { font-size: 13pt; margin: 0; line-height: 1.3; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid black; padding: 5px; text-align: center; font-size: 12pt; font-family: "Times New Roman"; }
             th { background-color: #E2E2E2; font-weight: bold; }
-
-            .code-box { 
-                font-weight: bold; font-size: 14pt; padding: 4pt; 
-                background-color: #F0F0F0; border: 0.5pt solid black; 
-                margin-top: 12pt; text-align: left; 
-            }
-
-            .footer-text { margin-top: 30pt; text-align: right; font-style: italic; font-size: 11pt; }
+            .code-box { font-weight: bold; font-size: 13pt; padding: 5px; background-color: #F0F0F0; border: 1px solid black; margin-top: 20px; }
+            .footer { margin-top: 40px; text-align: right; font-style: italic; font-size: 11pt; }
         </style>
     </head>
     <body>
         <h2>BẢNG ĐIỂM CHI TIẾT: ${folderName.toUpperCase()}</h2>
         
-        <div class="info-header">
-            <p><b>Môn học:</b> ${subjectName.toUpperCase()}</p>
-            <p><b>Ngày kiểm tra:</b> ${examDate}</p>
-            <p><b>Tổng số thí sinh:</b> ${matches.length}</p>
+        <div style="margin-bottom: 20px;">
+            <p class="info-p"><b>Môn học:</b> ${subjectName}</p>
+            <p class="info-p"><b>Ngày kiểm tra:</b> ${examDate}</p>
+            <p class="info-p"><b>Tổng số thí sinh:</b> ${matches.length}</p>
         </div>
 
-        ${Object.keys(groupedByCode).sort().map(code => `
-            <div class="code-box">MÃ ĐỀ: ${code} (${groupedByCode[code].length} thí sinh)</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 10%">STT</th>
-                        <th style="width: 45%; text-align: left;">Họ và Tên thí sinh</th>
-                        <th style="width: 15%">Câu đúng</th>
-                        <th style="width: 10%">Điểm</th>
-                        <th style="width: 20%">TG làm bài</th> 
-                    </tr>
-                </thead>
-                <tbody>
-                    ${groupedByCode[code].map((s, i) => `
+        ${Object.keys(groupedByCode).sort().map(code => {
+            const sortedStudents = sortArrayByVietnameseName(groupedByCode[code], 'fullname');
+            return `
+                <div class="code-box">MÃ ĐỀ: ${code} (${sortedStudents.length} thí sinh)</div>
+                <table border="1">
+                    <thead>
                         <tr>
-                            <td>${i + 1}</td>
-                            <td style="text-align: left;">${s.fullname || "N/A"}</td>
-                            <td>${s.score}/${s.total}</td>
-                            <td><b>${s.point}</b></td>
-                            <td>${s.duration || "---"}</td> 
+                            <th width="10%">STT</th>
+                            <th width="45%" align="left">Họ và Tên thí sinh</th>
+                            <th width="15%">Câu đúng</th>
+                            <th width="10%">Điểm</th>
+                            <th width="20%">Thời gian</th>
                         </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        `).join('')}
+                    </thead>
+                    <tbody>
+                        ${sortedStudents.map((s, i) => `
+                            <tr>
+                                <td>${i + 1}</td>
+                                <td align="left">${s.fullname}</td>
+                                <td>${s.score}/${s.total}</td>
+                                <td><b>${s.point}</b></td>
+                                <td>${s.duration || "---"}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }).join('')}
 
-        <p class="footer-text">
+        <p class="footer">
             Tài liệu được xuất từ hệ thống S-STICK Quiz<br>
             Ngày xuất file: ${new Date().toLocaleDateString('vi-VN')}
         </p>
@@ -8536,13 +8488,19 @@ function exportFolderScoresToWord(idx) {
         const fileName = `BANG_DIEM_${folderName.replace(/\s+/g, '_')}.docx`;
         const url = URL.createObjectURL(converted);
         const link = document.createElement('a');
-        link.href = url; link.download = fileName;
+        link.href = url;
+        link.download = fileName;
         document.body.appendChild(link);
         link.click();
-        setTimeout(() => { document.body.removeChild(link); window.URL.revokeObjectURL(url); }, 100);
-        showModernToast("Thành công", "Đã xuất file chuẩn phông và thu hẹp dãn dòng", "success");
+        
+        setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        }, 500);
+
+        showModernToast("Thành công", "File đã tải về! Vui lòng mở bằng ứng dụng Word.", "success");
     } catch (e) {
-        sysNotify("Lỗi", "Không thể tạo file Word!", "error");
+        alert("Lỗi xuất file: " + e.message);
     }
 }
 

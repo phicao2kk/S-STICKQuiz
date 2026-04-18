@@ -8321,6 +8321,7 @@ function exportFolderToWord(idx) {
     saveFileDocxBinary(html, `DE_THI_${examName.replace(/\s+/g, '_')}`);
 }
 
+// 1. HÀM XUẤT ĐIỂM - TỐI ƯU HIỂN THỊ 100%
 function exportFolderScoresToWord(idx) {
     if (typeof foldersDB === 'undefined' || !foldersDB[idx]) return;
     const folder = foldersDB[idx];
@@ -8336,20 +8337,16 @@ function exportFolderScoresToWord(idx) {
 
     if (matches.length === 0) return sysNotify("Thông báo", "Chưa có dữ liệu thí sinh.", "warn");
 
-    showModernToast("Đang xử lý", "Đang tạo file .docx tương thích mọi thiết bị...", "info");
+    showModernToast("Hệ thống", "Đang tạo file Word chuẩn cho di động...", "info");
 
-    // Dùng Table để layout - Cách an toàn nhất cho Word
-    let html = `
-        <style>
-            .table-docx { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            .table-docx td, .table-docx th { border: 1px solid black; padding: 5px; font-size: 11pt; text-align: center; }
-            .title { text-align: center; font-weight: bold; font-size: 16pt; }
-        </style>
+    // TẠO NỘI DUNG VỚI STYLE INLINE (Mobile dễ đọc hơn)
+    let htmlContent = `
         <div style="font-family: 'Times New Roman';">
-            <p class="title">BẢNG ĐIỂM CHI TIẾT</p>
-            <p style="text-align: center; font-weight: bold; text-transform: uppercase;">${folderName}</p>
+            <h2 style="text-align: center; text-transform: uppercase;">BẢNG ĐIỂM CHI TIẾT</h2>
+            <h3 style="text-align: center; text-transform: uppercase;">${folderName}</h3>
             <p><b>Môn học:</b> ${subjectName}</p>
-            <p><b>Tổng số thí sinh:</b> ${matches.length}</p>
+            <p><b>Ngày xuất:</b> ${new Date().toLocaleDateString('vi-VN')}</p>
+            <p><b>Tổng thí sinh:</b> ${matches.length}</p>
     `;
 
     const grouped = matches.reduce((acc, h) => {
@@ -8361,93 +8358,105 @@ function exportFolderScoresToWord(idx) {
 
     Object.keys(grouped).sort().forEach(code => {
         const students = sortArrayByVietnameseName(grouped[code], 'fullname');
-        html += `
+        htmlContent += `
             <p style="margin-top: 15px; font-weight: bold;">MÃ ĐỀ: ${code} (${students.length} thí sinh)</p>
-            <table class="table-docx">
-                <thead>
-                    <tr style="background-color: #f2f2f2; font-weight: bold;">
-                        <th style="width: 10%;">STT</th>
-                        <th style="width: 45%; text-align: left;">Họ và Tên</th>
-                        <th style="width: 15%;">Câu đúng</th>
-                        <th style="width: 15%;">Điểm</th>
-                        <th style="width: 15%;">TG làm</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${students.map((s, i) => `
-                        <tr>
-                            <td>${i + 1}</td>
-                            <td style="text-align: left;">${s.fullname || "N/A"}</td>
-                            <td>${s.score}/${s.total}</td>
-                            <td style="font-weight: bold;">${s.point}</td>
-                            <td>${s.duration || "---"}</td>
-                        </tr>`).join('')}
-                </tbody>
+            <table border="1" cellspacing="0" cellpadding="5" style="width: 100%; border-collapse: collapse;">
+                <tr style="background-color: #f2f2f2; font-weight: bold; text-align: center;">
+                    <td width="10%">STT</td>
+                    <td width="45%" align="left">Họ và Tên</td>
+                    <td width="15%">Câu đúng</td>
+                    <td width="15%">Điểm</td>
+                    <td width="15%">TG làm</td>
+                </tr>
+                ${students.map((s, i) => `
+                    <tr align="center">
+                        <td>${i + 1}</td>
+                        <td align="left">${s.fullname || "N/A"}</td>
+                        <td>${s.score}/${s.total}</td>
+                        <td><b>${s.point}</b></td>
+                        <td>${s.duration || "---"}</td>
+                    </tr>`).join('')}
             </table>`;
     });
 
-    html += `<p style="text-align: right; margin-top: 30px; font-style: italic;">Xuất từ S-STICK Quiz</p></div>`;
+    htmlContent += `<p style="text-align: right; margin-top: 30px; font-style: italic;">Xuất từ S-STICK Quiz</p></div>`;
 
-    saveFileDocxBinary(html, `BANG_DIEM_${folderName.replace(/\s+/g, '_')}`);
+    // GỌI DUY NHẤT MỘT LỆNH TẢI FILE NÀY
+    saveFileWordChuan(htmlContent, `BANG_DIEM_${folderName.replace(/\s+/g, '_')}`);
+}
 
-    // 2. ĐÓNG GÓI CHUẨN ĐỊNH DẠNG WORD XML (Dùng .doc để tương thích cao nhất)
-    const header = `
-        <html xmlns:o='urn:schemas-microsoft-com:office:office' 
-              xmlns:w='urn:schemas-microsoft-com:office:word' 
-              xmlns='http://www.w3.org/TR/REC-html40'>
-        <head>
-            <meta charset="utf-8">
-            <!--[if gte mso 9]>
-            <xml>
-                <w:WordDocument>
-                    <w:View>Print</w:View>
-                    <w:Zoom>100</w:Zoom>
-                    <w:DoNotOptimizeForBrowser/>
-                </w:WordDocument>
-            </xml>
-            <![endif]-->
-            <style>
-                @page { size: 21cm 29.7cm; margin: 2cm; }
-                body { font-family: "Times New Roman", serif; }
-                table { border-collapse: collapse; }
-                td { mso-number-format:"\\@"; } /* Tránh Word tự format số */
-            </style>
-        </head>
-        <body>
-            ${bodyHtml}
-        </body>
-        </html>
+// 2. HÀM XUẤT ĐỀ THI - TỐI ƯU HIỂN THỊ 100%
+function exportFolderToWord(idx) {
+    const folder = foldersDB[idx];
+    if (!folder || !folder.questions || folder.questions.length === 0) return sysNotify("Lỗi", "Đề trống!", "error");
+
+    showModernToast("Hệ thống", "Đang đóng gói đề thi...", "info");
+    const examName = folder.name.toUpperCase();
+    const questions = folder.questions;
+    const randomCode = Math.floor(100 + Math.random() * 899);
+
+    let htmlBody = `
+        <div style="font-family: 'Times New Roman', serif;">
+            <table style="width: 100%; border: none;">
+                <tr>
+                    <td width="40%" align="center">SỞ GIÁO DỤC VÀ ĐÀO TẠO<br><b>TRƯỜNG ...................</b></td>
+                    <td width="60%" align="center"><b>ĐỀ THI TRẮC NGHIỆM</b><br><b>Môn: ${examName}</b><br><i>Mã đề: ${randomCode}</i></td>
+                </tr>
+            </table>
+            <p style="margin-top: 20px;"><b>Họ và tên:</b> ........................................................... <b>SBD:</b> .................</p>
+            <hr>
     `;
 
+    questions.forEach((q, i) => {
+        htmlBody += `
+            <div style="margin-bottom: 10px;">
+                <p><b>Câu ${i + 1}:</b> ${q.text}</p>
+                <p>A. ${q.options[0]}&nbsp;&nbsp;&nbsp;&nbsp;B. ${q.options[1]}&nbsp;&nbsp;&nbsp;&nbsp;C. ${q.options[2]}&nbsp;&nbsp;&nbsp;&nbsp;D. ${q.options[3]}</p>
+            </div>`;
+    });
+
+    htmlBody += `
+            <br style="page-break-before: always;">
+            <p style="text-align: center; font-weight: bold; font-size: 14pt;">ĐÁP ÁN MÃ ĐỀ: ${randomCode}</p>
+            <table border="1" cellspacing="0" style="width: 100%; border-collapse: collapse; text-align: center;">
+                <tr style="background-color: #eeeeee; font-weight: bold;">
+                    ${questions.map((_, i) => `<td>${i + 1}</td>`).join('')}
+                </tr>
+                <tr>
+                    ${questions.map(q => `<td>${String.fromCharCode(65 + q.correct)}</td>`).join('')}
+                </tr>
+            </table>
+        </div>`;
+
+    saveFinalDocx(htmlBody, `DE_THI_${examName.replace(/\s+/g, '_')}`);
+}
+
+// 3. ĐỘNG CƠ XUẤT FILE BINARY - CHỐNG TRẮNG TRANG TRÊN IPHONE
+function saveFileWordChuan(htmlContent, fileName) {
     try {
-        const fileName = `BANG_DIEM_${folderName.replace(/\s+/g, '_')}.doc`;
-        const blob = new Blob(['\ufeff', header], {
-            type: 'application/msword;charset=utf-8'
-        });
+        // Bọc HTML vào đúng tiêu chuẩn quốc tế
+        const wrapped = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${htmlContent}</body></html>`;
+        
+        // Chuyển đổi sang file Word Binary (chuẩn .docx)
+        const docxBlob = htmlDocx.asBlob(wrapped);
+        const url = window.URL.createObjectURL(docxBlob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName + ".docx"; // Bắt buộc dùng .docx
+        
+        // Kích hoạt lệnh tải đặc biệt cho iPhone
+        document.body.appendChild(link);
+        link.click();
+        
+        // Giải phóng bộ nhớ
+        setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        }, 1000);
 
-        // Xử lý tải file cho mọi nền tảng (PC, Android, iOS)
-        if (navigator.msSaveOrOpenBlob) {
-            // Cho IE/Edge cũ
-            navigator.msSaveOrOpenBlob(blob, fileName);
-        } else {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = fileName;
-            
-            // Một số trình duyệt mobile yêu cầu link phải trong document
-            document.body.appendChild(link);
-            link.click();
-            
-            setTimeout(() => {
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            }, 100);
-        }
-
-        showModernToast("Thành công", "Đã xuất file bảng điểm (.doc)", "success");
+        showModernToast("Thành công", "Đã tải file .docx! Mở trong app Files hoặc Word.", "success");
     } catch (e) {
-        console.error(e);
         alert("Lỗi xuất file: " + e.message);
     }
 }

@@ -9098,58 +9098,34 @@ async function generatePDFScore(idx) {
         return hName === fName || hName.startsWith(fName + " (mã");
     });
 
-    showModernToast("Hệ thống", "Đang tạo bản in PDF...", "info");
+    if (matches.length === 0) return;
 
-    const element = document.createElement('div');
-    element.style.width = "700px"; 
-    element.style.padding = "35px";
-    element.style.background = "#ffffff";
-    element.style.fontFamily = "'Times New Roman', serif";
-
-    // Lấy ngày từ thí sinh đầu tiên
-    let testDate = matches.length > 0 ? matches[0].time.split(' ').pop() : new Date().toLocaleDateString('vi-VN');
+    const testDate = matches[0].time.split(' ').pop();
     
-    // LẤY THỜI GIAN GIÁO VIÊN THIẾT LẬP
-    const durationLimit = folder.duration || '--';
-
-    let html = `
+    // HTML siêu tinh gọn - cô lập lề
+    let pdfStr = `
+    <div id="capture-zone" style="width: 700px; color: black; background: white; font-family: Times New Roman, serif; padding: 20px;">
         <style>
-            .pdf-table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
-            .pdf-table th, .pdf-table td { border: 1.5px solid #000 !important; padding: 10px 5px; text-align: center; font-size: 13px; color: #000 !important; }
-            .pdf-table th { background-color: #f0f0f0 !important; font-weight: bold; }
-            .text-left { text-align: left !important; padding-left: 10px !important; }
-            
-            .pdf-title-main { 
-                text-align: center; 
-                margin-bottom: 5px; 
-                color: #000 !important; 
-                font-weight: 900 !important; 
-                font-size: 24px !important; 
-                text-transform: uppercase;
-            }
-            .pdf-title-sub { 
-                text-align: center; 
-                margin-top: 0; 
-                margin-bottom: 20px;
-                color: #000 !important; 
-                font-weight: 800 !important; 
-                font-size: 18px !important; 
-                text-transform: uppercase;
-            }
+            * { color: black !important; background: white !important; margin: 0; padding: 0; box-sizing: border-box; }
+            .p-h1 { text-align: center; font-weight: bold; font-size: 20px; margin-bottom: 5px; width: 100%; }
+            .p-h2 { text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px; width: 100%; }
+            .info { font-size: 13px; line-height: 1.6; margin-bottom: 20px; text-align: left; }
+            table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 20px; border: 1px solid black; }
+            th, td { border: 1px solid black; padding: 8px 4px; text-align: center; font-size: 12px; word-wrap: break-word; }
+            th { background: #f0f0f0 !important; font-weight: bold; }
+            .t-left { text-align: left !important; padding-left: 10px; }
+            .code-bar { font-weight: bold; font-size: 14px; margin-bottom: 8px; border-left: 8px solid black; padding-left: 10px; text-align: left; }
         </style>
-        
-        <div class="pdf-title-main">BẢNG ĐIỂM CHI TIẾT</div>
-        <div class="pdf-title-sub">${folder.name}</div>
-        
-        <p style="color: #000 !important; font-size: 14px; margin-bottom: 10px; line-height: 1.6;">
-            <b>Môn học:</b> ${folder.subject || "Tự do"}<br>
-            <b>Thời gian quy định:</b> ${durationLimit} phút<br>
-            <b>Ngày làm bài:</b> ${testDate} | <b>Tổng số:</b> ${matches.length} thí sinh
-        </p>
+        <div class="p-h1">BẢNG ĐIỂM TỔNG HỢP CHI TIẾT</div>
+        <div class="p-h2">BỘ ĐỀ: ${folder.name.toUpperCase()}</div>
+        <div class="info">
+            Môn học: <b>${folder.subject}</b> | Quy định: <b>${folder.duration || '--'} phút</b><br>
+            Ngày kiểm tra: <b>${testDate}</b> | Sĩ số: <b>${matches.length} thí sinh</b>
+        </div>
     `;
 
     const grouped = matches.reduce((acc, h) => {
-        const c = h.examCode || "Gốc";
+        const c = h.examCode || "GỐC";
         if (!acc[c]) acc[c] = [];
         acc[c].push(h);
         return acc;
@@ -9157,38 +9133,42 @@ async function generatePDFScore(idx) {
 
     Object.keys(grouped).sort().forEach(code => {
         const students = sortArrayByVietnameseName(grouped[code], 'fullname');
-        html += `
-            <p style="font-weight: bold; margin-top: 20px; color: #000 !important;">MÃ ĐỀ: ${code}</p>
-            <table class="pdf-table">
-                <thead>
-                    <tr>
-                        <th style="width: 45px;">STT</th>
-                        <th style="width: 250px;" class="text-left">Họ và Tên thí sinh</th>
-                        <th style="width: 100px;">Số câu đúng</th>
-                        <th style="width: 80px;">Điểm số</th>
-                        <th style="width: 100px;">Thời gian làm</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${students.map((s, i) => `<tr><td>${i+1}</td><td class="text-left">${s.fullname}</td><td>${s.score}/${s.total}</td><td><b>${s.point}</b></td><td>${s.duration}</td></tr>`).join('')}
-                </tbody>
-            </table>`;
+        pdfStr += `
+        <div class="code-bar">MÃ ĐỀ: ${code}</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 8%">STT</th>
+                    <th style="width: 42%">Tên thí sinh</th>
+                    <th style="width: 15%">Điểm</th>
+                    <th style="width: 15%">Câu</th>
+                    <th style="width: 20%">Xếp loại</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${students.map((s, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td class="t-left">${s.fullname}</td>
+                    <td><b>${s.point}</b></td>
+                    <td>${s.score}/${s.total}</td>
+                    <td>${parseFloat(s.point) >= 5 ? 'ĐẠT' : 'CHƯA ĐẠT'}</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>`;
     });
 
-    html += `<p style="text-align: right; margin-top: 40px; font-style: italic; color: #000 !important;">Xuất từ hệ thống S-STICK Quiz</p>`;
-    element.innerHTML = html;
+    pdfStr += `<div style="text-align: right; font-style: italic; margin-top: 30px;">Hệ thống S-STICK QUIZ báo cáo</div></div>`;
 
-    const opt = { 
-        margin: 10, 
-        filename: `DIEM_${folder.name.replace(/\s+/g, '_')}.pdf`, 
-        image: { type: 'jpeg', quality: 1 }, 
-        html2canvas: { scale: 3, useCORS: true }, 
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+    const opt = {
+        margin: [10, 10, 10, 10], // Lề đồng nhất
+        filename: 'KET_QUA_CUOI.pdf',
+        image: { type: 'jpeg', quality: 1.0 },
+        html2canvas: { scale: 3, width: 700, useCORS: true, scrollY: 0 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    html2pdf().set(opt).from(element).save().then(() => {
-        showModernToast("Thành công", "Đã lưu file PDF!", "success");
-    });
+    html2pdf().set(opt).from(pdfStr).save();
 }
 
 // 3. HÀM XUẤT EXCEL (BẢN ĐÃ FIX LỖI CÚ PHÁP)

@@ -5,7 +5,7 @@ const urlsToCache = [
   '/',
   'index.html',
   'manifest.json',
-  'https://i.ibb.co/VYr2cdVh/LOGO-S-STICK-Quiz.png',
+  'https://i.ibb.co/qSTVx47/S-STICK.png',
   'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js',
   'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',

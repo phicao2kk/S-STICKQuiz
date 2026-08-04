@@ -6088,12 +6088,15 @@ function handleJoinQuiz() {
 
         // --- ĐOẠN FIX: LƯU TRƯỜNG VÀ LỚP VÀO MÁY THÍ SINH ---
         currentUser = { 
-            name: name, user: safeUser, isAdmin: false, adminSource: data.admin,
+            name: name, 
+            user: safeUser, 
+            isAdmin: false, 
+            adminSource: data.admin.replace(/\./g, '_'), // <--- ÉP THÀNH GẠCH DƯỚI NGAY TẠI ĐÂY
             examCode: code, 
             examName: data.examName + ` (Mã đề: ${subVersionLabel})`,
             subject: data.subject || "TỰ DO",
-            school: data.school || "",        // NHẬN TỪ SERVER
-            className: data.className || "",  // NHẬN TỪ SERVER
+            school: data.school || "",
+            className: data.className || "",
             quizDuration: parseInt(data.duration) || 45,
             fixedQuestions: pickedQuestions 
         };
@@ -6118,6 +6121,13 @@ function handleJoinQuiz() {
 }
 
 async function startQuizFromCode() {
+    if (!currentUser) currentUser = JSON.parse(localStorage.getItem('sys_logged_user'));
+    
+    // Khôi phục adminSource từ dữ liệu đã lưu nếu bị mất
+    let blackBox = JSON.parse(localStorage.getItem('quiz_save_' + currentUser.user) || 'null');
+    if (blackBox && blackBox.adminSource) {
+        currentUser.adminSource = blackBox.adminSource;
+    }
     // 1. CHỈ ẨN VIDEO NỀN KHI VÀO THI (Giữ nguyên logic hiệu năng)
     const bgVid = document.getElementById('bgVideo');
     if (bgVid) {
@@ -6153,7 +6163,11 @@ try {
             return;
         }
 
-        const adminKey = (currentUser.adminSource || mapData.admin).replace(/\./g, '_');
+        // *** FIX: Lưu adminSource vào biến toàn cục cho chắc chắn ***
+        const adminSource = (currentUser.adminSource || mapData.admin);
+        currentUser.adminSource = adminSource; // Gán lại để đảm bảo
+
+        const adminKey = adminSource.replace(/\./g, '_');
         const studentKey = currentUser.user.replace(/[.#$\[\]]/g, "_");
         const sessionRef = rdb.ref(`system/active_sessions/${adminKey}/${examCode}/${studentKey}`);
         
@@ -6663,30 +6677,28 @@ function submitQuiz() {
     stopAllMedia();
 
     if (quizInterval) clearInterval(quizInterval);
-    clearQuizBlackBox(); 
+    clearQuizBlackBox();
 
     // --- CẬP NHẬT GIAO DIỆN KẾT QUẢ ---
     document.getElementById('rs-exam-name-display').innerText = currentUser.examName || "KẾT QUẢ BÀI THI";
     document.getElementById('rs-subject-display').innerText = "MÔN HỌC: " + (currentUser.subject || "TỰ DO");
 
-    // ĐỔ DỮ LIỆU TRƯỜNG LỚP VÀO GIAO DIỆN
     const rsSchool = document.getElementById('rs-school-display');
     const rsClass = document.getElementById('rs-class-display');
     if (rsSchool) rsSchool.innerText = currentUser.school ? `TRƯỜNG: ${currentUser.school.toUpperCase()}` : "TRƯỜNG: TỰ DO";
     if (rsClass) rsClass.innerText = currentUser.className ? `LỚP: ${currentUser.className.toUpperCase()}` : "LỚP: --";
 
-    // 1. TÍNH THỜI GIAN LÀM BÀI THỰC TẾ (Giữ nguyên logic của bạn)
-    const totalAllowedMins = currentUser.quizDuration || 45; 
+    // 2. TÍNH THỜI GIAN LÀM BÀI THỰC TẾ
+    const totalAllowedMins = currentUser.quizDuration || 45;
     const totalAllowedSeconds = totalAllowedMins * 60;
-    const remainingSeconds = Math.max(0, timeLeft); 
+    const remainingSeconds = Math.max(0, timeLeft);
     const totalSecondsSpent = totalAllowedSeconds - remainingSeconds;
-
     const spentMins = Math.floor(totalSecondsSpent / 60);
     const spentSecs = totalSecondsSpent % 60;
     const timeTakenStr = `${spentMins.toString().padStart(2, '0')}:${spentSecs.toString().padStart(2, '0')}`;
 
-    // 2. CHẤM ĐIỂM CHI TIẾT (Giữ nguyên logic của bạn)
-    let totalQuestions = activeQuestions.length; 
+    // 3. CHẤM ĐIỂM CHI TIẾT
+    let totalQuestions = activeQuestions.length;
     let correctCount = 0;
     let details = [];
 
@@ -6705,25 +6717,17 @@ function submitQuiz() {
     const pointNum = parseFloat(((correctCount / totalQuestions) * 10).toFixed(1));
     const percent = Math.round((correctCount / totalQuestions) * 100);
 
-    // --- 3. LOGIC XẾP LOẠI (Giữ nguyên logic của bạn) ---
-    let gradeText = "";
-    let gradeColor = "";
+    // --- LOGIC XẾP LOẠI ---
+    let gradeText = pointNum >= 5.0 ? "ĐẠT ✅" : "CHƯA ĐẠT ❌";
+    let gradeColor = pointNum >= 5.0 ? "#10b981" : "#ef4444";
 
-    if (pointNum >= 5.0) { 
-        gradeText = "ĐẠT ✅"; 
-        gradeColor = "#10b981"; // Màu xanh Emerald cực đẹp
-    } else { 
-        gradeText = "CHƯA ĐẠT ❌"; 
-        gradeColor = "#ef4444"; // Màu đỏ rực rỡ
-    }
-
-    // 4. CẬP NHẬT GIAO DIỆN HIỂN THỊ (UI)
+    // 4. CẬP NHẬT GIAO DIỆN
     document.getElementById('rs-percent').innerText = percent + "%";
     document.getElementById('rs-circle').style.setProperty('--deg', (percent * 3.6) + 'deg');
     document.getElementById('rs-circle').style.setProperty('--primary', pointNum >= 5 ? "#10b981" : "#ef4444");
     document.getElementById('rs-correct').innerText = correctCount + " / " + totalQuestions;
     document.getElementById('rs-point').innerText = pointNum.toFixed(1);
-    document.getElementById('rs-time').innerText = timeTakenStr; 
+    document.getElementById('rs-time').innerText = timeTakenStr;
 
     const gradeEl = document.getElementById('rs-grade');
     if (gradeEl) {
@@ -6737,47 +6741,95 @@ function submitQuiz() {
 
     showPage('page-result');
 
-    // --- 5. CHỐT CHẶN PHÂN QUYỀN: NẾU THI THỬ THÌ DỪNG LẠI TẠI ĐÂY ---
+    // --- 5. NẾU THI THỬ THÌ DỪNG LẠI ---
     if (window.isDemoMode) {
-        window.isDemoMode = false; 
+        window.isDemoMode = false;
         showModernToast("THI THỬ HOÀN TẤT", "Dữ liệu thi thử sẽ không lưu lại.", "info");
-        return; 
+        return;
     }
 
-    // Lưu kết quả vào máy thí sinh để xem lại sau này
+    // Lưu kết quả vào máy thí sinh
     let myHistory = JSON.parse(localStorage.getItem('my_quiz_history') || '[]');
-    myHistory.unshift(hi); // Đẩy bài mới nhất lên đầu
-    if(myHistory.length > 5) myHistory = myHistory.slice(0, 5); // Chỉ giữ 5 bài gần nhất
+    const hi = {
+        user: currentUser.user,
+        fullname: currentUser.name,
+        score: correctCount,
+        total: totalQuestions,
+        point: pointNum.toFixed(1),
+        percent: percent,
+        grade: gradeText,
+        examName: currentUser.examName,
+        examCode: currentUser.examCode,
+        time: new Date().toLocaleString(),
+        duration: timeTakenStr,
+        details: details
+    };
+    myHistory.unshift(hi);
+    if (myHistory.length > 5) myHistory = myHistory.slice(0, 5);
     localStorage.setItem('my_quiz_history', JSON.stringify(myHistory));
 
-    // --- 6. LƯU LÊN FIREBASE (CHỈ DÀNH CHO THI THẬT) ---
-    const hi = { 
-        user: currentUser.user, 
-        fullname: currentUser.name, 
-        score: correctCount, 
-        total: totalQuestions, 
-        point: pointNum.toFixed(1),
-        percent: percent, 
-        grade: gradeText, 
-        examName: currentUser.examName,
-        examCode: currentUser.examCode, 
-        time: new Date().toLocaleString(), 
-        duration: timeTakenStr,
-        details: details 
-    };
-    
-    if (currentUser.adminSource) {
-        const adminKey = currentUser.adminSource.replace(/\./g, '_');
-        rdb.ref(`system/active_sessions/${adminKey}/${currentUser.examCode}/${currentUser.user}`).update({
-            status: 'ĐÃ NỘP BÀI',
-            score: pointNum.toFixed(1),      
-            submitTime: Date.now()
-        });
-        rdb.ref('users_data/' + adminKey + '/quiz_history').push(hi);
-        rdb.ref(`system/submissions/${adminKey}/${currentUser.examCode}/${currentUser.user}`).set({
-            submittedAt: Date.now(),
+    // --- 6. LƯU LÊN FIREBASE (QUAN TRỌNG NHẤT) ---
+    // Lấy adminKey từ currentUser.adminSource (đã được chuẩn hóa trong handleJoinQuiz)
+    let adminKey = currentUser.adminSource;
+    let examCode = currentUser.examCode;
+    let studentKey = currentUser.user.replace(/[.#$\[\]]/g, "_");
+
+    // Nếu adminKey chưa có dấu gạch dưới, chuẩn hóa nó
+    if (adminKey && !adminKey.includes('_')) {
+        adminKey = adminKey.replace(/\./g, '_');
+    }
+
+    console.log("📤 Nộp bài:", { adminKey, examCode, studentKey });
+
+    if (adminKey && examCode && studentKey) {
+        // Tạo bản ghi lịch sử
+        const historyRef = rdb.ref(`users_data/${adminKey}/quiz_history`).push();
+        const historyKey = historyRef.key;
+
+        // Tạo dữ liệu cập nhật
+        const updates = {};
+
+        // 1. Cập nhật trạng thái trên Active Sessions (trang Giám sát)
+        updates[`system/active_sessions/${adminKey}/${examCode}/${studentKey}/status`] = 'ĐÃ NỘP BÀI';
+        updates[`system/active_sessions/${adminKey}/${examCode}/${studentKey}/score`] = pointNum.toFixed(1);
+        updates[`system/active_sessions/${adminKey}/${examCode}/${studentKey}/submitTime`] = getServerTime();
+
+        // 2. Khóa bài làm (chặn thi lại)
+        updates[`system/submissions/${adminKey}/${examCode}/${studentKey}`] = {
+            submittedAt: getServerTime(),
             score: pointNum.toFixed(1)
-        });
+        };
+
+        // 3. Lưu lịch sử
+        updates[`users_data/${adminKey}/quiz_history/${historyKey}`] = hi;
+
+        // Thực hiện tất cả cập nhật trong 1 lần
+        rdb.ref().update(updates)
+            .then(() => {
+                console.log("✅ Nộp bài thành công!");
+                showModernToast("THÀNH CÔNG", "Bài làm của bạn đã được lưu!", "success");
+                // Xóa hộp đen
+                clearQuizBlackBox();
+                // Cập nhật currentUser
+                currentUser.submitted = true;
+                localStorage.setItem('sys_logged_user', JSON.stringify(currentUser));
+            })
+            .catch((err) => {
+                console.error("❌ Lỗi nộp bài:", err);
+                // Lưu vào hàng đợi offline
+                const offlineQueue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+                offlineQueue.push({
+                    adminPath: adminKey,
+                    examCode: examCode,
+                    studentId: studentKey,
+                    data: hi
+                });
+                localStorage.setItem('offline_queue', JSON.stringify(offlineQueue));
+                showModernToast("CẢNH BÁO", "Mất kết nối mạng. Bài làm đã được lưu tạm!", "warn");
+            });
+    } else {
+        console.warn("⚠️ Không thể lưu lên Firebase: thiếu thông tin");
+        showModernToast("LỖI", "Không tìm thấy thông tin bài thi!", "error");
     }
 }
 
@@ -8057,46 +8109,58 @@ function loadChatMessages() {
         // Cập nhật chấm đỏ ngoài Menu chính (☰)
         updateGlobalMenuDot();
 
-        // --- PHẦN VẼ TIN NHẮN (GIỮ NGUYÊN CỦA MÀY) ---
+        // --- PHẦN VẼ TIN NHẮN ---
         if(!data || !data.messages) {
             container.innerHTML = '<div class="text-slate-500 text-[10px] text-center mt-20 opacity-30 font-black">Bắt đầu trò chuyện...</div>';
             return;
         }
 
-        const msgs = (data && data.messages) ? Object.entries(data.messages) : [];
+        // *** FIX: Định nghĩa msgs ở đây ***
+        const msgs = Object.entries(data.messages);
         let fullHtml = "";
         let lastDateString = ""; 
 
-msgs.forEach(([id, m], index) => {
-    if (m.deletedByUser) return;
+        msgs.forEach(([id, m]) => {
+            if (m.deletedByUser) return;
 
-    const isMe = m.sender === currentUser.user;
-    const isRecalled = m.recalled === true; 
-    const msgText = m.text.replace(/'/g, "\\'"); 
-    
-    fullHtml += `
-        <div class="msg-row ${isMe ? 'right' : 'left'} group animate-in fade-in duration-300">
-            ${!isMe ? `<img src="${m.avatar || 'https://ui-avatars.com/api/?name=' + m.name}" class="msg-avatar-main shadow-md">` : ''}
-            <div class="msg-content-wrapper relative max-w-[85%]">
-                ${!isMe ? `<span class="msg-sender-name">${m.name}</span>` : ''}
-                <div class="flex items-center gap-2 ${isMe ? 'flex-row-reverse' : ''}">
-                    
-                    <!-- BONG BÓNG TIN NHẮN CÓ HIỆU ỨNG MỜ -->
-                    <div class="msg-bubble shadow-sm ${isRecalled ? 'recalled' : ''}">
-                        ${isRecalled ? "Đã thu hồi 1 tin nhắn" : m.text}
-                        <span class="msg-time">${formatChatTime(m.time)}</span>
+            const isMe = m.sender === currentUser.user;
+            const isRecalled = m.recalled === true; 
+            const msgText = m.text.replace(/'/g, "\\'"); 
+            
+            // Thêm ngăn cách ngày tháng
+            const msgDate = new Date(m.time).toDateString();
+            if (msgDate !== lastDateString) {
+                fullHtml += `
+                    <div class="chat-date-separator">
+                        <span>${getChatDateLabel(m.time)}</span>
                     </div>
-                    
-                    ${(!isRecalled) ? `
-                        <button onclick="openUserMsgMenu('${chatId}', '${id}', '${msgText}', ${isMe})" 
-                                class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-black/20 text-slate-400 hover:text-white transition-all text-[10px] border border-white/5">
-                            •••
-                        </button>
-                    ` : ''}
-                </div>
-            </div>
-        </div>`;
-});
+                `;
+                lastDateString = msgDate;
+            }
+            
+            fullHtml += `
+                <div class="msg-row ${isMe ? 'right' : 'left'} group animate-in fade-in duration-300">
+                    ${!isMe ? `<img src="${m.avatar || 'https://ui-avatars.com/api/?name=' + m.name}" class="msg-avatar-main shadow-md">` : ''}
+                    <div class="msg-content-wrapper relative max-w-[85%]">
+                        ${!isMe ? `<span class="msg-sender-name">${m.name}</span>` : ''}
+                        <div class="flex items-center gap-2 ${isMe ? 'flex-row-reverse' : ''}">
+                            
+                            <!-- BONG BÓNG TIN NHẮN CÓ HIỆU ỨNG MỜ -->
+                            <div class="msg-bubble shadow-sm ${isRecalled ? 'recalled' : ''}">
+                                ${isRecalled ? "Đã thu hồi 1 tin nhắn" : m.text}
+                                <span class="msg-time">${formatChatTime(m.time)}</span>
+                            </div>
+                            
+                            ${(!isRecalled) ? `
+                                <button onclick="openUserMsgMenu('${chatId}', '${id}', '${msgText}', ${isMe})" 
+                                        class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-black/20 text-slate-400 hover:text-white transition-all text-[10px] border border-white/5">
+                                    •••
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>`;
+        });
 
         container.innerHTML = fullHtml;
         container.scrollTop = container.scrollHeight;
@@ -9970,7 +10034,7 @@ let lastKnownTotalCandidates = -1; // Biến dùng để so sánh số lượng
 
 function listenToCandidates() {
     if (!currentUser || !currentUser.isAdmin) return;
-    
+
     const safeAdmin = currentUser.user.replace(/\./g, '_');
     const body = document.getElementById('candidates-table-body');
     const ref = rdb.ref(`system/active_sessions/${safeAdmin}`);
@@ -9980,11 +10044,11 @@ function listenToCandidates() {
         body.innerHTML = `<tr><td colspan="5" class="text-center py-12"><p class="animate-pulse text-indigo-400 font-bold text-xs uppercase tracking-widest">📡 Đang quét radar thí sinh...</p></td></tr>`;
     }
 
-    ref.off(); 
+    ref.off();
     ref.on('value', (snapshot) => {
         const data = snapshot.val();
-        window.monitorCache = data || {}; 
-        
+        window.monitorCache = data || {};
+
         if (!data) {
             if (body) body.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-500 italic text-xs">Hiện tại chưa có thí sinh nào tham gia.</td></tr>';
             window.candidatesInitialDataLoaded = true;
@@ -9997,7 +10061,7 @@ function listenToCandidates() {
         });
 
         if (lastKnownTotalCandidates !== -1 && currentTotal > lastKnownTotalCandidates) {
-            if (!isialLoad) { 
+            if (!isialLoad) {
                 NOTI_SOUND.play().catch(() => {});
                 showModernToast("THÍ SINH MỚI 👤", "Có thí sinh vừa tham gia phòng thi!", "info", "page-candidates-manager");
                 updateCandidateBadge(currentTotal - lastKnownTotalCandidates);
@@ -10024,11 +10088,11 @@ function listenToCandidates() {
         });
 
         let html = "";
-        const now = getServerTime(); 
+        const now = getServerTime();
 
         Object.keys(groupedByExam).forEach((examName) => {
             const studentsInExam = groupedByExam[examName];
-            
+
             // --- TÌM BỘ ĐỀ ĐỂ LẤY TỔNG SỐ CÂU ---
             const folderMatch = foldersDB.find(f => examName.toLowerCase().includes(f.name.toLowerCase()));
             const totalQ = (folderMatch && folderMatch.questions) ? folderMatch.questions.length : 0;
@@ -10049,7 +10113,7 @@ function listenToCandidates() {
             </tr>`;
 
             const mainCodesInExam = [...new Set(studentsInExam.map(s => s.mainCode))];
-            
+
             mainCodesInExam.forEach(mCode => {
                 const studentsInRoom = studentsInExam.filter(s => s.mainCode === mCode);
 
@@ -10077,46 +10141,99 @@ function listenToCandidates() {
                         </td>
                     </tr>`;
 
-                    const finalStudents = studentsInRoom.filter(s => s.subId === subId).sort((a,b) => a.name.localeCompare(b.name, 'vi'));
+                    const finalStudents = studentsInRoom.filter(s => s.subId === subId).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
 
                     finalStudents.forEach(s => {
                         const studentUniqueKey = `${mCode}_${s.safeUser}`;
-                        const isDone = s.status === 'ĐÃ NỘP BÀI' || s.status === 'ĐÃ THU BÀI';
-                        const isExpired = (s.status === 'ĐANG LÀM BÀI' && s.endTime > 0 && now > s.endTime);
 
-                        // --- LOGIC XỬ LÝ TRẠNG THÁI & BADGE ---
+                        // **QUAN TRỌNG: Xác định trạng thái chính xác**
                         let displayStatus = s.status;
                         let badgeClass = "bg-amber-500/20 text-amber-400 animate-pulse";
-                        if (isDone) {
+
+                        // **KIỂM TRA NỘP BÀI TỪ HAI NGUỒN:**
+                        // 1. Trạng thái 'ĐÃ NỘP BÀI' hoặc 'ĐÃ THU BÀI'
+                        // 2. Kiểm tra xem thí sinh có bị khóa (submitted) không
+                        // *** FIX: Kiểm tra trạng thái chính xác hơn ***
+                        const isSubmitted = (s.status === 'ĐÃ NỘP BÀI' || s.status === 'ĐÃ THU BÀI');
+                        const isExpired = (s.status === 'ĐANG LÀM BÀI' && s.endTime > 0 && now > s.endTime);
+
+                        // *** FIX 1: Tính điểm thực tế từ tempAnswers nếu có ***
+                        let actualScore = s.score;
+                        if (isExpired && s.tempAnswers && Array.isArray(s.tempAnswers) && folderMatch) {
+                            // Tính điểm dựa trên câu trả lời đã lưu
+                            const questions = folderMatch.questions || [];
+                            let correctCount = 0;
+                            s.tempAnswers.forEach((ans, idx) => {
+                                if (idx < questions.length && ans !== -1 && Number(ans) === Number(questions[idx].correct)) {
+                                    correctCount++;
+                                }
+                            });
+                            if (questions.length > 0) {
+                                actualScore = ((correctCount / questions.length) * 10).toFixed(1);
+                            }
+                        }
+
+                        if (isSubmitted) {
+                            displayStatus = 'ĐÃ NỘP BÀI';
                             badgeClass = "bg-emerald-500/20 text-emerald-400";
                         } else if (isExpired) {
-                            displayStatus = "CHƯA NỘP BÀI";
-                            badgeClass = "bg-red-500/20 text-red-400 font-bold animate-pulse";
+                            // **FIX: Nếu hết giờ nhưng chưa nộp, hiển thị trạng thái ĐÃ NỘP BÀI**
+                            displayStatus = 'ĐÃ NỘP BÀI';
+                            badgeClass = "bg-emerald-500/20 text-emerald-400";
+                            
+                            // *** FIX 2: CẬP NHẬT TRẠNG THÁI VÀ ĐIỂM SỐ LÊN FIREBASE ***
+                            const updateData = {
+                                status: 'ĐÃ NỘP BÀI',
+                                submitTime: getServerTime()
+                            };
+                            
+                            // Chỉ cập nhật điểm nếu có điểm thực tế
+                            if (actualScore && actualScore !== '---') {
+                                updateData.score = actualScore;
+                            } else if (s.score && s.score !== '---') {
+                                updateData.score = s.score;
+                            } else {
+                                updateData.score = '0.0';
+                            }
+                            
+                            rdb.ref(`system/active_sessions/${safeAdmin}/${mCode}/${s.safeUser}`).update(updateData)
+                                .then(() => {
+                                    console.log(`✅ Đã tự động nộp bài cho ${s.name} (hết giờ)`);
+                                })
+                                .catch(err => console.error("Lỗi cập nhật trạng thái hết giờ:", err));
+                        } else if (s.status === 'ĐANG LÀM BÀI' && s.endTime > 0) {
+                            // Đang làm bài và còn thời gian
+                            badgeClass = "bg-blue-500/20 text-blue-400 animate-pulse";
                         }
 
                         // --- LOGIC TÍNH SỐ CÂU ĐÚNG ---
                         let correctCountHtml = `<span class="opacity-20">---</span>`;
-                        if (s.score !== '---' && totalQ > 0) {
-                            const pointNum = parseFloat(s.score);
+                        const displayScore = (actualScore && actualScore !== '---') ? actualScore : s.score;
+                        if (displayScore !== '---' && totalQ > 0) {
+                            const pointNum = parseFloat(displayScore);
                             const correctCount = Math.round((pointNum / 10) * totalQ);
                             correctCountHtml = `<b class="text-emerald-400 text-xl font-black">${correctCount}</b><span class="text-slate-500 text-sm font-bold ml-1">/${totalQ}</span>`;
                         }
 
                         // --- LOGIC ĐỒNG HỒ ---
                         let displayTime = '--:--';
-                        if (isDone) displayTime = 'HOÀN TẤT';
-                        else if (s.status === 'ĐANG LÀM BÀI' && s.endTime > 0) {
+                        if (isSubmitted) {
+                            displayTime = '✅ NỘP BÀI';
+                        } else if (s.status === 'ĐANG LÀM BÀI' && s.endTime > 0) {
                             const remain = s.endTime - now;
-                            if (remain <= 0) displayTime = "HẾT GIỜ";
-                            else {
+                            if (remain <= 0) {
+                                displayTime = "HẾT GIỜ";
+                            } else {
                                 const m = Math.floor(remain / 60000);
                                 const sec = Math.floor((remain % 60000) / 1000);
                                 displayTime = `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
                             }
-                        } else displayTime = "HẾT GIỜ";
+                        } else {
+                            displayTime = "HẾT GIỜ";
+                        }
 
-                        let scoreHtml = isDone ? `<b class="text-indigo-400 text-xl">${s.score}</b>` : `<span class="opacity-20">---</span>`;
-                        if (!isDone && isExpired) {
+                        let scoreHtml = isSubmitted ? `<b class="text-indigo-400 text-xl">${displayScore}</b>` : `<span class="opacity-20">---</span>`;
+                        if (!isSubmitted && isExpired) {
                             scoreHtml = `<button onclick="collectStudentPaper('${mCode}', '${s.safeUser}')" class="bg-orange-600 text-white text-[10px] px-3 py-1.5 rounded-lg font-black shadow-lg">THU BÀI</button>`;
                         }
 
@@ -10124,7 +10241,7 @@ function listenToCandidates() {
                         <tr id="row-${studentUniqueKey}" class="hover:bg-white/5 transition">
                             <td class="py-3 px-20">
                                 <div class="flex items-center gap-2">
-                                     <div class="w-1.5 h-1.5 rounded-full ${isDone ? 'bg-slate-600' : 'bg-emerald-500 animate-pulse'}"></div>
+                                     <div class="w-1.5 h-1.5 rounded-full ${isSubmitted ? 'bg-slate-600' : 'bg-emerald-500 animate-pulse'}"></div>
                                      <div class="font-bold text-slate-200 text-sm">${s.name}</div>
                                 </div>
                             </td>
@@ -10132,7 +10249,7 @@ function listenToCandidates() {
                             <td class="text-center">
                                 <span class="px-2 py-0.5 rounded-full text-[9px] font-black ${badgeClass}">${displayStatus}</span>
                             </td>
-                            <td class="text-center font-mono text-xs ${isDone ? 'text-slate-600' : 'text-indigo-400'}" id="clock-${studentUniqueKey}">${displayTime}</td>
+                            <td class="text-center font-mono text-xs ${isSubmitted ? 'text-slate-600' : 'text-indigo-400'}" id="clock-${studentUniqueKey}">${displayTime}</td>
                             <td class="pr-8 text-right">${scoreHtml}</td>
                         </tr>`;
                     });
@@ -10143,16 +10260,60 @@ function listenToCandidates() {
         if (body) body.innerHTML = html;
         window.candidatesInitialDataLoaded = true;
 
+        // Cập nhật đồng hồ mỗi giây
+        if (window.monitorInterval) clearInterval(window.monitorInterval);
         window.monitorInterval = setInterval(() => {
             const currentTime = getServerTime();
             Object.keys(window.monitorCache).forEach(mainCode => {
                 Object.entries(window.monitorCache[mainCode]).forEach(([safeUser, s]) => {
-                    if (s.status === 'ĐANG LÀM BÀI' && s.endTime > 0) {
+                    // **CHỈ CẬP NHẬT ĐỒNG HỒ CHO THÍ SINH CHƯA NỘP BÀI**
+                    if (s.status !== 'ĐÃ NỘP BÀI' && s.status !== 'ĐÃ THU BÀI' && s.endTime > 0) {
                         const studentUniqueKey = `${mainCode}_${safeUser}`;
                         const clockEl = document.getElementById(`clock-${studentUniqueKey}`);
                         const remain = s.endTime - currentTime;
                         if (remain <= 0) {
-                            if(clockEl) clockEl.innerText = "HẾT GIỜ";
+                            if (clockEl) clockEl.innerText = "HẾT GIỜ";
+                            
+                            // *** FIX 3: Tính điểm thực tế khi hết giờ ***
+                            let actualScore = s.score;
+                            // Tìm folder để tính điểm
+                            const folderMatch = foldersDB.find(f => {
+                                const examNameLower = (s.examName || "").toLowerCase();
+                                return examNameLower.includes(f.name.toLowerCase());
+                            });
+                            
+                            if (s.tempAnswers && Array.isArray(s.tempAnswers) && folderMatch) {
+                                const questions = folderMatch.questions || [];
+                                let correctCount = 0;
+                                s.tempAnswers.forEach((ans, idx) => {
+                                    if (idx < questions.length && ans !== -1 && Number(ans) === Number(questions[idx].correct)) {
+                                        correctCount++;
+                                    }
+                                });
+                                if (questions.length > 0) {
+                                    actualScore = ((correctCount / questions.length) * 10).toFixed(1);
+                                }
+                            }
+                            
+                            // **TỰ ĐỘNG NỘP BÀI KHI HẾT GIỜ**
+                            const updateData = {
+                                status: 'ĐÃ NỘP BÀI',
+                                submitTime: getServerTime()
+                            };
+                            
+                            if (actualScore && actualScore !== '---') {
+                                updateData.score = actualScore;
+                            } else if (s.score && s.score !== '---') {
+                                updateData.score = s.score;
+                            } else {
+                                updateData.score = '0.0';
+                            }
+                            
+                            rdb.ref(`system/active_sessions/${safeAdmin}/${mainCode}/${safeUser}`).update(updateData)
+                                .then(() => {
+                                    console.log(`✅ Tự động nộp bài cho ${s.name} (hết giờ)`);
+                                })
+                                .catch(err => console.error("Lỗi cập nhật trạng thái hết giờ:", err));
                         } else if (clockEl) {
                             const m = Math.floor(remain / 60000);
                             const sec = Math.floor((remain % 60000) / 1000);
@@ -11360,6 +11521,34 @@ async function saveResultAsPNG() {
     } catch (err) {
         console.error(err);
         showModernToast("Lỗi", "Chụp màn hình thủ công!", "error");
+    }
+}
+
+// Hàm xử lý nộp bài tự động cho một thí sinh cụ thể (khi hết giờ)
+async function autoSubmitStudent(examCode, studentKey, studentData) {
+    if (!currentUser || !currentUser.isAdmin) return;
+
+    const safeAdmin = currentUser.user.replace(/\./g, '_');
+    const sessionRef = rdb.ref(`system/active_sessions/${safeAdmin}/${examCode}/${studentKey}`);
+    
+    try {
+        // Cập nhật trạng thái là đã nộp bài
+        await sessionRef.update({
+            status: 'ĐÃ NỘP BÀI',
+            score: studentData.score || '0.0',
+            submitTime: Date.now()
+        });
+        
+        // Khóa bài làm để chặn thi lại
+        await rdb.ref(`system/submissions/${safeAdmin}/${examCode}/${studentKey}`).set({
+            submittedAt: Date.now(),
+            score: studentData.score || '0.0',
+            type: 'auto_submit' // Đánh dấu là tự động nộp
+        });
+        
+        console.log(`✅ Tự động nộp bài cho thí sinh ${studentKey}`);
+    } catch (err) {
+        console.error("❌ Lỗi tự động nộp bài:", err);
     }
 }
 
